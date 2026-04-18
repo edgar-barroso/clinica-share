@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, Home, Plus, User } from "lucide-react";
+import { CalendarDays, Home, MessageCircle, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items: Array<{ href: string; label: string; icon: LucideIcon }> = [
@@ -42,16 +42,17 @@ export function PatientBottomNav() {
         </div>
 
         <NavItem
+          href="#"
+          icon={MessageCircle}
+          label="Mensagens"
+          active={false}
+        />
+        <NavItem
           href="/p/perfil"
           icon={User}
           label="Perfil"
           active={pathname.startsWith("/p/perfil")}
         />
-        <div className="flex items-center justify-center">
-          <span className="block text-[10px] text-muted-foreground select-none">
-            Você
-          </span>
-        </div>
       </div>
     </nav>
   );

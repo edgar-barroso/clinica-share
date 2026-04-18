@@ -3,6 +3,7 @@
 import { Bell, Search } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { MobileSidebarTrigger } from "./mobile-sidebar";
 import { RoleSwitcher } from "./role-switcher";
 import { useRole } from "@/lib/role";
 
@@ -11,6 +12,7 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur lg:px-10">
+      <MobileSidebarTrigger />
       <div className="relative hidden max-w-md flex-1 md:block">
         <Search
           size={16}
