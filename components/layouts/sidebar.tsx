@@ -7,7 +7,9 @@ import {
   Calendar,
   ClipboardList,
   DoorOpen,
+  FileBarChart,
   FileSearch,
+  Settings,
   Stethoscope,
   Users,
   Wallet,
@@ -24,12 +26,14 @@ const navAll: NavItem[] = [
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/auditoria", label: "Auditoria", icon: FileSearch },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/auditoria"],
+  auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
   profissional: ["/dashboard", "/agenda", "/atendimentos"],
   atendente: ["/agenda", "/atendimentos"],
   paciente: [],

@@ -6,7 +6,13 @@ import { PageHeader } from "@/components/layouts/page-header";
 import { repasses } from "@/lib/mock/data";
 import { formatBRL } from "@/lib/format";
 
-const cards = [
+const cards: Array<{
+  href: string;
+  title: string;
+  description: string;
+  icon: typeof Wallet;
+  disabled?: boolean;
+}> = [
   {
     href: "/financeiro/repasses",
     title: "Repasses",
@@ -20,18 +26,16 @@ const cards = [
     icon: Calculator,
   },
   {
-    href: "#",
+    href: "/relatorios",
     title: "Relatórios",
-    description: "Filtros por profissional, consultório e período (F2)",
+    description: "Filtros por profissional, consultório e período (RE02/RE03)",
     icon: FileBarChart,
-    disabled: true,
   },
   {
-    href: "#",
+    href: "/relatorios/gratuitas-descontos",
     title: "Descontos e gratuidades",
-    description: "Listagem de consultas gratuitas com justificativa (F2)",
+    description: "Listagem de consultas gratuitas com justificativa (RE04)",
     icon: Receipt,
-    disabled: true,
   },
 ];
 
