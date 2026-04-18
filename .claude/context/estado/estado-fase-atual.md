@@ -1,0 +1,37 @@
+# Fase Atual do Projeto
+
+## Status: Modelagem + Prototipação paralela
+
+**Data da última atualização:** 2026-04-18
+
+### O que já aconteceu
+- [x] 1ª reunião de levantamento de requisitos com o Dr. Edson (R1 — 06/04/2026)
+- [x] Ata da R1 consolidada — [reunioes/R1/ata-R1.md](../reunioes/R1/ata-R1.md)
+- [x] Documento de Requisitos v1.0 produzido — [reunioes/R1/requisitos-v1.md](../reunioes/R1/requisitos-v1.md): 5 atores, 29 RF, 4 RNF, 5 riscos
+- [x] Planilha de Custos v2 — [visao-roi/planilha-custos-v2.md](../visao-roi/planilha-custos-v2.md): 36 macro-requisitos com estimativa de horas e custo por papel
+- [x] Documento de Visão v1 — [visao-roi/visao-v1.md](../visao-roi/visao-v1.md): posicionamento, envolvidos, recursos, ROI
+- [x] Requisitos, decisões e riscos consolidados neste diretório `estado/`
+- [x] Plano de protótipo navegável escrito — [../../../PROTOTIPO-PLANO.md](../../../PROTOTIPO-PLANO.md)
+
+### Em andamento
+- [ ] Protótipo navegável (F1 — 15 telas core admin/profissional)
+- [ ] Preparação da R2 com o Dr. Edson (roteiro baseado nas pendências P0 ainda abertas)
+
+### Próximos passos imediatos
+1. Implementar F1 do protótipo (setup + AppShell + 15 telas mockadas)
+2. Gerar screenshots das telas para apresentar na R2
+3. Preparar roteiro da R2 focando: PEND-002 (bruto/líquido), PEND-014 (turnos e horários), PEND-015 (alocação consultório/turno), PEND-017 (escopo prontuário)
+4. Após R2 e validação do protótipo: iniciar Codificação real
+
+### Fase seguinte (Codificação)
+Entra quando:
+- Protótipo aprovado pelo Dr. Edson em R2
+- Campos mínimos do prontuário definidos (PEND-017)
+- Turnos definidos (PEND-014)
+- Modelo de dados (DER) aprovado em revisão técnica formal
+
+### Histórico de transições
+| Data | De | Para | Motivo |
+|---|---|---|---|
+| 2026-04-06 | — | Comunicação (R1) | Início do projeto; reunião inicial com cliente |
+| 2026-04-09 | Comunicação | Modelagem + Prototipação | Documento de Requisitos v1 e Visão v1 publicados; pendências P0 dependem de artefato visual para destravar |

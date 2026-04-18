@@ -1,36 +1,176 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClinicaShare
 
-## Getting Started
+> Plataforma web para gestão de repasses financeiros em clínicas multiprofissionais.
 
-First, run the development server:
+Sistema em desenvolvimento para **Dr. Edson Andrade**, proprietário de clínica médica multiprofissional, no contexto da disciplina de Desenvolvimento de Software (DevsTech). O produto automatiza o cálculo e o acompanhamento dos repasses devidos ao dono da clínica sobre as consultas realizadas pelos profissionais que utilizam seus consultórios.
+
+## Status
+
+**Fase atual: Protótipo navegável (descoberta).** Dados mockados; ainda sem banco, sem autenticação real, sem cálculo de repasse definitivo.
+
+- **36 casos de uso** levantados em R1 (06/04/2026) — ver [requisitos-v1.docx](.claude/context/reunioes/R1/requisitos-v1.docx) e [planilha-custos-v2](.claude/context/visao-roi/planilha-custos-v2-2026-04-16.xlsx)
+- **5 perfis de usuário**: Administrador, Auxiliar Financeiro, Profissional, Atendente, Paciente
+- **Reunião R2** agendada para refinar: campos do prontuário, turnos, integrações externas
+
+Ver [PROTOTIPO-PLANO.md](PROTOTIPO-PLANO.md) para inventário completo de telas e faseamento.
+
+## Problema
+
+A clínica recebe um percentual sobre cada consulta realizada nos seus consultórios. Sem controle financeiro dedicado, o Dr. Edson não consegue responder com confiança:
+
+- Quanto deveria receber em cada período?
+- Qual o recebimento por profissional, por consultório?
+- Quais repasses estão em aberto? Quais já foram pagos?
+
+## Solução (MVP)
+
+- Registro de consultas por profissional e consultório
+- Cálculo automático do percentual de repasse
+- Relatórios financeiros (período / profissional / consultório)
+- Dashboard consolidado para o administrador
+- Trilha de auditoria em toda alteração financeira
+
+**Fora do MVP:** prontuário eletrônico, agendamento avançado, portal do paciente, armazenamento de dados clínicos (LGPD).
+
+## Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Framework | [Next.js 16.2.4](https://nextjs.org) (App Router) |
+| Runtime UI | [React 19.2.4](https://react.dev) |
+| Estilização | [Tailwind CSS v4](https://tailwindcss.com) |
+| Biblioteca de componentes | [shadcn/ui](https://ui.shadcn.com) + [Radix](https://www.radix-ui.com) |
+| Ícones | [lucide-react](https://lucide.dev) |
+| Formulários | [react-hook-form](https://react-hook-form.com) + [Zod](https://zod.dev) |
+| Datas | [date-fns](https://date-fns.org) (locale pt-BR) |
+| Gráficos | [Recharts](https://recharts.org) |
+| Notificações | [Sonner](https://sonner.emilkowal.ski) |
+| Tipagem | TypeScript 5 |
+| Lint | ESLint 9 |
+
+## Começando
+
+### Pré-requisitos
+
+- Node.js 20+ (recomendado 22 LTS)
+- npm, pnpm, yarn ou bun
+
+### Instalação
+
+```bash
+git clone https://github.com/<seu-usuario>/clinica-share.git
+cd clinica-share
+npm install
+```
+
+### Rodar em desenvolvimento
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Outros scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build   # build de produção
+npm run start   # servir o build
+npm run lint    # rodar ESLint
+```
 
-## Learn More
+## Estrutura de pastas
 
-To learn more about Next.js, take a look at the following resources:
+```
+.
+├── app/                        # App Router
+│   ├── (auth)/                 # rotas públicas: login, recuperação
+│   ├── (app)/                  # rotas logadas: dashboard, agenda, financeiro…
+│   ├── p/                      # patient shell (mobile/PWA)
+│   ├── layout.tsx              # root layout + fontes
+│   ├── page.tsx                # landing / redirect
+│   └── globals.css             # tokens do design system (Tailwind v4)
+├── components/
+│   ├── layouts/                # AppShell, Sidebar, Topbar, PageHeader, PatientShell
+│   ├── ui/                     # primitivos shadcn (Button, Card, Input, …)
+│   ├── dashboard/              # MetricStat…
+│   ├── appointments/           # AppointmentCard, WeekDayPicker, TimeSlotPicker
+│   ├── consultorios/           # ConsultorioCard
+│   └── financial/              # FinanceTable, RepasseStatusBadge
+├── lib/
+│   ├── utils.ts                # helper cn()
+│   ├── format.ts               # formatBRL, formatDate (pt-BR)
+│   └── mock/                   # dados mockados do protótipo
+├── public/                     # estáticos
+├── .claude/                    # base de conhecimento (ver abaixo)
+│   ├── context/                # metodologia, playbooks, estado, templates
+│   └── skills/                 # design system da aplicação
+├── PROTOTIPO-PLANO.md          # plano e sitemap do protótipo
+├── CLAUDE.md                   # entrypoint do Claude Code
+└── AGENTS.md                   # convenções para agentes de IA
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Mapa de rotas (protótipo)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Públicas
+- `/` — redireciona para `/login` ou `/dashboard`
+- `/login` — autenticação
+- `/esqueci-senha` — recuperação
 
-## Deploy on Vercel
+### Área administrativa / profissional (AppShell)
+- `/dashboard` — visão geral financeira (RE01, CO04)
+- `/agenda` — agenda do profissional; `/agenda/novo` (AG02)
+- `/consultorios` — lista (CO01) + `novo/` + `[id]/` (CO04)
+- `/profissionais` — lista + `novo/` + `[id]/` (contrato FI01/FI02, turnos AG03/AG04, aluguel FI08)
+- `/atendimentos` — lista (AT01) + `novo/` (AT01+AT02+AT04+FI05+FI06) + `[id]/` (AT03 prontuário)
+- `/financeiro` — hub
+  - `/repasses` — lista (FI03, FI04, FI05); `/[id]/` marcar como pago
+  - `/fechamento` — prestação de contas semanal (FI07)
+- `/relatorios` — hub
+  - `/financeiro` (RE02), `/consultorios` (RE03)
+  - `/gratuitas-descontos` (RE04), `/cancelamentos` (RE05)
+- `/configuracoes` — `/turnos` (AG03), `/integracoes` (AG07)
+- `/auditoria` — trilha de alterações financeiras
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Paciente (PatientShell — mobile-first)
+- `/p` — home
+- `/p/consultas` + `/p/consultas/[id]` — minhas consultas (AG06 cancelar)
+- `/p/agendar` — fluxo de agendamento em passos (AG01 + FI09 pagamento)
+- `/p/perfil` — perfil do paciente
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Regras de produto (não negociáveis)
+
+Mantidas em [.claude/context/base/02-regras-inegociaveis.md](.claude/context/base/02-regras-inegociaveis.md):
+
+- Valores monetários: inteiro em centavos **ou** `Decimal`. Nunca `float`/`double`.
+- Toda alteração financeira gera registro de auditoria.
+- Cálculo de repasse sempre no servidor, nunca no front-end.
+- Dados clínicos de pacientes **não** entram no MVP (redução de risco LGPD).
+- Interfaces em pt-BR. Valores com `Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })`. Datas com `date-fns` + locale `ptBR`.
+
+## Design system
+
+O sistema visual está documentado como skill em [.claude/skills/clinicashare-design-system/](.claude/skills/clinicashare-design-system/). Princípios:
+
+- **Trust before delight** — software operacional para gestão, não app de wellness
+- **Uma ação primária por tela** (botão azul `bg-primary`)
+- **Status é cidadão de primeira classe** — `PaymentStatusBadge`, `RepasseStatusBadge`
+- **Mobile não é opcional** — todo componente define comportamento responsivo
+- **Nunca hex hardcoded** — tokens resolvem via CSS vars em `globals.css`
+
+## Equipe
+
+Projeto conduzido por 4 alunos. Divisão de responsabilidades em [.claude/context/estado/estado-equipe.md](.claude/context/estado/estado-equipe.md).
+
+Metodologia baseada em Pressman (6ª ed.), seguindo as 5 frentes (comunicação, planejamento, modelagem, codificação, implementação) e as 5 atividades guarda-chuva (risco, SQA, configuração, RTF, controle). Ver [.claude/context/base/](.claude/context/base/).
+
+## Contribuindo
+
+- Crie branches nomeadas como `feature/xxx`, `fix/xxx`, `docs/xxx`.
+- Commits seguem [Conventional Commits](https://www.conventionalcommits.org).
+- Toda PR passa por revisão cruzada antes de merge em `main`.
+- Cálculos de repasse exigem teste unitário cobrindo o caso antes do merge.
+
+## Licença
+
+Projeto acadêmico. Direitos reservados aos autores e ao Dr. Edson Andrade (cliente da simulação).

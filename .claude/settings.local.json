@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(lsof -i :3000 -i :3001 -sTCP:LISTEN)",
+      "Bash(curl -s -o /dev/null -w \"GET /                         → %{http_code}  %{time_total}s\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"GET /login                    → %{http_code}  %{time_total}s\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"GET /dashboard                → %{http_code}  %{time_total}s\\\\n\" http://localhost:3000/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"GET /agenda                   → %{http_code}  %{time_total}s\\\\n\" http://localhost:3000/agenda)",
+      "Bash(curl -s -o /dev/null -w \"GET /agenda/novo              → %{http_code}  %{time_total}s\\\\n\" http://localhost:3000/agenda/novo)",
+      "Bash(curl -s http://localhost:3000__TRACKED_VAR__)",
+      "Bash(curl -s http://localhost:3000/dashboard)",
+      "Bash(grep -Eo 'R\\\\$ [0-9.,]+')",
+      "Bash(grep -o 'R\\\\$[^<]\\\\{1,20\\\\}')",
+      "Bash(git add *)"
+    ]
+  }
+}
