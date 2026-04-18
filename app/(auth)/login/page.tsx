@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -86,9 +87,12 @@ export default function LoginPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Senha</Label>
-                    <a href="#" className="text-xs text-primary hover:underline">
+                    <Link
+                      href="/esqueci-senha"
+                      className="text-xs text-primary hover:underline"
+                    >
                       Esqueci minha senha
-                    </a>
+                    </Link>
                   </div>
                   <Input id="password" type="password" defaultValue="protótipo" required />
                 </div>
