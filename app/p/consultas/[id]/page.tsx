@@ -7,17 +7,18 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Calendar,
+  CheckCircle2,
   Clock,
+  CreditCard,
   MapPin,
-  MessageCircle,
   Stethoscope,
-  User,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/layouts/page-header";
 import {
   AgendamentoStatusBadge,
   PaymentStatusBadge,
@@ -28,11 +29,6 @@ import {
   getProfissional,
 } from "@/lib/mock/data";
 import { formatBRL, formatDateLong } from "@/lib/format";
-
-function initials(name: string) {
-  const parts = name.split(" ").filter((p) => !["Dr.", "Dra."].includes(p));
-  return (parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "");
-}
 
 export default function ConsultaDetailPage({
   params,
@@ -83,157 +79,174 @@ export default function ConsultaDetailPage({
         Minhas consultas
       </Link>
 
-      <h1 className="mb-1 text-xl font-bold">Detalhes da consulta</h1>
-      <p className="mb-5 text-sm text-muted-foreground">
-        Consulta #{consulta.id}
-      </p>
+      <PageHeader
+        title={`Consulta #${consulta.id}`}
+        description={`${formatDateLong(consulta.data)} · ${consulta.hora}`}
+        actions={
+          podeCancelar && !showCancelar ? (
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setShowCancelar(true)}
+            >
+              <X size={16} />
+              Cancelar consulta
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <Card className="mb-4">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Status
-            </p>
-            <div className="flex gap-2">
-              <AgendamentoStatusBadge status={consulta.status} />
-              <PaymentStatusBadge status={consulta.statusPagamento} />
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-4">
-            <InfoRow
-              icon={Calendar}
-              label="Data"
-              value={formatDateLong(consulta.data)}
-            />
-            <InfoRow icon={Clock} label="Horário" value={consulta.hora} />
-            <InfoRow
-              icon={Stethoscope}
-              label="Profissional"
-              value={`${prof?.nome} · ${prof?.especialidade}`}
-            />
-            <InfoRow
-              icon={MapPin}
-              label="Consultório"
-              value={cons?.nome ?? "—"}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4">
-        <CardContent className="p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Pagamento
-          </p>
-          <div className="mt-3 space-y-2 text-sm tabular-nums">
-            <div className="flex justify-between">
-              <span>Consulta</span>
-              <span>{formatBRL(consulta.valorConsulta)}</span>
-            </div>
-            {consulta.procedimentos.length > 0 && (
-              <>
-                {consulta.procedimentos.map((p) => (
-                  <div
-                    key={p.nome}
-                    className="flex justify-between text-muted-foreground"
-                  >
-                    <span>{p.nome}</span>
-                    <span>{formatBRL(p.valor)}</span>
-                  </div>
-                ))}
-              </>
-            )}
-            <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-semibold">
-              <span>Total</span>
-              <span>{formatBRL(total)}</span>
-            </div>
-          </div>
-          {consulta.statusPagamento === "pendente" && (
-            <Button className="mt-4 w-full">Pagar agora</Button>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 text-sm font-medium transition-colors hover:bg-muted"
-          aria-label="Conversar com o consultório"
-        >
-          <MessageCircle size={16} />
-          Mensagens
-        </button>
-        <Link
-          href={`/p/perfil`}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <User size={16} />
-          Meus dados
-        </Link>
-      </div>
-
-      {podeCancelar && !showCancelar && (
-        <Button
-          variant="outline"
-          className="w-full text-destructive hover:text-destructive"
-          onClick={() => setShowCancelar(true)}
-        >
-          <X size={16} />
-          Cancelar consulta
-        </Button>
-      )}
-
-      {showCancelar && (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="space-y-3 p-5">
-            <div>
-              <p className="font-semibold">Cancelar consulta (AG06)</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Sem cobrança de taxa. O motivo abaixo é obrigatório e fica registrado
-                para o consultório.
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="motivo">Motivo</Label>
-              <Textarea
-                id="motivo"
-                placeholder="Ex: tive um imprevisto e não posso comparecer"
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                required
-                rows={3}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle>Informações da consulta</CardTitle>
+                <div className="flex gap-2">
+                  <AgendamentoStatusBadge status={consulta.status} />
+                  <PaymentStatusBadge status={consulta.statusPagamento} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <InfoRow
+                icon={Calendar}
+                label="Data"
+                value={formatDateLong(consulta.data)}
               />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowCancelar(false)}
-              >
-                Voltar
-              </Button>
-              <Button
-                className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={cancelar}
-              >
-                Confirmar cancelamento
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <InfoRow icon={Clock} label="Horário" value={consulta.hora} />
+              <InfoRow
+                icon={Stethoscope}
+                label="Profissional"
+                value={`${prof?.nome} · ${prof?.especialidade}`}
+              />
+              <InfoRow
+                icon={MapPin}
+                label="Consultório"
+                value={cons?.nome ?? "—"}
+              />
+            </CardContent>
+          </Card>
 
-      {consulta.motivoCancelamento && (
-        <Card className="mt-4 border-destructive/40 bg-destructive/5">
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-destructive">
-              Motivo do cancelamento
-            </p>
-            <p className="mt-1 text-sm">{consulta.motivoCancelamento}</p>
-          </CardContent>
-        </Card>
-      )}
+          {showCancelar && (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardHeader>
+                <CardTitle className="text-destructive">
+                  Cancelar consulta (AG06)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Sem cobrança de taxa. O motivo abaixo é obrigatório e fica
+                  registrado para o consultório.
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="motivo">Motivo</Label>
+                  <Textarea
+                    id="motivo"
+                    placeholder="Ex: tive um imprevisto e não posso comparecer"
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    required
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowCancelar(false)}
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={cancelar}
+                  >
+                    Confirmar cancelamento
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {consulta.motivoCancelamento && (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardHeader>
+                <CardTitle className="text-sm">Motivo do cancelamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">{consulta.motivoCancelamento}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <aside className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pagamento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm tabular-nums">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Consulta</span>
+                <span>{formatBRL(consulta.valorConsulta)}</span>
+              </div>
+              {consulta.procedimentos.map((p) => (
+                <div
+                  key={p.nome}
+                  className="flex justify-between text-muted-foreground"
+                >
+                  <span>{p.nome}</span>
+                  <span>{formatBRL(p.valor)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between border-t border-border pt-2 text-base">
+                <span className="font-semibold">Total</span>
+                <span className="font-bold">{formatBRL(total)}</span>
+              </div>
+              {consulta.statusPagamento === "pendente" && (
+                <Button className="mt-3 w-full">
+                  <CreditCard size={14} />
+                  Pagar agora
+                </Button>
+              )}
+              {consulta.statusPagamento === "pago" && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-success/10 p-3 text-sm text-success">
+                  <CheckCircle2 size={14} />
+                  Pagamento confirmado
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Precisa de ajuda?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Link
+                href="#"
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "w-full justify-start",
+                })}
+              >
+                Falar com o consultório
+              </Link>
+              <Link
+                href="/p/perfil"
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "w-full justify-start",
+                })}
+              >
+                Atualizar meus dados
+              </Link>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
     </>
   );
 }

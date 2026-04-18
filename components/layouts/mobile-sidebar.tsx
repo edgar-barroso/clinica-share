@@ -7,13 +7,17 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Calendar,
+  CalendarHeart,
+  CalendarPlus,
   ClipboardList,
   DoorOpen,
   FileBarChart,
   FileSearch,
+  Home,
   Menu,
   Settings,
   Stethoscope,
+  User,
   Users,
   Wallet,
   X,
@@ -35,12 +39,19 @@ const navAll: NavItem[] = [
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
+const navPaciente: NavItem[] = [
+  { href: "/p", label: "Início", icon: Home },
+  { href: "/p/consultas", label: "Minhas consultas", icon: CalendarHeart },
+  { href: "/p/agendar", label: "Agendar consulta", icon: CalendarPlus },
+  { href: "/p/perfil", label: "Meu perfil", icon: User },
+];
+
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
   auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
   profissional: ["/dashboard", "/agenda", "/atendimentos"],
   atendente: ["/agenda", "/atendimentos"],
-  paciente: [],
+  paciente: navPaciente.map((n) => n.href),
 };
 
 export function MobileSidebarTrigger() {
@@ -65,8 +76,7 @@ export function MobileSidebarTrigger() {
     };
   }, [open]);
 
-  const allowed = new Set(navByRole[role] ?? []);
-  const items = navAll.filter((n) => allowed.has(n.href));
+  const items = role === "paciente" ? navPaciente : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
 
   return (
     <>
@@ -110,11 +120,6 @@ export function MobileSidebarTrigger() {
             </div>
 
             <nav className="space-y-1 px-3 py-4">
-              {items.length === 0 && (
-                <p className="px-3 py-2 text-xs text-muted-foreground">
-                  Este perfil usa o portal do paciente, não a área administrativa.
-                </p>
-              )}
               {items.map(({ href, label, icon: Icon }) => {
                 const active =
                   pathname === href || pathname.startsWith(`${href}/`);

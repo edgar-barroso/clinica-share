@@ -1,21 +1,35 @@
 import Link from "next/link";
 import {
-  Bell,
-  Calendar,
+  CalendarCheck2,
+  CalendarClock,
+  CheckCircle2,
   ChevronRight,
-  Clock,
-  MessageCircle,
   Plus,
   Stethoscope,
+  Wallet,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { MetricStat } from "@/components/dashboard/metric-stat";
+import { PageHeader } from "@/components/layouts/page-header";
+import {
+  AgendamentoStatusBadge,
+  PaymentStatusBadge,
+} from "@/components/financial/status-badge";
 import {
   atendimentos,
   getConsultorio,
   getProfissional,
 } from "@/lib/mock/data";
-import { formatDateLong, formatRelative } from "@/lib/format";
+import { formatBRL, formatDate, formatDateLong } from "@/lib/format";
 
 const PACIENTE_ID = "pt01";
 
@@ -25,186 +39,242 @@ function initials(name: string) {
 }
 
 export default function PatientHomePage() {
-  const minhasConsultas = atendimentos.filter(
-    (a) => a.pacienteId === PACIENTE_ID,
-  );
-  const futuras = minhasConsultas
+  const todas = atendimentos.filter((a) => a.pacienteId === PACIENTE_ID);
+  const futuras = todas
     .filter((a) => a.status === "agendado" || a.status === "confirmado")
     .sort((a, b) => `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`));
-  const proxima = futuras[0];
-  const realizadas = minhasConsultas
+  const realizadas = todas
     .filter((a) => a.status === "realizado")
     .sort((a, b) => `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`));
+  const proxima = futuras[0];
+  const totalInvestido = realizadas
+    .filter((a) => a.statusPagamento === "pago")
+    .reduce(
+      (s, a) =>
+        s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+      0,
+    );
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Olá, 👋</p>
-          <h1 className="text-xl font-bold">João Pereira</h1>
-        </div>
-        <button
-          type="button"
-          className="relative flex size-11 items-center justify-center rounded-full bg-card border border-border"
-          aria-label="Notificações"
-        >
-          <Bell size={18} />
-          <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-destructive" />
-        </button>
-      </div>
-
-      {proxima ? (
-        <Card className="mb-6 overflow-hidden border-0 bg-primary text-primary-foreground">
-          <CardContent className="p-5">
-            <p className="text-xs font-medium opacity-80">Sua próxima consulta</p>
-            <p className="mt-2 text-2xl font-bold leading-tight">
-              {formatDateLong(proxima.data)}
-            </p>
-            <p className="mt-0.5 text-lg font-semibold opacity-90 tabular-nums">
-              {proxima.hora}
-            </p>
-
-            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-white/10 p-3">
-              <div className="flex size-12 items-center justify-center rounded-xl bg-white text-primary font-semibold">
-                {initials(getProfissional(proxima.profissionalId)?.nome ?? "—")}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">
-                  {getProfissional(proxima.profissionalId)?.nome}
-                </p>
-                <p className="truncate text-xs opacity-80">
-                  {getProfissional(proxima.profissionalId)?.especialidade} ·{" "}
-                  {getConsultorio(proxima.consultorioId)?.nome}
-                </p>
-              </div>
-            </div>
-
-            <Link
-              href={`/p/consultas/${proxima.id}`}
-              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-white"
-            >
-              Ver detalhes
-              <ChevronRight size={14} />
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-6 border-dashed p-6 text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Calendar size={22} />
-          </div>
-          <p className="font-semibold">Nenhuma consulta agendada</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Agende sua próxima visita com um dos nossos especialistas.
-          </p>
-          <Link href="/p/agendar" className={buttonVariants({ className: "mt-4" })}>
+      <PageHeader
+        title="Olá, João 👋"
+        description="Acompanhe suas próximas consultas e seu histórico de atendimentos"
+        actions={
+          <Link href="/p/agendar" className={buttonVariants()}>
             <Plus size={16} />
             Agendar consulta
           </Link>
-        </Card>
-      )}
+        }
+      />
 
-      <section className="mb-6 grid grid-cols-2 gap-3">
-        <QuickAction href="/p/agendar" icon={Plus} label="Agendar" tone="primary" />
-        <QuickAction
-          href="/p/consultas"
-          icon={Calendar}
-          label={`${futuras.length} próximas`}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricStat
+          label="Próximas consultas"
+          value={String(futuras.length)}
+          icon={CalendarClock}
+          tone="primary"
         />
-        <QuickAction
-          href="#"
-          icon={MessageCircle}
-          label="Mensagens"
-          badge="2"
+        <MetricStat
+          label="Consultas realizadas"
+          value={String(realizadas.length)}
+          icon={CheckCircle2}
+          tone="success"
         />
-        <QuickAction href="/p/perfil" icon={Stethoscope} label="Meu perfil" />
+        <MetricStat
+          label="Investido em saúde"
+          value={formatBRL(totalInvestido)}
+          icon={Wallet}
+          tone="neutral"
+        />
+        <MetricStat
+          label="Especialidades visitadas"
+          value={String(
+            new Set(
+              realizadas
+                .map((a) => getProfissional(a.profissionalId)?.especialidade)
+                .filter(Boolean),
+            ).size,
+          )}
+          icon={Stethoscope}
+          tone="neutral"
+        />
       </section>
 
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Histórico recente</h2>
-          <Link
-            href="/p/consultas"
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            Ver tudo
-          </Link>
-        </div>
-
-        <div className="space-y-3">
-          {realizadas.slice(0, 3).map((a) => {
-            const prof = getProfissional(a.profissionalId);
-            return (
-              <Link key={a.id} href={`/p/consultas/${a.id}`} className="block">
-                <Card className="transition-colors hover:border-primary/30">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
-                      {initials(prof?.nome ?? "—")}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{prof?.nome}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {prof?.especialidade}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                        <Clock size={10} />
-                        {formatRelative(a.data)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+      <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {proxima ? (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle>Sua próxima consulta</CardTitle>
+                <AgendamentoStatusBadge status={proxima.status} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-2xl font-bold leading-tight">
+                    {formatDateLong(proxima.data)}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-muted-foreground tabular-nums">
+                    {proxima.hora}
+                  </p>
+                </div>
+                <Link
+                  href={`/p/consultas/${proxima.id}`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  Ver detalhes
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-4">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
+                  {initials(getProfissional(proxima.profissionalId)?.nome ?? "")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {getProfissional(proxima.profissionalId)?.nome}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {getProfissional(proxima.profissionalId)?.especialidade} ·{" "}
+                    {getConsultorio(proxima.consultorioId)?.nome}
+                  </p>
+                </div>
+                <PaymentStatusBadge status={proxima.statusPagamento} />
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-dashed lg:col-span-2">
+            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <CalendarCheck2 size={20} />
+              </div>
+              <p className="text-base font-semibold">Nenhuma consulta agendada</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Agende sua próxima visita com um dos nossos especialistas.
+              </p>
+              <Link href="/p/agendar" className={buttonVariants()}>
+                <Plus size={14} />
+                Agendar consulta
               </Link>
-            );
-          })}
-          {realizadas.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Você ainda não tem consultas realizadas.
-            </p>
-          )}
-        </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ações rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <QuickLink href="/p/agendar" icon={Plus} label="Agendar consulta" />
+            <QuickLink
+              href="/p/consultas"
+              icon={CalendarCheck2}
+              label="Minhas consultas"
+              sublabel={`${futuras.length} próximas · ${realizadas.length} realizadas`}
+            />
+            <QuickLink
+              href="/p/perfil"
+              icon={Stethoscope}
+              label="Meus dados e notificações"
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Histórico recente</CardTitle>
+            <Link
+              href="/p/consultas"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Ver tudo
+            </Link>
+          </CardHeader>
+          <CardContent className="p-0">
+            {realizadas.length === 0 ? (
+              <p className="p-6 text-sm text-muted-foreground">
+                Você ainda não tem consultas realizadas.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Profissional</TableHead>
+                    <TableHead>Consultório</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Pagamento</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {realizadas.slice(0, 5).map((a) => {
+                    const prof = getProfissional(a.profissionalId);
+                    const cons = getConsultorio(a.consultorioId);
+                    const bruto =
+                      a.valorConsulta +
+                      a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                    return (
+                      <TableRow key={a.id}>
+                        <TableCell className="whitespace-nowrap text-sm tabular-nums">
+                          {formatDate(a.data, "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm font-medium">{prof?.nome}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {prof?.especialidade}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-sm">{cons?.nome}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {formatBRL(bruto)}
+                        </TableCell>
+                        <TableCell>
+                          <PaymentStatusBadge status={a.statusPagamento} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </section>
     </>
   );
 }
 
-function QuickAction({
+function QuickLink({
   href,
   icon: Icon,
   label,
-  badge,
-  tone,
+  sublabel,
 }: {
   href: string;
   icon: typeof Plus;
   label: string;
-  badge?: string;
-  tone?: "primary";
+  sublabel?: string;
 }) {
-  const primary = tone === "primary";
   return (
     <Link
       href={href}
-      className={`relative flex items-center gap-2 rounded-2xl px-4 py-3.5 transition-colors ${
-        primary
-          ? "bg-primary text-primary-foreground"
-          : "bg-card border border-border hover:border-primary/30"
-      }`}
+      className="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-muted"
     >
-      <div
-        className={`flex size-9 items-center justify-center rounded-xl ${
-          primary ? "bg-white/20" : "bg-primary/10 text-primary"
-        }`}
-      >
+      <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
         <Icon size={16} />
       </div>
-      <span className="text-sm font-medium">{label}</span>
-      {badge && (
-        <span className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-destructive-foreground">
-          {badge}
-        </span>
-      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{label}</p>
+        {sublabel && (
+          <p className="truncate text-xs text-muted-foreground">{sublabel}</p>
+        )}
+      </div>
+      <ChevronRight size={14} className="text-muted-foreground" />
     </Link>
   );
 }

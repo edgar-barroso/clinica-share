@@ -4,13 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  CalendarHeart,
+  CalendarPlus,
   Calendar,
   ClipboardList,
   DoorOpen,
   FileBarChart,
   FileSearch,
+  Home,
   Settings,
   Stethoscope,
+  User,
   Users,
   Wallet,
 } from "lucide-react";
@@ -31,19 +35,25 @@ const navAll: NavItem[] = [
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
+const navPaciente: NavItem[] = [
+  { href: "/p", label: "Início", icon: Home },
+  { href: "/p/consultas", label: "Minhas consultas", icon: CalendarHeart },
+  { href: "/p/agendar", label: "Agendar consulta", icon: CalendarPlus },
+  { href: "/p/perfil", label: "Meu perfil", icon: User },
+];
+
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
   auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
   profissional: ["/dashboard", "/agenda", "/atendimentos"],
   atendente: ["/agenda", "/atendimentos"],
-  paciente: [],
+  paciente: navPaciente.map((n) => n.href),
 };
 
 export function Sidebar() {
   const pathname = usePathname();
   const { role } = useRole();
-  const allowed = new Set(navByRole[role] ?? []);
-  const items = navAll.filter((n) => allowed.has(n.href));
+  const items = role === "paciente" ? navPaciente : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">
@@ -58,11 +68,6 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {items.length === 0 && (
-          <p className="px-3 py-2 text-xs text-muted-foreground">
-            Este perfil usa o portal do paciente, não a área administrativa.
-          </p>
-        )}
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (

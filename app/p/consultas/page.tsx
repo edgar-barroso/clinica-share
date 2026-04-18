@@ -2,28 +2,32 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Calendar, ChevronRight, Clock, MapPin, Plus } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AgendamentoStatusBadge,
   PaymentStatusBadge,
 } from "@/components/financial/status-badge";
-import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/layouts/page-header";
 import {
   atendimentos,
   getConsultorio,
   getProfissional,
 } from "@/lib/mock/data";
-import { formatDateLong } from "@/lib/format";
+import { formatBRL, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PACIENTE_ID = "pt01";
-
-function initials(name: string) {
-  const parts = name.split(" ").filter((p) => !["Dr.", "Dra."].includes(p));
-  return (parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "");
-}
 
 export default function MinhasConsultasPage() {
   const [tab, setTab] = useState<"futuras" | "historico">("futuras");
@@ -40,41 +44,41 @@ export default function MinhasConsultasPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Minhas consultas</h1>
-        <Link
-          href="/p/agendar"
-          className={buttonVariants({ size: "sm", className: "h-9 rounded-full px-3" })}
-        >
-          <Plus size={14} />
-          Nova
-        </Link>
-      </div>
+      <PageHeader
+        title="Minhas consultas"
+        description="Acompanhe consultas agendadas e seu histórico completo"
+        actions={
+          <Link href="/p/agendar" className={buttonVariants()}>
+            <Plus size={16} />
+            Agendar nova
+          </Link>
+        }
+      />
 
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-full bg-muted p-1 text-sm">
+      <div className="mb-6 inline-flex rounded-xl border border-border bg-card p-1 text-sm">
         <button
           type="button"
           onClick={() => setTab("futuras")}
           className={cn(
-            "rounded-full py-1.5 font-medium transition-colors",
+            "rounded-lg px-4 py-1.5 font-medium transition-colors",
             tab === "futuras"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground",
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
-          Próximas {futuras.length > 0 && `(${futuras.length})`}
+          Próximas{futuras.length > 0 && ` · ${futuras.length}`}
         </button>
         <button
           type="button"
           onClick={() => setTab("historico")}
           className={cn(
-            "rounded-full py-1.5 font-medium transition-colors",
+            "rounded-lg px-4 py-1.5 font-medium transition-colors",
             tab === "historico"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground",
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
-          Histórico {historico.length > 0 && `(${historico.length})`}
+          Histórico{historico.length > 0 && ` · ${historico.length}`}
         </button>
       </div>
 
@@ -89,63 +93,76 @@ export default function MinhasConsultasPage() {
           description={
             tab === "futuras"
               ? "Agende sua próxima visita com um especialista."
-              : "Suas consultas realizadas aparecem aqui."
+              : "Suas consultas realizadas aparecerão aqui."
           }
           action={
             tab === "futuras" ? (
               <Link href="/p/agendar" className={buttonVariants()}>
                 <Plus size={14} />
-                Agendar
+                Agendar consulta
               </Link>
             ) : undefined
           }
         />
       ) : (
-        <div className="space-y-3">
-          {lista.map((a) => {
-            const prof = getProfissional(a.profissionalId);
-            const cons = getConsultorio(a.consultorioId);
-            return (
-              <Link key={a.id} href={`/p/consultas/${a.id}`} className="block">
-                <Card className="transition-colors hover:border-primary/30">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-sm font-semibold text-primary">
-                        {initials(prof?.nome ?? "—")}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="truncate text-sm font-semibold">
-                            {prof?.nome}
-                          </p>
-                          <AgendamentoStatusBadge status={a.status} />
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data / Hora</TableHead>
+                  <TableHead>Profissional</TableHead>
+                  <TableHead>Consultório</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lista.map((a) => {
+                  const prof = getProfissional(a.profissionalId);
+                  const cons = getConsultorio(a.consultorioId);
+                  const bruto =
+                    a.valorConsulta +
+                    a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell className="whitespace-nowrap">
+                        <Link
+                          href={`/p/consultas/${a.id}`}
+                          className="block hover:text-primary"
+                        >
+                          <div className="text-sm font-medium">
+                            {formatDate(a.data, "dd/MM/yyyy")}
+                          </div>
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            {a.hora}
+                          </div>
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm font-medium">{prof?.nome}</p>
+                        <p className="text-xs text-muted-foreground">
                           {prof?.especialidade}
                         </p>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar size={12} /> {formatDateLong(a.data)}
-                          </span>
-                          <span className="flex items-center gap-1 tabular-nums">
-                            <Clock size={12} /> {a.hora}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin size={12} /> {cons?.nome}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <PaymentStatusBadge status={a.statusPagamento} />
-                          <ChevronRight size={14} className="text-muted-foreground" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{cons?.nome}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {formatBRL(bruto)}
+                      </TableCell>
+                      <TableCell>
+                        <AgendamentoStatusBadge status={a.status} />
+                      </TableCell>
+                      <TableCell>
+                        <PaymentStatusBadge status={a.statusPagamento} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </>
   );
