@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -72,6 +73,7 @@ export default function RepassesPage() {
                 return (
                   <TableRow key={r.id}>
                     <TableCell>
+                      <Link href={`/financeiro/repasses/${r.id}`} className="block hover:text-primary">
                       <div className="flex items-center gap-3">
                         <Avatar className="size-9 bg-primary/10 text-primary">
                           <AvatarFallback>{initials(prof.nome)}</AvatarFallback>
@@ -81,6 +83,7 @@ export default function RepassesPage() {
                           <p className="text-xs text-muted-foreground">{prof.especialidade}</p>
                         </div>
                       </div>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">

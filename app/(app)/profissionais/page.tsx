@@ -31,8 +31,9 @@ export default function ProfissionaisPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {profissionais.map((p) => (
-              <div
+              <Link
                 key={p.id}
+                href={`/profissionais/${p.id}`}
                 className="flex flex-col gap-4 p-5 transition-colors hover:bg-muted/40 lg:flex-row lg:items-center"
               >
                 <div className="flex flex-1 items-center gap-4">
@@ -84,7 +85,7 @@ export default function ProfissionaisPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </CardContent>

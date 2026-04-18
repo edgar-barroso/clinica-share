@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
+
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -68,8 +69,13 @@ export default function AtendimentosPage() {
                 return (
                   <TableRow key={a.id}>
                     <TableCell className="whitespace-nowrap">
-                      <div className="text-sm font-medium">{formatDate(a.data, "dd/MM")}</div>
-                      <div className="text-xs text-muted-foreground tabular-nums">{a.hora}</div>
+                      <Link
+                        href={`/atendimentos/${a.id}`}
+                        className="block hover:text-primary"
+                      >
+                        <div className="text-sm font-medium">{formatDate(a.data, "dd/MM")}</div>
+                        <div className="text-xs text-muted-foreground tabular-nums">{a.hora}</div>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm font-medium">{paciente?.nome}</p>

@@ -31,7 +31,8 @@ export default function ConsultoriosPage() {
           const atends = r?.atendimentos ?? 0;
           const ocioso = atends === 0;
           return (
-            <Card key={c.id} className="transition-colors hover:border-primary/30">
+            <Link key={c.id} href={`/consultorios/${c.id}`} className="block">
+            <Card className="h-full transition-colors hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -73,6 +74,7 @@ export default function ConsultoriosPage() {
                 </div>
               </CardContent>
             </Card>
+            </Link>
           );
         })}
       </div>
