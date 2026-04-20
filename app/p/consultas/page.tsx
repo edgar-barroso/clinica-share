@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Calendar, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,15 +27,22 @@ import {
 } from "@/lib/mock/data";
 import { formatBRL, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const PACIENTE_ID = "pt01";
+import { useCurrentUser } from "@/lib/current-user";
 
 export default function MinhasConsultasPage() {
+  const router = useRouter();
+  const { pacienteId } = useCurrentUser();
   const [tab, setTab] = useState<"futuras" | "historico">("futuras");
 
-  const todas = atendimentos.filter((a) => a.pacienteId === PACIENTE_ID);
+  useEffect(() => {
+    if (!pacienteId) router.replace("/entrar");
+  }, [pacienteId, router]);
+
+  if (!pacienteId) return null;
+
+  const todas = atendimentos.filter((a) => a.pacienteId === pacienteId);
   const futuras = todas
-    .filter((a) => a.status === "agendado" || a.status === "confirmado")
+    .filter((a) => a.status === "agendado" || a.status === "em_atendimento")
     .sort((a, b) => `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`));
   const historico = todas
     .filter((a) => a.status === "realizado" || a.status === "cancelado")

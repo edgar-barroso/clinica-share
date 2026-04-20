@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import {
   CalendarCheck2,
   CalendarClock,
@@ -27,11 +31,11 @@ import {
 import {
   atendimentos,
   getConsultorio,
+  getPaciente,
   getProfissional,
 } from "@/lib/mock/data";
 import { formatBRL, formatDate, formatDateLong } from "@/lib/format";
-
-const PACIENTE_ID = "pt01";
+import { useCurrentUser } from "@/lib/current-user";
 
 function initials(name: string) {
   const parts = name.split(" ").filter((p) => !["Dr.", "Dra."].includes(p));
@@ -39,9 +43,20 @@ function initials(name: string) {
 }
 
 export default function PatientHomePage() {
-  const todas = atendimentos.filter((a) => a.pacienteId === PACIENTE_ID);
+  const router = useRouter();
+  const { pacienteId } = useCurrentUser();
+
+  useEffect(() => {
+    if (!pacienteId) router.replace("/entrar");
+  }, [pacienteId, router]);
+
+  if (!pacienteId) return null;
+
+  const paciente = getPaciente(pacienteId);
+  const primeiroNome = paciente?.nome.split(" ")[0] ?? "";
+  const todas = atendimentos.filter((a) => a.pacienteId === pacienteId);
   const futuras = todas
-    .filter((a) => a.status === "agendado" || a.status === "confirmado")
+    .filter((a) => a.status === "agendado" || a.status === "em_atendimento")
     .sort((a, b) => `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`));
   const realizadas = todas
     .filter((a) => a.status === "realizado")
@@ -58,7 +73,7 @@ export default function PatientHomePage() {
   return (
     <>
       <PageHeader
-        title="Olá, João 👋"
+        title={primeiroNome ? `Olá, ${primeiroNome} 👋` : "Olá 👋"}
         description="Acompanhe suas próximas consultas e seu histórico de atendimentos"
         actions={
           <Link href="/p/agendar" className={buttonVariants()}>

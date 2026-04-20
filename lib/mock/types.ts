@@ -35,10 +35,10 @@ export interface Paciente {
 export type StatusPagamento = "pago" | "pendente" | "gratuito";
 export type StatusAgendamento =
   | "agendado"
-  | "confirmado"
+  | "em_atendimento"
   | "realizado"
   | "cancelado"
-  | "nao-compareceu";
+  | "nao_compareceu";
 
 export interface ProcedimentoExtra {
   nome: string;

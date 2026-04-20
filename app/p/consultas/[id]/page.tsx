@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Calendar,
+  CalendarClock,
   CheckCircle2,
   Clock,
   CreditCard,
@@ -66,8 +67,8 @@ export default function ConsultaDetailPage({
     setTimeout(() => router.push("/p/consultas"), 800);
   }
 
-  const podeCancelar =
-    consulta.status === "agendado" || consulta.status === "confirmado";
+  const podeCancelar = consulta.status === "agendado";
+  const podeReagendar = consulta.status === "agendado";
 
   return (
     <>
@@ -83,15 +84,28 @@ export default function ConsultaDetailPage({
         title={`Consulta #${consulta.id}`}
         description={`${formatDateLong(consulta.data)} · ${consulta.hora}`}
         actions={
-          podeCancelar && !showCancelar ? (
-            <Button
-              variant="outline"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setShowCancelar(true)}
-            >
-              <X size={16} />
-              Cancelar consulta
-            </Button>
+          !showCancelar && (podeCancelar || podeReagendar) ? (
+            <div className="flex gap-2">
+              {podeReagendar && (
+                <Link
+                  href={`/p/agendar?remarcacao=${consulta.id}`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  <CalendarClock size={16} />
+                  Reagendar
+                </Link>
+              )}
+              {podeCancelar && (
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setShowCancelar(true)}
+                >
+                  <X size={16} />
+                  Cancelar consulta
+                </Button>
+              )}
+            </div>
           ) : undefined
         }
       />
@@ -141,7 +155,7 @@ export default function ConsultaDetailPage({
                   registrado para o consultório.
                 </p>
                 <div className="space-y-1.5">
-                  <Label htmlFor="motivo">Motivo</Label>
+                  <Label htmlFor="motivo">Motivo do cancelamento</Label>
                   <Textarea
                     id="motivo"
                     placeholder="Ex: tive um imprevisto e não posso comparecer"

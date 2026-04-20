@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -23,17 +25,27 @@ import {
   getProfissional,
 } from "@/lib/mock/data";
 import { formatBRL, formatDate } from "@/lib/format";
+import { useCurrentUser } from "@/lib/current-user";
 
 export default function AtendimentosPage() {
-  const ordenados = [...atendimentos].sort((a, b) =>
+  const { role, profissionalId } = useCurrentUser();
+  const isProfissional = role === "profissional" && !!profissionalId;
+  const filtrados = isProfissional
+    ? atendimentos.filter((a) => a.profissionalId === profissionalId)
+    : atendimentos;
+  const ordenados = [...filtrados].sort((a, b) =>
     `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`),
   );
 
   return (
     <>
       <PageHeader
-        title="Atendimentos"
-        description="Registro de consultas e procedimentos realizados na clínica"
+        title={isProfissional ? "Meus atendimentos" : "Atendimentos"}
+        description={
+          isProfissional
+            ? "Consultas e procedimentos realizados por você"
+            : "Registro de consultas e procedimentos realizados na clínica"
+        }
         actions={
           <Link href="/atendimentos/novo" className={buttonVariants()}>
             <Plus size={16} />

@@ -32,6 +32,7 @@ Resumo pós-reconciliação: **5 atores, 35 RF (29 oficiais + 6 de acesso), 10 R
 | [base/01-glossario-metodologia.md](base/01-glossario-metodologia.md) | Vocabulário Pressman da disciplina — usar termos do professor |
 | [base/02-regras-inegociaveis.md](base/02-regras-inegociaveis.md) | Limites técnicos/metodológicos que nunca se quebram |
 | [base/03-atividades-guarda-chuva.md](base/03-atividades-guarda-chuva.md) | Práticas contínuas obrigatórias (risco, SQA, configuração, RTF, controle) |
+| [base/04-glossario-dominio.md](base/04-glossario-dominio.md) | Vocabulário do domínio: agendamento × atendimento × consulta; labels de "motivo"; remarcação; repasse |
 
 ## 2. Playbooks — como executar cada frente
 

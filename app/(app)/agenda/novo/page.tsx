@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/layouts/page-header";
-import { consultorios, pacientes, profissionais } from "@/lib/mock/data";
+import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
+import { consultorios, profissionais } from "@/lib/mock/data";
 
 const HORARIOS_MANHA = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"];
 const HORARIOS_TARDE = ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"];
@@ -19,6 +20,7 @@ const HORARIOS_TARDE = ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "1
 export default function NovoAgendamentoPage() {
   const router = useRouter();
   const [horario, setHorario] = useState<string | null>(null);
+  const [pacienteId, setPacienteId] = useState("pt01");
   const [ocupados] = useState(new Set(["09:30", "14:00", "14:30", "15:30"]));
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -54,13 +56,16 @@ export default function NovoAgendamentoPage() {
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="paciente">Paciente</Label>
-                <Select id="paciente" required defaultValue="pt01">
-                  {pacientes.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome} — {p.telefone}
-                    </option>
-                  ))}
-                </Select>
+                <PacienteCombobox
+                  id="paciente"
+                  value={pacienteId}
+                  onChange={setPacienteId}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Busque pelo telefone do WhatsApp. Se o paciente ainda não estiver
+                  cadastrado, use <span className="font-medium">&quot;Cadastrar novo paciente&quot;</span>.
+                </p>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">

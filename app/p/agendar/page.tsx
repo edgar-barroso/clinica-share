@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  CalendarClock,
   Check,
+  Clock,
   CreditCard,
   Landmark,
   QrCode,
@@ -14,9 +16,10 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layouts/page-header";
-import { profissionais } from "@/lib/mock/data";
+import { atendimentos, profissionais } from "@/lib/mock/data";
 import { formatBRL, formatDateLong, formatWeekday } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/lib/current-user";
 
 const STEPS = [
   { key: "especialidade", label: "Especialidade" },
@@ -37,7 +40,7 @@ const HORARIOS = [
   { periodo: "Tarde", slots: ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"] },
 ];
 
-type Pagamento = "pix" | "cartao" | "boleto";
+type Pagamento = "pix" | "cartao" | "boleto" | "na_consulta";
 
 function initials(name: string) {
   const parts = name.split(" ").filter((x) => !["Dr.", "Dra."].includes(x));
@@ -45,10 +48,53 @@ function initials(name: string) {
 }
 
 export default function AgendarPage() {
+  return (
+    <Suspense fallback={null}>
+      <AgendarPageInner />
+    </Suspense>
+  );
+}
+
+function AgendarPageInner() {
   const router = useRouter();
-  const [step, setStep] = useState<StepKey>("especialidade");
-  const [especialidade, setEspecialidade] = useState<string | null>(null);
-  const [profId, setProfId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const { pacienteId } = useCurrentUser();
+  const remarcacaoId = searchParams.get("remarcacao");
+
+  useEffect(() => {
+    if (!pacienteId) router.replace("/entrar");
+  }, [pacienteId, router]);
+
+  const consultaOriginal = useMemo(() => {
+    if (!remarcacaoId || !pacienteId) return undefined;
+    const found = atendimentos.find((a) => a.id === remarcacaoId);
+    if (!found) return undefined;
+    if (found.pacienteId !== pacienteId) return undefined;
+    return found;
+  }, [remarcacaoId, pacienteId]);
+
+  useEffect(() => {
+    if (remarcacaoId && pacienteId && !consultaOriginal) {
+      toast.error("Consulta não encontrada", {
+        description: "Você só pode reagendar consultas da sua própria agenda.",
+      });
+      router.replace("/p/consultas");
+    }
+  }, [remarcacaoId, pacienteId, consultaOriginal, router]);
+
+  const profOriginal = consultaOriginal
+    ? profissionais.find((p) => p.id === consultaOriginal.profissionalId)
+    : undefined;
+
+  const [step, setStep] = useState<StepKey>(
+    consultaOriginal ? "data" : "especialidade",
+  );
+  const [especialidade, setEspecialidade] = useState<string | null>(
+    profOriginal?.especialidade ?? null,
+  );
+  const [profId, setProfId] = useState<string | null>(
+    consultaOriginal?.profissionalId ?? null,
+  );
   const [data, setData] = useState<string | null>(null);
   const [horario, setHorario] = useState<string | null>(null);
   const [pagamento, setPagamento] = useState<Pagamento>("pix");
@@ -97,10 +143,16 @@ export default function AgendarPage() {
     if (idx > 0) setStep(STEPS[idx - 1].key);
   }
   function finalizar() {
-    toast.success("Consulta agendada", {
-      description:
-        "Você receberá lembretes via WhatsApp 2 dias e 1 dia antes (AG07).",
-    });
+    if (consultaOriginal) {
+      toast.success("Consulta reagendada", {
+        description: `Consulta #${consultaOriginal.id} cancelada com motivo "Remarcado" e nova criada. Protótipo — não persistido.`,
+      });
+    } else {
+      toast.success("Consulta agendada", {
+        description:
+          "Você receberá lembretes via WhatsApp 2 dias e 1 dia antes (AG07).",
+      });
+    }
     setTimeout(() => router.push("/p/consultas"), 800);
   }
 
@@ -121,14 +173,39 @@ export default function AgendarPage() {
   return (
     <>
       <PageHeader
-        title="Agendar consulta"
-        description="Escolha a especialidade, o profissional, o horário e a forma de pagamento (AG01 + FI09)"
+        title={consultaOriginal ? "Reagendar consulta" : "Agendar consulta"}
+        description={
+          consultaOriginal
+            ? `Remarcando a consulta de ${formatDateLong(consultaOriginal.data)} às ${consultaOriginal.hora}`
+            : "Escolha a especialidade, o profissional, o horário e a forma de pagamento (AG01 + FI09)"
+        }
         actions={
-          <Link href="/p" className={buttonVariants({ variant: "outline" })}>
+          <Link
+            href={
+              consultaOriginal ? `/p/consultas/${consultaOriginal.id}` : "/p"
+            }
+            className={buttonVariants({ variant: "outline" })}
+          >
             Cancelar
           </Link>
         }
       />
+
+      {consultaOriginal && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
+          <CalendarClock size={16} className="mt-0.5 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">
+              Reagendamento em andamento
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Escolha uma nova data e horário. A consulta original (#
+              {consultaOriginal.id}) será cancelada automaticamente com motivo
+              &quot;Remarcado&quot;.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="mb-3 flex items-center justify-between text-sm">
@@ -299,28 +376,49 @@ export default function AgendarPage() {
               )}
 
               {step === "pagamento" && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <PaymentOption
-                    active={pagamento === "pix"}
-                    onClick={() => setPagamento("pix")}
-                    icon={QrCode}
-                    label="Pix"
-                    hint="Aprovação em 1 segundo"
-                  />
-                  <PaymentOption
-                    active={pagamento === "cartao"}
-                    onClick={() => setPagamento("cartao")}
-                    icon={CreditCard}
-                    label="Cartão"
-                    hint="Parcele em até 3x sem juros"
-                  />
-                  <PaymentOption
-                    active={pagamento === "boleto"}
-                    onClick={() => setPagamento("boleto")}
-                    icon={Landmark}
-                    label="Boleto"
-                    hint="Compensação em 2 dias úteis"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Pagar agora
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <PaymentOption
+                        active={pagamento === "pix"}
+                        onClick={() => setPagamento("pix")}
+                        icon={QrCode}
+                        label="Pix"
+                        hint="Aprovação em 1 segundo"
+                      />
+                      <PaymentOption
+                        active={pagamento === "cartao"}
+                        onClick={() => setPagamento("cartao")}
+                        icon={CreditCard}
+                        label="Cartão"
+                        hint="Parcele em até 3x sem juros"
+                      />
+                      <PaymentOption
+                        active={pagamento === "boleto"}
+                        onClick={() => setPagamento("boleto")}
+                        icon={Landmark}
+                        label="Boleto"
+                        hint="Compensação em 2 dias úteis"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Ou pagar depois
+                    </p>
+                    <PaymentOption
+                      active={pagamento === "na_consulta"}
+                      onClick={() => setPagamento("na_consulta")}
+                      icon={Clock}
+                      label="Pagar na hora da consulta"
+                      hint="Você paga no atendimento presencial (dinheiro, Pix ou cartão)"
+                      full
+                    />
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -352,15 +450,24 @@ export default function AgendarPage() {
                         ? "Pix"
                         : pagamento === "cartao"
                           ? "Cartão"
-                          : "Boleto"
+                          : pagamento === "boleto"
+                            ? "Boleto"
+                            : "Na consulta"
                     }
                   />
                 )}
               </dl>
               {valorBase > 0 && (
-                <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
-                  <span>Total</span>
-                  <span className="tabular-nums">{formatBRL(valorBase)}</span>
+                <div className="space-y-1 border-t border-border pt-3">
+                  <div className="flex items-center justify-between text-base font-semibold">
+                    <span>Total</span>
+                    <span className="tabular-nums">{formatBRL(valorBase)}</span>
+                  </div>
+                  {step === "pagamento" && pagamento === "na_consulta" && (
+                    <p className="text-xs text-muted-foreground">
+                      A pagar no atendimento presencial.
+                    </p>
+                  )}
                 </div>
               )}
               <div className="flex gap-2 pt-2">
@@ -384,7 +491,9 @@ export default function AgendarPage() {
                   </Button>
                 ) : (
                   <Button type="submit" className="flex-1">
-                    Confirmar e pagar
+                    {pagamento === "na_consulta"
+                      ? "Confirmar agendamento"
+                      : "Confirmar e pagar"}
                   </Button>
                 )}
               </div>
@@ -427,30 +536,45 @@ function PaymentOption({
   icon: Icon,
   label,
   hint,
+  full,
 }: {
   active: boolean;
   onClick: () => void;
   icon: typeof QrCode;
   label: string;
   hint: string;
+  full?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors",
+        "rounded-xl border p-4 text-left transition-colors",
+        full
+          ? "flex w-full items-center gap-4"
+          : "flex flex-col items-start gap-2",
         active
           ? "border-primary bg-primary/5"
           : "border-border bg-card hover:bg-muted",
       )}
     >
-      <Icon
-        size={20}
-        className={active ? "text-primary" : "text-muted-foreground"}
-      />
-      <p className="text-sm font-semibold">{label}</p>
-      <p className="text-xs text-muted-foreground">{hint}</p>
+      <div
+        className={cn(
+          full &&
+            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+          full && (active ? "bg-primary/10" : "bg-muted"),
+        )}
+      >
+        <Icon
+          size={20}
+          className={active ? "text-primary" : "text-muted-foreground"}
+        />
+      </div>
+      <div className={full ? "min-w-0 flex-1" : "contents"}>
+        <p className="text-sm font-semibold">{label}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
     </button>
   );
 }

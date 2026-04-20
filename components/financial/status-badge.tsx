@@ -23,10 +23,10 @@ export function RepasseStatusBadge({ status }: { status: StatusRepasse }) {
 export function AgendamentoStatusBadge({ status }: { status: StatusAgendamento }) {
   const map: Record<StatusAgendamento, { variant: "success" | "warning" | "danger" | "secondary" | "info" | "default"; label: string }> = {
     agendado: { variant: "info", label: "Agendado" },
-    confirmado: { variant: "default", label: "Confirmado" },
+    em_atendimento: { variant: "warning", label: "Em atendimento" },
     realizado: { variant: "success", label: "Realizado" },
     cancelado: { variant: "danger", label: "Cancelado" },
-    "nao-compareceu": { variant: "secondary", label: "Não compareceu" },
+    nao_compareceu: { variant: "secondary", label: "Não compareceu" },
   };
   const { variant, label } = map[status];
   return <Badge variant={variant}>{label}</Badge>;

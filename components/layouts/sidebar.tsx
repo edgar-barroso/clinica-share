@@ -42,18 +42,27 @@ const navPaciente: NavItem[] = [
   { href: "/p/perfil", label: "Meu perfil", icon: User },
 ];
 
+const navProfissional: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
+  { href: "/minha-agenda", label: "Minha agenda", icon: Calendar },
+  { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
+];
+
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
   auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
-  profissional: ["/dashboard", "/agenda", "/atendimentos"],
   atendente: ["/agenda", "/atendimentos"],
-  paciente: navPaciente.map((n) => n.href),
 };
 
 export function Sidebar() {
   const pathname = usePathname();
   const { role } = useRole();
-  const items = role === "paciente" ? navPaciente : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
+  const items =
+    role === "paciente"
+      ? navPaciente
+      : role === "profissional"
+        ? navProfissional
+        : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">

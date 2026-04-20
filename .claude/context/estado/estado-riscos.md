@@ -34,6 +34,20 @@
 | R-013 | Next.js 16 + Tailwind v4 são versões recentes com documentação escassa e possíveis breaking changes | Média | Médio | Média | Consultar `node_modules/next/dist/docs/` antes de usar APIs novas; usar shadcn canary para compatibilidade com Tailwind v4 | Equipe (codificação) | Aberto |
 | R-014 | Protótipo mockado pode ser confundido pelo Dr. Edson como sistema pronto | Média | Médio | Média | Banner "PROTÓTIPO" visível; introdução formal na R2 explicando escopo; dados visivelmente fictícios | Equipe (comunicação) | Aberto |
 
+### Riscos decorrentes da auth separada do paciente + Google OAuth (2026-04-19) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-015 | Google OAuth compartilha dados do paciente (e-mail, nome, foto) com terceiro — impacto LGPD e dependência jurídica | Alta | Médio | Alta | Documentar na Política de Privacidade; exigir consentimento explícito no cadastro; confirmar decisão com cliente em R2 (PEND-024); avaliar manter e-mail/senha como alternativa sempre disponível | Equipe (modelagem + implementação) | Aberto |
+| R-016 | Auto-cadastro sem validação prévia pode gerar contas duplicadas ou fake, conflitando com cadastros criados pela atendente via AG02 | Média | Médio | Média | Unificar por e-mail/CPF na criação; fluxo de "vincular conta existente" quando atendente já cadastrou; definir dados mínimos em PEND-025 | Equipe (modelagem) | Aberto |
+| R-017 | Indisponibilidade do Google bloqueia o método de login mais usado pelo paciente | Baixa | Médio | Baixa | Manter e-mail/senha sempre disponível como fallback; exibir erro amigável se OAuth falhar | Equipe (implementação) | Aberto |
+| R-018 | Oferecer "pagar na hora da consulta" (FI10) sem política de no-show aumenta faltas e ociosidade de consultório (relaciona com R-002) <!-- NOVO --> | Média | Médio | Média | Validar política em R2 via PEND-027; até lá, manter lembrete WhatsApp (AG07) como principal redutor de no-show; avaliar sinal de "reserva confirmada" com confirmação 1 dia antes | Equipe (comunicação + planejamento) | Aberto |
+
+### Riscos do fluxo operacional mockado (2026-04-19) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-019 | Protótipo sem persistência entre páginas pode confundir Dr. Edson na demo — marcar "Chegou" e navegar desfaz a transição <!-- NOVO --> | Alta | Baixo | Média | Toasts claros por transição ("Registrado por X"); banner "protótipo sem persistência" visível; roteiro de demo executa todas as ações sem mudar de tela; README orienta | Equipe (comunicação) | Aberto |
+| R-020 | Role simulado sem `profissionalId` real impede validação semântica — profissional é sempre `p01` (Dra. Nirmala) <!-- NOVO --> | Média | Baixo | Baixa | Nota no seletor de role; PEND-032 e implementação de auth real resolverão. Demo usa apenas o profissional mapeado | Equipe (implementação) | Aberto |
+
 ### Legenda
 - **Probabilidade:** Baixa / Média / Alta
 - **Impacto:** Baixo / Médio / Alto / Crítico
@@ -44,4 +58,4 @@
 |---|---|---|---|
 | _(nenhum)_ | | | |
 
-## Última atualização: 2026-04-18 (incorporação dos riscos R1 e riscos técnicos de stack)
+## Última atualização: 2026-04-19 (+R-019/020 protótipo sem persistência + role simulado sem profissionalId real)

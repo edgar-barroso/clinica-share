@@ -1,21 +1,32 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Bell, ChevronRight, FileLock2, LogOut, Mail, MessageCircle, Phone, Shield } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layouts/page-header';
 import { getPaciente } from '@/lib/mock/data';
-
-const PACIENTE_ID = 'pt01';
+import { useCurrentUser } from '@/lib/current-user';
 
 export default function PerfilPage() {
-  const paciente = getPaciente(PACIENTE_ID)!;
+  const router = useRouter();
+  const { pacienteId } = useCurrentUser();
   const [notifWhats, setNotifWhats] = useState(true);
   const [notifEmail, setNotifEmail] = useState(true);
+
+  useEffect(() => {
+    if (!pacienteId) router.replace('/entrar');
+  }, [pacienteId, router]);
+
+  if (!pacienteId) return null;
+
+  const paciente = getPaciente(pacienteId);
+  if (!paciente) return null;
 
   return (
     <>
@@ -102,10 +113,22 @@ export default function PerfilPage() {
               <CardTitle>Sair</CardTitle>
             </CardHeader>
             <CardContent>
-              <Link href="/login" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.localStorage.removeItem('clinicashare:role');
+                  }
+                  toast.success('Sessão encerrada');
+                  router.push('/entrar');
+                }}
+                className={cn(
+                  'inline-flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10',
+                )}
+              >
                 <LogOut size={16} />
                 Encerrar sessão
-              </Link>
+              </button>
               <p className="mt-3 text-center text-[11px] text-muted-foreground">ClinicaShare · v0.1.0 · DevsTech</p>
             </CardContent>
           </Card>

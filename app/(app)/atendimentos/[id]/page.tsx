@@ -8,6 +8,7 @@ import {
   AgendamentoStatusBadge,
   PaymentStatusBadge,
 } from "@/components/financial/status-badge";
+import { EditAtendimentoButton } from "@/components/atendimento/edit-button";
 import {
   atendimentos,
   getConsultorio,
@@ -44,6 +45,7 @@ export default async function AtendimentoDetailPage({
       <PageHeader
         title={`Atendimento #${a.id}`}
         description={`${formatDateLong(a.data)} · ${a.hora}`}
+        actions={<EditAtendimentoButton atendimentoId={a.id} />}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

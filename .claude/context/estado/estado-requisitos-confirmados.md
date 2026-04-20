@@ -27,6 +27,8 @@
 | AG05 | Sistema impede conflito de horário no mesmo consultório | Alta | A | R1 | E | Confirmado |
 | AG06 | Paciente/atendente pode cancelar agendamento com registro obrigatório de motivo | Média | B | R1 | N | Confirmado |
 | AG07 | IA envia lembrete de consulta via WhatsApp: 2 dias antes, 1 dia antes e no dia | Média | A | R1 | X | Confirmado |
+| AG08 | Atendente marca chegada do paciente no dia (transição `agendado → em_atendimento`) <!-- NOVO --> | Alta | B | Equipe | E | **Proposto — validar em R2 (PEND-030)** |
+| AG09 | Paciente pode reagendar consulta sem refazer wizard do zero (cancela original + abre agendamento novo) <!-- NOVO --> | Média | M | Equipe | E | **Proposto — validar em R2 (PEND-032)** |
 
 ### Módulo de Consultórios (CO)
 | ID | Descrição | Prioridade | Complexidade | Origem | IFQ | Status |
@@ -43,6 +45,8 @@
 | AT02 | Procedimentos extras realizados no atendimento são registrados individualmente | Alta | B | R1 | N | Confirmado |
 | AT03 | Sistema possui prontuário eletrônico integrado (campos a definir na R2) | Alta | A | R1 | N | Confirmado (escopo aberto) |
 | AT04 | Se profissional usar prontuário externo, sistema registra a ocorrência para fins financeiros | Média | B | R1 | E | Confirmado |
+| AT05 | Profissional inicia atendimento (transição `agendado → em_atendimento`) <!-- NOVO --> | Alta | B | Equipe | E | **Proposto — validar em R2 (PEND-030)** |
+| AT06 | Profissional finaliza atendimento abrindo formulário de registro pré-populado a partir do agendamento original (transição `em_atendimento → realizado`) <!-- NOVO --> | Alta | M | Equipe | E | **Proposto — validar em R2 (PEND-030)** |
 
 ### Módulo Financeiro (FI)
 | ID | Descrição | Prioridade | Complexidade | Origem | IFQ | Status |
@@ -56,6 +60,8 @@
 | FI07 | Fechamento financeiro é semanal; sistema gera relatório de prestação de contas por período | Alta | M | R1 | N | Confirmado |
 | FI08 | Sistema registra aluguel fixo por turno utilizado por profissional | Alta | B | R1 | N | Confirmado |
 | FI09 | Paciente pode pagar via Pix, cartão ou boleto no momento do agendamento online | Média | A | R1 | X | Confirmado |
+| FI10 | Paciente pode optar por **pagar no momento do atendimento** (presencial), ao invés de pagar online no agendamento <!-- NOVO --> | Alta | B | Equipe | E | **Proposto — validar em R2 (PEND-026/027/028)** |
+| FI11 | Auxiliar/admin pode editar valor, procedimentos e status de pagamento de atendimento após registro (corrige erros operacionais) <!-- NOVO --> | Alta | B | Equipe | N | **Proposto — validar em R2 (PEND-031)** |
 
 ### Módulo de Relatórios e Dashboard (RE)
 | ID | Descrição | Prioridade | Complexidade | Origem | IFQ | Status |
@@ -77,6 +83,9 @@ Derivados da planilha v2 (adicionados pós-revisão da equipe como infraestrutur
 | RF-024 | Encerramento automático de sessão após inatividade | Média | B | Equipe | E | Confirmado |
 | RF-025 | Registro do user_id autenticado em todo audit log financeiro | Alta | B | Regra inegociável | N | Confirmado |
 | RF-026 | Recuperação de senha via e-mail | Média | B | Equipe | N | Confirmado |
+| RF-027 | Paciente pode se auto-cadastrar pelo portal fornecendo dados mínimos <!-- NOVO --> | Alta | M | Equipe | E | **Proposto — validar em R2 (PEND-023)** |
+| RF-028 | Paciente pode autenticar via Google OAuth (SSO) <!-- NOVO --> | Média | M | Equipe | X | **Proposto — validar em R2 (PEND-024)** |
+| RF-029 | URLs/fluxos distintos para login da equipe interna (`/login`) e login do paciente (`/entrar`, `/cadastrar`) <!-- NOVO --> | Média | B | Equipe | E | **Proposto — decisão interna (DEC-A07)** |
 
 ### Legenda IFQ (Kano / QFD)
 - **Normal (N):** o cliente espera e ficará insatisfeito se faltar
@@ -112,9 +121,10 @@ Se qualquer critério falhar, o requisito volta como pendência para a próxima 
 
 ## Resumo
 - **5 atores** confirmados
-- **29 RF oficiais** (R1) + **6 RF de controle de acesso** (equipe) = **35 RF**
+- **29 RF oficiais** (R1) + **6 RF de controle de acesso** (equipe) + **3 RF propostos de auth paciente (RF-027/028/029)** + **1 RF proposto de pagamento presencial (FI10)** + **5 RF propostos de fluxo operacional (AG08, AG09, AT05, AT06, FI11)** = **35 confirmados + 9 propostos**
 - **4 RNF oficiais** + **6 RNF internos (regras inegociáveis)** = **10 RNF**
 - Limites quantitativos de RNF03 (tempo de resposta, disponibilidade) **pendentes — R2**
 - Campos do prontuário (AT03) **pendentes — R2**
+- Auto-cadastro e Google OAuth do paciente **propostos — validar em R2** (PEND-023, PEND-024, PEND-025)
 
-## Última atualização: 2026-04-18 (reconciliação com artefatos R1)
+## Última atualização: 2026-04-19 (+AG08/AG09/AT05/AT06/FI11 fluxo operacional proposto)
