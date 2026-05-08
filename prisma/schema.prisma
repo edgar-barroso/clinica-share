@@ -1,3 +1,11 @@
+// =====================================================================
+// ClinicaShare — Schema Prisma
+// =====================================================================
+// Modelos espelham lib/mock/types.ts. Tabelas físicas em snake_case
+// inglês (regra inegociável do projeto). Cliente Prisma exposto em
+// português para alinhar com o código de domínio existente.
+// =====================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,6 +13,295 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ============ AUTH / USERS ============================================
+
+enum Role {
+  admin
+  auxiliar
+  profissional
+  atendente
+  paciente
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String?
+  role         Role
+  ativo        Boolean   @default(true)
+  ultimoAcesso DateTime?
+
+  passwordResetToken          String?
+  passwordResetTokenExpiresAt DateTime?
+
+  profissionalId String?       @unique
+  profissional   Profissional? @relation(fields: [profissionalId], references: [id])
+
+  pacienteId String?   @unique
+  paciente   Paciente? @relation(fields: [pacienteId], references: [id])
+
+  staffId String? @unique
+  staff   Staff?  @relation(fields: [staffId], references: [id])
+
+  auditLogs AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@map("users")
+}
+
+// ============ DOMAIN ENUMS ============================================
+
+enum Turno {
+  manha
+  tarde
+  noite
+}
+
+enum ModalidadeContrato {
+  aluguel_fixo @map("aluguel-fixo")
+  percentual
+}
+
+enum CargoStaff {
+  atendente
+  auxiliar
+}
+
+enum Sexo {
+  M
+  F
+  outro
+}
+
+enum StatusPagamento {
+  pago
+  pendente
+  gratuito
+}
+
+enum StatusAgendamento {
+  agendado
+  em_atendimento
+  realizado
+  cancelado
+  nao_compareceu
+}
+
+enum StatusRepasse {
+  aberto
+  pago
+}
+
+// ============ DOMAIN MODELS ===========================================
+
+model Consultorio {
+  id                        String   @id @default(uuid())
+  nome                      String
+  tipo                      String
+  equipamentos              String[]
+  especialidadesCompativeis String[]
+  ativo                     Boolean  @default(true)
+
+  atendimentos Atendimento[]
+  turnosFixos  TurnoFixo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("consulting_rooms")
+}
+
+model Profissional {
+  id                     String             @id @default(uuid())
+  nome                   String
+  especialidade          String
+  conselho               String
+  email                  String             @unique
+  telefone               String
+  ativo                  Boolean            @default(true)
+  modalidadeContrato     ModalidadeContrato
+  // 0..1 (ex.: 0.30 = 30%); RNF-101 sobre precisão financeira
+  percentualRepasse      Decimal?           @db.Decimal(5, 4)
+  // Aluguel pago pelo profissional ao Dr. Edson, por turno utilizado (DEC-R1-08)
+  valorAluguelPorTurno   Decimal?           @db.Decimal(10, 2)
+  duracaoConsultaMinutos Int                @default(30)
+
+  turnosFixos  TurnoFixo[]
+  atendimentos Atendimento[]
+  repasses     Repasse[]
+  user         User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ativo])
+  @@map("professionals")
+}
+
+model TurnoFixo {
+  id             String @id @default(uuid())
+  profissionalId String
+  consultorioId  String
+  // 1=segunda ... 5=sexta (clínica não opera sáb/dom no MVP)
+  diaSemana      Int
+  turno          Turno
+
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+
+  // Profissional não pode ter dois turnos no mesmo dia/turno
+  @@unique([profissionalId, diaSemana, turno])
+  // Um consultório só atende um profissional por dia/turno (PEND-015 valida em R2)
+  @@unique([consultorioId, diaSemana, turno])
+  @@map("fixed_shifts")
+}
+
+model Staff {
+  id            String     @id @default(uuid())
+  nome          String
+  cargo         CargoStaff
+  email         String     @unique
+  telefone      String
+  ativo         Boolean    @default(true)
+  senhaDefinida Boolean    @default(false)
+
+  user User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("staff_members")
+}
+
+model Paciente {
+  id             String    @id @default(uuid())
+  nome           String
+  telefone       String
+  email          String    @unique
+  // CPF é PII de alto risco: opcional no MVP até PEND-025 definir mínimo
+  cpf            String?   @unique
+  dataNascimento DateTime? @db.Date
+  sexo           Sexo?
+  // Estrutura: { cep, rua, numero, cidade, uf } — não normalizado no MVP
+  endereco       Json?
+  // Estrutura: { temPlano, operadora?, numeroCarteirinha? }
+  plano          Json?
+  senhaDefinida  Boolean   @default(false)
+
+  atendimentos Atendimento[]
+  user         User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("patients")
+}
+
+model Atendimento {
+  id             String @id @default(uuid())
+  data           DateTime @db.Date
+  // HH:mm (string em vez de Time pra simplificar formatação no front)
+  hora           String
+  pacienteId     String
+  profissionalId String
+  consultorioId  String
+  // Valor cobrado nesta consulta. RNF-101 / DEC-A03: nunca float
+  valorConsulta  Decimal           @db.Decimal(10, 2)
+  status         StatusAgendamento @default(agendado)
+  // Independente de status — pode estar agendado e já pago, ou realizado e pendente
+  statusPagamento StatusPagamento  @default(pendente)
+  // Obrigatório quando status=cancelado ou status=nao_compareceu (validar na app)
+  motivoCancelamento         String?
+  // Obrigatório quando statusPagamento=gratuito (FI06)
+  motivoDescontoOuGratuidade String?
+  usaProntuarioExterno       Boolean @default(false)
+  // Estrutura aberta até PEND-017 — DEC-E01 dados clínicos fora do MVP no schema relacional
+  prontuarioInterno          Json?
+  observacoes                String?
+
+  paciente     Paciente             @relation(fields: [pacienteId], references: [id])
+  profissional Profissional         @relation(fields: [profissionalId], references: [id])
+  consultorio  Consultorio          @relation(fields: [consultorioId], references: [id])
+  repasses     RepasseAtendimento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Não pode haver dois atendimentos no mesmo consultório no mesmo horário (AG05)
+  @@unique([data, hora, consultorioId])
+  @@index([profissionalId, data])
+  @@index([pacienteId])
+  @@index([status])
+  @@index([statusPagamento])
+  @@map("appointments")
+}
+
+model Repasse {
+  id             String        @id @default(uuid())
+  profissionalId String
+  // Período semanal (DEC-R1-02). FI07 fechamento.
+  periodoInicio  DateTime      @db.Date
+  periodoFim     DateTime      @db.Date
+  // Soma de valorConsulta dos atendimentos pagos no período
+  receitaBruta   Decimal       @db.Decimal(12, 2)
+  // Calculado SEMPRE no servidor (DEC-A04 / RNF-103)
+  valorRepasse   Decimal       @db.Decimal(12, 2)
+  status         StatusRepasse @default(aberto)
+  dataPagamento  DateTime?
+
+  profissional Profissional         @relation(fields: [profissionalId], references: [id])
+  atendimentos RepasseAtendimento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([profissionalId, periodoInicio, periodoFim])
+  @@index([status])
+  @@map("payouts")
+}
+
+model RepasseAtendimento {
+  repasseId     String
+  atendimentoId String
+
+  repasse     Repasse     @relation(fields: [repasseId], references: [id], onDelete: Cascade)
+  atendimento Atendimento @relation(fields: [atendimentoId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@id([repasseId, atendimentoId])
+  @@index([atendimentoId])
+  @@map("payout_appointments")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  userId      String
+  // Snapshot do nome do usuário no momento da ação (RF-025) — sobrevive a renomeações
+  userNome    String
+  // Nome lógico da entidade ("Atendimento", "Repasse", etc.); sem FK por design
+  entidade    String
+  entidadeId  String
+  campo       String
+  valorAntes  String
+  valorDepois String
+  // Justificativa da alteração (RNF-102 — sempre preenchido)
+  motivo      String
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entidade, entidadeId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// ============ INFRA ===================================================
 
 model HealthCheck {
   id        String   @id @default(uuid())

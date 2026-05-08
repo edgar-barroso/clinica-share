@@ -57,7 +57,7 @@
 ### Riscos da antecipação de infra (2026-05-08) <!-- NOVO -->
 | ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
 |---|---|---|---|---|---|---|---|
-| R-023 | Schema do Prisma divergir dos modelos validados em R2; equipe precisa descartar/reescrever migrations <!-- NOVO --> | Baixa | Baixo | Baixa | Schema atual contém apenas `HealthCheck` (placeholder); nenhuma entidade de domínio foi modelada antes da R2; migrations descartáveis até primeiro requisito real (DEC-A13) | Equipe (modelagem + codificação) | Aberto |
+| R-023 | Schema do Prisma divergir dos modelos validados em R2; equipe precisa descartar/reescrever migrations <!-- ALTERADO 2026-05-08 — risco realizado parcialmente: schema do domínio foi antecipado (DEC-A15), exposição subiu --> | Média | Médio | Média | Schema espelha `lib/mock/types.ts` (já consolidado) + decisões R1; campos abertos por R2 ficam nullable/JSON (`prontuarioInterno`, `endereco`, `plano`); migrations renomeáveis se R2 trouxer mudanças; revisar após R2 com Dr. Edson | Equipe (modelagem + codificação) | Aberto |
 | R-024 | Conflito de porta entre Postgres do clinica-share e outros projetos locais que usam 5432 (ex: ar-lens-marketplace) <!-- NOVO --> | Alta | Baixo | Média | Postgres do clinica-share publicado na porta host **5433** (DEC-A11); `.env.example` documenta a porta; isolamento via Docker network nominalmente nomeado | Equipe (implementação) | Mitigado |
 
 ### Legenda
@@ -70,4 +70,4 @@
 |---|---|---|---|
 | _(nenhum)_ | | | |
 
-## Última atualização: 2026-05-08 (+R-023 schema Prisma divergir de R2; +R-024 conflito de porta Postgres mitigado via 5433)
+## Última atualização: 2026-05-08 (+R-023 atualizado: domínio antecipado em DEC-A15 elevou exposição de Baixa para Média; +R-024 conflito de porta Postgres mitigado via 5433)
