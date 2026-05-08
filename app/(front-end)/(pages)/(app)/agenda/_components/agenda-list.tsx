@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Clock, MapPin, Stethoscope, User } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AgendamentoStatusBadge } from "@/components/financial/status-badge";
@@ -30,6 +31,7 @@ export function AgendaList({ agendamentos, onChange, showProfissional }: Props) 
   // RBAC client-side: define quais ações aparecem para cada role.
   const podeMarcarChegada = ["admin", "auxiliar", "atendente"].includes(role);
   const podeCancelar = ["admin", "auxiliar", "atendente"].includes(role);
+  const podeAtuarNoAtendimento = ["admin", "auxiliar", "profissional"].includes(role);
 
   async function handleMarcarChegada(id: string) {
     try {
@@ -96,6 +98,22 @@ export function AgendaList({ agendamentos, onChange, showProfissional }: Props) 
                 >
                   Marcar chegada
                 </Button>
+              )}
+              {a.status === "em_atendimento" && podeAtuarNoAtendimento && (
+                <Link
+                  href={`/atendimentos/${a.id}`}
+                  className={buttonVariants({ variant: "default", size: "sm" })}
+                >
+                  Finalizar
+                </Link>
+              )}
+              {a.status === "agendado" && podeAtuarNoAtendimento && (
+                <Link
+                  href={`/atendimentos/${a.id}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Iniciar
+                </Link>
               )}
               {(a.status === "agendado" || a.status === "em_atendimento") &&
                 podeCancelar && (

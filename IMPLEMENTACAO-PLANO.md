@@ -1,7 +1,7 @@
 # Plano de Implementação — ClinicaShare
 
 > **Audiência**: equipe de 4 alunos (DevsTech) trabalhando no MVP do Dr. Edson Andrade.
-> **Status**: 2026-05-08 — Fases 0, 1, 2 e 3 ✅ concluídas. 97 testes Vitest + 11 specs Playwright verde. Próxima: Fase 4 (Atendimento + Pagamento).
+> **Status**: 2026-05-08 — Fases 0, 1, 2, 3 e 4 ✅ concluídas. 117 testes Vitest + 15 specs Playwright verde. Próxima: Fase 5 (Repasse — CRÍTICO RNF-104, cobertura ≥ 90%).
 > **Meta**: levar o sistema ao estado **100% implementado e testado** em 8 sprints (Fases 1–8).
 
 ---
@@ -344,7 +344,7 @@ Componentes refeitos:
 
 ---
 
-### Fase 4 — Atendimento + Pagamento (1 sprint)
+### Fase 4 — Atendimento + Pagamento (100% concluída ✅ 2026-05-08)
 
 **Objetivo**: registrar atendimento realizado (avulso ou pós-finalização) com pagamento presencial e prontuário.
 
@@ -353,36 +353,42 @@ Componentes refeitos:
 **Entregáveis**:
 
 Rotas:
-- `POST /api/atendimentos` — registro avulso (walk-in, AT01 sem agendamento prévio)
-- `POST /api/atendimentos/[id]/iniciar` — AT05 (profissional dono OU admin/aux)
-- `POST /api/atendimentos/[id]/finalizar` — AT06 (profissional dono OU admin/aux). Body inclui `prontuarioInterno: Json`, `valorConsulta`, `statusPagamento`
-- `PATCH /api/atendimentos/[id]` — FI11 editar pós-realizado. **RBAC: só admin e auxiliar** (PEND-031). Audit log obrigatório
-- `GET /api/atendimentos` — listar com filtro por role
-- `GET /api/atendimentos/[id]` — detalhe
+- [x] `POST /api/atendimentos` — registro avulso (walk-in, AT01) → `status=realizado` direto
+- [x] `POST /api/agendamentos/[id]/iniciar` — AT05 (profissional dono OU admin/aux). Audit log
+- [x] `POST /api/agendamentos/[id]/nao-compareceu` — atendente/admin/aux. Audit log
+- [x] `POST /api/atendimentos/[id]/finalizar` — AT06 (profissional dono OU admin/aux). Body: `valorConsulta`, `statusPagamento`, `motivoDescontoOuGratuidade?`, `prontuarioInterno?` (Json livre PEND-017). 3 audit logs (status, valor, statusPagamento)
+- [x] `PATCH /api/atendimentos/[id]` — FI11 editar pós-realizado. **RBAC: só admin e auxiliar** (PEND-031). Motivo obrigatório → audit log por campo alterado
+- [x] `GET /api/atendimentos` — listar com filtro por role (RBAC RF-023)
+- [x] `GET /api/atendimentos/[id]` — detalhe (paciente RBAC: só dono)
 
-Páginas:
-- [ ] [/atendimentos](app/(front-end)/(pages)/(app)/atendimentos/page.tsx)
-- [ ] [/atendimentos/novo](app/(front-end)/(pages)/(app)/atendimentos/novo/page.tsx) — usa `AtendimentoForm` em [components/atendimento/atendimento-form.tsx](components/atendimento/atendimento-form.tsx)
-- [ ] [/atendimentos/[id]](app/(front-end)/(pages)/(app)/atendimentos/[id]/page.tsx) — botões de transição condicionados por role
-- [ ] [/atendimentos/[id]/editar](app/(front-end)/(pages)/(app)/atendimentos/[id]/editar/page.tsx) — só visível pra admin/aux
+Páginas migradas (mock removido):
+- [x] [/atendimentos](app/(front-end)/(pages)/(app)/atendimentos/page.tsx) — tabela com role-aware columns
+- [x] [/atendimentos/novo](app/(front-end)/(pages)/(app)/atendimentos/novo/page.tsx) — walk-in (AT01) com PacienteCombobox + selects
+- [x] [/atendimentos/[id]](app/(front-end)/(pages)/(app)/atendimentos/[id]/page.tsx) — detalhe + ações inline (Iniciar/Finalizar com prontuário expansível) condicionadas por role
+- [x] [/atendimentos/[id]/editar](app/(front-end)/(pages)/(app)/atendimentos/[id]/editar/page.tsx) — só admin/aux (PEND-031); motivo obrigatório
 
-**Audit log obrigatório em**:
-- Alteração de `valorConsulta`, `statusPagamento`, `motivoDescontoOuGratuidade` (RNF-102)
-- Transição de status (RF-025 em audit financeiro)
+Componentes:
+- [x] [agenda-list.tsx](app/(front-end)/(pages)/(app)/agenda/_components/agenda-list.tsx) — adicionou botões "Iniciar" e "Finalizar" linkando para /atendimentos/[id]
+
+**Audit log gravado em**:
+- [x] AT05 (iniciar) — 1 log de status
+- [x] AT06 (finalizar) — 3 logs (status + valorConsulta + statusPagamento)
+- [x] AT01 (walk-in) — 2 logs (valorConsulta + statusPagamento)
+- [x] FI11 (edição) — 1 log por campo alterado (valorConsulta, statusPagamento, motivoDescontoOuGratuidade) com motivo do operador
+- [x] não-compareceu — 1 log de status
 
 **Testes**:
-- [ ] Vitest: cada transição (com role permitido/negado), edição pós-realizado por admin/aux, profissional NÃO edita
-- [ ] Vitest: tentativa de marcar `gratuito` sem motivo → 400
-- [ ] Playwright: "agendado → em_atendimento → realizado com prontuário e pagamento"
+- [x] Vitest: 20 testes novos (walk-in RBAC, iniciar transition + RBAC, nao-compareceu, finalizar transitions + role gating, FI06 gratuito sem motivo, FI11 edição) — total **117 verde**
+- [x] Playwright `e2e/atendimento-flow.spec.ts`: 4 specs (fluxo completo agendado→em_atendimento→realizado, walk-in via UI, FI11 com audit log, FI06 422) — total **15 specs verde**
 
 **DoD**:
-- [ ] FI09 (pagamento online) NÃO implementado (DEC-E09)
-- [ ] `motivoDescontoOuGratuidade` obrigatório quando `statusPagamento=gratuito` (FI06)
-- [ ] AuditLog cobre 100% das mutações financeiras
+- [x] FI09 (pagamento online) NÃO implementado (DEC-E09)
+- [x] `motivoDescontoOuGratuidade` obrigatório quando `statusPagamento=gratuito` (FI06) → schema Zod refine
+- [x] AuditLog cobre 100% das mutações financeiras (verificado via grep no `_usecases/atendimento/*`)
 
-**Bloqueios**:
-- PEND-017 (campos prontuário) — usar Json livre com sugestões no UI
-- PEND-031 (quem edita) — implementado conforme decisão (só admin/aux)
+**Bloqueios resolvidos**:
+- PEND-017 (campos prontuário) — Json livre com sugestões no UI (anamnese, evolução, conduta, retorno)
+- PEND-031 (quem edita) — implementado conforme decisão (só admin/aux); profissional/atendente recebem 403
 
 **RFs cobertas**: AT01, AT02, AT03, AT04, AT05, AT06, FI05, FI06, FI10, FI11, RF-025
 
