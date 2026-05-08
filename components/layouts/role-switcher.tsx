@@ -6,10 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { ROLES, useRole, type Role } from "@/lib/role";
 import { cn } from "@/lib/utils";
 
+/**
+ * Switcher de perfil — **dev-only** (DEC-P09). Em produção, role vem
+ * exclusivamente de `/api/auth/me` (cookie + JWT); permitir trocar via
+ * UI seria bypass de RBAC.
+ */
 export function RoleSwitcher() {
   const { role, info, setRole } = useRole();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
 
   useEffect(() => {
     if (!open) return;

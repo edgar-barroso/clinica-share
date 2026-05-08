@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db";
 
 export async function cleanAuthData() {
-  // Ordem importa: User referencia Paciente (FK opcional)
+  // Ordem importa por causa das FKs:
+  // AuditLog → User; User → Paciente/Profissional/Staff (1:1 opcional)
+  await prisma.auditLog.deleteMany();
   await prisma.user.deleteMany();
   await prisma.paciente.deleteMany();
 }

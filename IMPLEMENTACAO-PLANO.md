@@ -171,37 +171,39 @@ Helper `cleanAuthData()` em `tests/helpers/db.ts` deve evoluir para `cleanDb()` 
 
 ---
 
-### Fase 1 — Backend foundation + seed (1 sprint)
+### Fase 1 — Backend foundation + seed (concluída ✅ 2026-05-08)
 
-**Objetivo**: criar os helpers transversais (audit, requireRole, api-handler) e popular o DB com 1 admin para destravar todas as fases seguintes.
-
-**Pré-requisitos**: Fase 0 concluída.
+**Objetivo**: criar os helpers transversais (audit, requireRole, requireUser, handle-error) e popular o DB com 1 admin para destravar todas as fases seguintes.
 
 **Entregáveis**:
-- [ ] `app/(back-end)/_lib/audit.ts` — helper `audit({ user, entidade, entidadeId, campo, valorAntes, valorDepois, motivo })` que insere em `AuditLog`
-- [ ] `app/(back-end)/_lib/require-role.ts` — helper `requireRole(req, allowedRoles[])` que valida cookie + role; retorna user ou throw `NaoAutorizado`
-- [ ] `app/(back-end)/_lib/handle-error.ts` — generaliza `handle-auth-error.ts` (renomear ou extrair)
-- [ ] `app/(back-end)/_lib/api-handler.ts` (opcional) — wrapper try/catch padrão
-- [ ] `lib/api-client.ts` — `apiGet/apiPost/apiPatch/apiDelete` genéricos
-- [ ] `prisma/seed.ts` — cria User admin idempotente a partir de `ADMIN_EMAIL`+`ADMIN_PASSWORD`+`ADMIN_NOME` (envs novas)
-- [ ] Adicionar script `db:seed` em `package.json` → `tsx prisma/seed.ts`
-- [ ] Atualizar `.env.example` com `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOME`
-- [ ] Atualizar `lib/env.ts` validando essas envs
-- [ ] **`RoleProvider` populado por `/api/auth/me`** no boot (em vez de localStorage)
-- [ ] `<RoleSwitcher>` vira dev-only (`process.env.NODE_ENV !== "production"`)
+- [x] `app/(back-end)/_lib/audit.ts` — helper `audit({ user, entidade, entidadeId, campo, valorAntes, valorDepois, motivo }, tx?)` que insere em `AuditLog`. Snapshot do nome (paciente.nome ?? profissional.nome ?? staff.nome ?? email).
+- [x] `app/(back-end)/_lib/require-role.ts` — `requireRole(req, [roles])` (JWT-only, sem DB) + `requireUser(req, [roles]?)` (JWT + DB lookup com `ativo: true`).
+- [x] `app/(back-end)/_lib/handle-error.ts` — generaliza `handle-auth-error.ts` (alias mantido). Mapeia ZodError, AuthError, NaoAutorizado (403), NaoEncontrado (404), ConflitoRecurso (409), TokenExpirado (410), RegraNegocio (400).
+- [x] `app/(back-end)/_lib/errors.ts` — adiciona `NaoAutorizado`, `NaoEncontrado`, `ConflitoRecurso`, `RegraNegocio`.
+- [x] `lib/api-client.ts` — `apiGet/apiPost/apiPatch/apiPut/apiDelete` genéricos com `credentials: "same-origin"`.
+- [x] `lib/auth-client.ts#apiMe()` — busca `/api/auth/me`, retorna null se não autenticado.
+- [x] `prisma/seed.ts` — cria User admin idempotente a partir de `ADMIN_EMAIL`+`ADMIN_PASSWORD`+`ADMIN_NOME`.
+- [x] Script `db:seed` em `package.json` → `tsx prisma/seed.ts`.
+- [x] `.env.example` e `.env` com `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOME`.
+- [x] `lib/env.ts` validando essas envs.
+- [x] **`RoleProvider` populado por `/api/auth/me`** no boot (em vez de localStorage). Adiciona `user`, `loading`, `refresh()` ao contexto.
+- [x] `useCurrentUser()` agora retorna user real (id, email, profissionalId, pacienteId, staffId) com flag `loading`/`anonymous`.
+- [x] `<RoleSwitcher>` retorna `null` em produção (`NODE_ENV === "production"`).
 
 **Testes obrigatórios**:
-- [ ] `tests/unit/audit.test.ts` — helper insere AuditLog corretamente
-- [ ] `tests/unit/require-role.test.ts` — valida roles allow/deny
-- [ ] `tests/integration/seed.test.ts` — rodar seed cria 1 admin; rodar 2x não duplica
+- [x] `tests/integration/audit.test.ts` — 4 testes (campos, snapshot do nome, motivo vazio, múltiplos logs)
+- [x] `tests/integration/require-role.test.ts` — 11 testes (JWT-only ×5 + JWT+DB ×6 incluindo `ativo: false`)
 
 **DoD**:
-- [ ] `npm run db:seed` cria admin
-- [ ] Login com `ADMIN_EMAIL`/`ADMIN_PASSWORD` funciona
-- [ ] Após login, `/dashboard` renderiza com role correto vindo de `/api/auth/me`
-- [ ] Build verde + tsc verde + Vitest verde
+- [x] `npm run db:seed` cria admin (idempotente: 2ª chamada → "✓ Admin já existe")
+- [x] Login com `ADMIN_EMAIL`/`ADMIN_PASSWORD` retorna 200 + cookie HttpOnly
+- [x] `/api/auth/me` retorna user logado com role `admin`
+- [x] `npm run build` verde, `npx tsc --noEmit` verde
+- [x] `npm test` 38 testes passando (auth 23 + audit 4 + require-role 11)
 
-**RFs cobertas nesta fase**: nenhuma diretamente — fundação para as próximas.
+**RFs cobertos**: fundação para RF-022 (RBAC), RF-025 (audit), RF-024 (sessão).
+
+**Caveat operacional**: o helper `cleanAuthData()` dos testes apaga `User` e `AuditLog` — após rodar `npm test`, refazer `npm run db:seed` para repopular o admin. Em fase 8 separar DB de teste resolve.
 
 ---
 

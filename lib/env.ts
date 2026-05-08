@@ -8,6 +8,10 @@ const envSchema = z.object({
   EMAIL_SERVICE_USER_EMAIL: z.string().email(),
   EMAIL_SERVICE_USER_PASSWORD: z.string().min(6),
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(10),
+  // Seed inicial — usuário admin criado via prisma/seed.ts (DEC-P08)
+  ADMIN_EMAIL: z.string().email().default("admin@clinicashare.local"),
+  ADMIN_PASSWORD: z.string().min(8).default("change-me-on-first-login"),
+  ADMIN_NOME: z.string().min(2).default("Administrador"),
 });
 
 const parsed = envSchema.safeParse(process.env);

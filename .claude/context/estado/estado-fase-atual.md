@@ -37,3 +37,4 @@ Entra quando:
 | 2026-04-06 | — | Comunicação (R1) | Início do projeto; reunião inicial com cliente |
 | 2026-04-09 | Comunicação | Modelagem + Prototipação | Documento de Requisitos v1 e Visão v1 publicados; pendências P0 dependem de artefato visual para destravar |
 | 2026-05-08 | Modelagem + Prototipação | **+ Construção (parcial, apenas infra)** | Infra antecipada antes da R2 para reduzir risco de cronograma; entidades de domínio só entram pós-validação em R2 (DEC-A13) |
+| 2026-05-08 | Construção (Fase 0 ✅) | **Construção (Fase 1 ✅)** | Backend foundation + seed: helpers `audit()`/`requireRole()`/`requireUser()`/`handle-error()`, cliente API, seed admin, RoleProvider via /me, RoleSwitcher dev-only. 11 testes novos require-role + 4 testes audit. Próximo: Fase 2 (catálogos CRUD em 3 trilhas paralelas) |

@@ -66,6 +66,21 @@ export async function apiLogout() {
   return postJson<{ ok: true }>("/api/auth/logout", {});
 }
 
+/**
+ * Busca o usuário logado via cookie. Retorna `null` se não autenticado
+ * (em vez de throw) — útil para popular `RoleProvider` no boot.
+ */
+export async function apiMe(): Promise<AuthUser | null> {
+  const res = await fetch("/api/auth/me", {
+    method: "GET",
+    credentials: "same-origin",
+  });
+  if (res.status === 401) return null;
+  if (!res.ok) return null;
+  const data = (await res.json()) as { user: AuthUser };
+  return data.user ?? null;
+}
+
 export function authErrorMessage(err: unknown): string {
   if (typeof err === "object" && err !== null && "error" in err) {
     return String((err as AuthError).error);
