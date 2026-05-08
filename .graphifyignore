@@ -1,0 +1,32 @@
+# Build output & runtime
+node_modules/
+.next/
+dist/
+out/
+
+# graphify own output (não indexar o próprio grafo)
+graphify-out/
+
+# Assets estáticos — sem valor semântico
+public/
+
+# Migrations SQL — schema já capturado pelo schema.prisma
+prisma/migrations/
+
+# Lock files
+package-lock.json
+prisma/migrations/migration_lock.toml
+
+# Env files
+.env*
+
+# Config boilerplate
+postcss.config.mjs
+eslint.config.mjs
+vitest.config.ts
+next.config.ts
+tsconfig.json
+docker-compose.yml
+
+# Fotos/screenshots de docs
+docs/screenshots/
