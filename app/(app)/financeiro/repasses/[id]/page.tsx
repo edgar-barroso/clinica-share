@@ -135,32 +135,21 @@ export default function RepasseDetailPage({
                   <TableRow>
                     <TableHead>Data</TableHead>
                     <TableHead>Paciente</TableHead>
-                    <TableHead className="text-right">Consulta</TableHead>
-                    <TableHead className="text-right">Procedimentos</TableHead>
-                    <TableHead className="text-right">Bruto</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {atsDoRepasse.map((a) => {
-                    const procs = a.procedimentos.reduce((s, p) => s + p.valor, 0);
-                    return (
-                      <TableRow key={a.id}>
-                        <TableCell className="whitespace-nowrap text-sm tabular-nums">
-                          {formatDate(a.data, "dd/MM")} {a.hora}
-                        </TableCell>
-                        <TableCell className="text-sm">{getPaciente(a.pacienteId)?.nome}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatBRL(a.valorConsulta)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
-                          {procs > 0 ? formatBRL(procs) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">
-                          {formatBRL(a.valorConsulta + procs)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {atsDoRepasse.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="whitespace-nowrap text-sm tabular-nums">
+                        {formatDate(a.data, "dd/MM")} {a.hora}
+                      </TableCell>
+                      <TableCell className="text-sm">{getPaciente(a.pacienteId)?.nome}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {formatBRL(a.valorConsulta)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>

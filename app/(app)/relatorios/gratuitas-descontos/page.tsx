@@ -41,7 +41,7 @@ function GratuitasDescontosPageInner() {
   const visiveis = slice(dataset);
 
   const totalRenunciado = dataset.reduce(
-    (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+    (s, a) => s + a.valorConsulta,
     0,
   );
 
@@ -102,8 +102,7 @@ function GratuitasDescontosPageInner() {
               <TableBody>
                 {visiveis.map((a) => {
                   const bruto =
-                    a.valorConsulta +
-                    a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                    a.valorConsulta;
                   return (
                     <TableRow key={a.id}>
                       <TableCell className="text-sm tabular-nums">

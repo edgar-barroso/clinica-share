@@ -66,7 +66,7 @@ export default function PatientHomePage() {
     .filter((a) => a.statusPagamento === "pago")
     .reduce(
       (s, a) =>
-        s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+        s + a.valorConsulta,
       0,
     );
 
@@ -231,8 +231,7 @@ export default function PatientHomePage() {
                     const prof = getProfissional(a.profissionalId);
                     const cons = getConsultorio(a.consultorioId);
                     const bruto =
-                      a.valorConsulta +
-                      a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                      a.valorConsulta;
                     return (
                       <TableRow key={a.id}>
                         <TableCell className="whitespace-nowrap text-sm tabular-nums">

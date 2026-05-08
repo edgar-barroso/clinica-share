@@ -38,10 +38,6 @@ function NovoAtendimentoPageInner() {
         valorConsulta: origem.valorConsulta,
         usaProntuarioExterno: origem.usaProntuarioExterno,
         prontuario: origem.prontuarioInterno,
-        procedimentos: origem.procedimentos.map((p) => ({
-          nome: p.nome,
-          valor: p.valor,
-        })),
         statusPagamento: origem.statusPagamento,
       }
     : undefined;
@@ -61,7 +57,7 @@ function NovoAtendimentoPageInner() {
         title={origem ? "Finalizar atendimento" : "Registrar atendimento avulso"}
         description={
           origem
-            ? "Confirme os valores reais, procedimentos e pagamento da consulta realizada."
+            ? "Confirme o valor e o pagamento da consulta realizada."
             : "Use este fluxo apenas para walk-in ou ajuste retroativo, sem agendamento prévio."
         }
       />
@@ -76,7 +72,7 @@ function NovoAtendimentoPageInner() {
             ? {
                 title: `Finalizando agendamento #${origem.id}`,
                 description:
-                  "Paciente, profissional, consultório e horário vêm do agendamento e não podem ser alterados. Ajuste valor, procedimentos e pagamento conforme o atendido.",
+                  "Paciente, profissional, consultório e horário vêm do agendamento e não podem ser alterados. Ajuste valor e pagamento conforme o atendido.",
               }
             : {
                 title: "Registro avulso — sem agendamento prévio",

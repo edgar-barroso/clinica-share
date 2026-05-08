@@ -150,8 +150,7 @@ function MinhasConsultasPageInner() {
                   const prof = getProfissional(a.profissionalId);
                   const cons = getConsultorio(a.consultorioId);
                   const bruto =
-                    a.valorConsulta +
-                    a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                    a.valorConsulta;
                   return (
                     <TableRow key={a.id}>
                       <TableCell className="whitespace-nowrap">

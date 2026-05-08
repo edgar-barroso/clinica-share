@@ -89,8 +89,7 @@ export default async function ConsultorioDetailPage({
                       const paciente = getPaciente(a.pacienteId);
                       const prof = getProfissional(a.profissionalId);
                       const bruto =
-                        a.valorConsulta +
-                        a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                        a.valorConsulta;
                       return (
                         <TableRow key={a.id}>
                           <TableCell className="text-sm tabular-nums">

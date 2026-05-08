@@ -9,7 +9,6 @@ import {
   Check,
   Clock,
   CreditCard,
-  Info,
   QrCode,
   Stethoscope,
 } from "lucide-react";
@@ -378,16 +377,6 @@ function AgendarPageInner() {
 
               {step === "pagamento" && (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground">
-                    <Info size={14} className="mt-0.5 shrink-0 text-primary" />
-                    <span>
-                      Você está pagando agora apenas o valor da consulta. Caso
-                      o profissional realize procedimentos extras durante o
-                      atendimento (ex.: exames, ultrassom, ECG), eles podem ser
-                      cobrados à parte na clínica.
-                    </span>
-                  </div>
-
                   <div>
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Pagar agora

@@ -30,6 +30,22 @@ export interface Profissional {
   turnosFixos: Array<{ dia: number; turno: Turno; consultorioId: string }>;
 }
 
+export type CargoStaff = "atendente" | "auxiliar";
+
+export interface Staff {
+  id: string;
+  nome: string;
+  cargo: CargoStaff;
+  email: string;
+  telefone: string;
+  ativo: boolean;
+  /**
+   * Indica se a credencial de acesso foi configurada (PEND-036).
+   * Senha em si nunca é guardada no mock — em produção será hash.
+   */
+  senhaDefinida?: boolean;
+}
+
 export type Sexo = "M" | "F" | "outro";
 
 export interface EnderecoPaciente {
@@ -71,11 +87,6 @@ export type StatusAgendamento =
   | "cancelado"
   | "nao_compareceu";
 
-export interface ProcedimentoExtra {
-  nome: string;
-  valor: number;
-}
-
 export interface ProntuarioInterno {
   evolucao: string;
   diagnostico: string;
@@ -90,7 +101,6 @@ export interface Atendimento {
   profissionalId: string;
   consultorioId: string;
   valorConsulta: number;
-  procedimentos: ProcedimentoExtra[];
   status: StatusAgendamento;
   statusPagamento: StatusPagamento;
   motivoDescontoOuGratuidade?: string;

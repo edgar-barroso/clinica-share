@@ -29,8 +29,7 @@ export default async function AtendimentoDetailPage({
   const paciente = getPaciente(a.pacienteId);
   const prof = getProfissional(a.profissionalId);
   const cons = getConsultorio(a.consultorioId);
-  const totalProcedimentos = a.procedimentos.reduce((s, p) => s + p.valor, 0);
-  const total = a.valorConsulta + totalProcedimentos;
+  const total = a.valorConsulta;
 
   return (
     <>
@@ -93,30 +92,6 @@ export default async function AtendimentoDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Procedimentos registrados (AT02)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {a.procedimentos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum procedimento extra registrado — apenas a consulta.
-                </p>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {a.procedimentos.map((p) => (
-                    <li key={p.nome} className="flex items-center justify-between py-3">
-                      <span className="text-sm">{p.nome}</span>
-                      <span className="text-sm font-semibold tabular-nums">
-                        {formatBRL(p.valor)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Prontuário eletrônico (AT03)</CardTitle>
             </CardHeader>
             <CardContent>
@@ -149,18 +124,8 @@ export default async function AtendimentoDetailPage({
               <CardTitle>Valores</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm tabular-nums">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Consulta</span>
-                <span className="font-medium">{formatBRL(a.valorConsulta)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  Procedimentos ({a.procedimentos.length})
-                </span>
-                <span className="font-medium">{formatBRL(totalProcedimentos)}</span>
-              </div>
-              <div className="flex justify-between border-t border-border pt-2 text-base">
-                <span className="font-semibold">Total bruto</span>
+              <div className="flex justify-between text-base">
+                <span className="font-semibold">Valor da consulta</span>
                 <span className="font-bold">{formatBRL(total)}</span>
               </div>
             </CardContent>

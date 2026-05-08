@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { CheckCircle2, Clock, Download, Users, Wallet } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { CheckCircle2, Clock, Users, Wallet } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layouts/page-header";
 import { MetricStat } from "@/components/dashboard/metric-stat";
@@ -35,7 +35,7 @@ export default function DashboardPage() {
           a.statusPagamento === "pago",
       )
       .reduce(
-        (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+        (s, a) => s + a.valorConsulta,
         0,
       );
     return { dia: formatDate(iso, "dd/MM"), receita: total };
@@ -47,15 +47,9 @@ export default function DashboardPage() {
         title="Dashboard"
         description={`Visão geral da clínica · Semana de ${formatDateLong(periodoReferencia.inicio)} a ${formatDateLong(periodoReferencia.fim)}`}
         actions={
-          <>
-            <Button variant="outline">
-              <Download size={16} />
-              Exportar relatório
-            </Button>
-            <Link href="/financeiro/repasses" className={buttonVariants()}>
-              Repasses
-            </Link>
-          </>
+          <Link href="/financeiro/repasses" className={buttonVariants()}>
+            Repasses
+          </Link>
         }
       />
 

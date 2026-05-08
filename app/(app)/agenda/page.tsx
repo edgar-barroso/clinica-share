@@ -119,7 +119,7 @@ export default function AgendaPage() {
             const paciente = getPaciente(a.pacienteId);
             const prof = getProfissional(a.profissionalId);
             const cons = getConsultorio(a.consultorioId);
-            const bruto = a.valorConsulta + a.procedimentos.reduce((s, p) => s + p.valor, 0);
+            const bruto = a.valorConsulta;
             return (
               <Card key={a.id}>
                 <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">

@@ -62,8 +62,7 @@ export function ConsultorioMetrics({ consultorioId }: Props) {
             .reduce(
               (s, a) =>
                 s +
-                a.valorConsulta +
-                a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+                a.valorConsulta,
               0,
             );
           return { dia: formatDate(iso, "dd/MM"), receita: total };
@@ -78,7 +77,7 @@ export function ConsultorioMetrics({ consultorioId }: Props) {
         )
         .reduce(
           (s, a) =>
-            s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+            s + a.valorConsulta,
           0,
         );
       return { dia: `Sem ${idx + 1}`, receita: total };

@@ -161,8 +161,7 @@ export default async function ProfissionalDetailPage({
                 <TableBody>
                   {ats.slice(0, 10).map((a) => {
                     const bruto =
-                      a.valorConsulta +
-                      a.procedimentos.reduce((s, pr) => s + pr.valor, 0);
+                      a.valorConsulta;
                     return (
                       <TableRow key={a.id}>
                         <TableCell className="text-sm tabular-nums">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { Info, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import { Info, ShieldAlert } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,6 @@ export interface AtendimentoFormValues {
   valorConsulta: number;
   usaProntuarioExterno: boolean;
   prontuario?: ProntuarioInterno;
-  procedimentos: Array<{ nome: string; valor: number }>;
   statusPagamento: StatusPagamento;
   motivo: string;
 }
@@ -46,23 +45,11 @@ interface Props {
    */
   enableProntuarioFields?: boolean;
   /**
-   * Quando true, lista de procedimentos extras vira read-only (sem adicionar
-   * nem remover). Usado quando o profissional edita a própria consulta — só
-   * pode mexer no valor, não nos procedimentos lançados.
-   */
-  lockProcedimentos?: boolean;
-  /**
    * Quando true, status de pagamento + motivo viram read-only. Usado quando o
    * profissional edita a própria consulta — pagamento é decisão de admin/auxiliar.
    */
   lockPayment?: boolean;
   onSubmit: (values: AtendimentoFormValues) => void;
-}
-
-interface ProcedimentoRow {
-  id: string;
-  nome: string;
-  valor: string;
 }
 
 function hojeISO() {
@@ -74,7 +61,7 @@ function hojeISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabel, lockIdentity = false, enableProntuarioFields = false, lockProcedimentos = false, lockPayment = false, onSubmit }: Props) {
+export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabel, lockIdentity = false, enableProntuarioFields = false, lockPayment = false, onSubmit }: Props) {
   const [data, setData] = useState(initial?.data ?? hojeISO());
   const [hora, setHora] = useState(initial?.hora ?? '09:00');
   const [pacienteId, setPacienteId] = useState(initial?.pacienteId ?? 'pt01');
@@ -82,14 +69,6 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
   const [consultorioId, setConsultorioId] = useState(initial?.consultorioId ?? 'c03');
   const [valorConsulta, setValorConsulta] = useState(String(initial?.valorConsulta ?? 280));
   const [usaProntuarioExterno, setUsaProntuarioExterno] = useState(initial?.usaProntuarioExterno ?? false);
-  const [procedimentos, setProcedimentos] = useState<ProcedimentoRow[]>(
-    () =>
-      initial?.procedimentos?.map((p) => ({
-        id: crypto.randomUUID(),
-        nome: p.nome,
-        valor: String(p.valor),
-      })) ?? []
-  );
   const [statusPagamento, setStatusPagamento] = useState<StatusPagamento>(initial?.statusPagamento ?? 'pendente');
   const [motivo, setMotivo] = useState(initial?.motivo ?? '');
   const [evolucao, setEvolucao] = useState(initial?.prontuario?.evolucao ?? '');
@@ -98,18 +77,7 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
 
   const exibirCamposProntuario = enableProntuarioFields && !usaProntuarioExterno;
 
-  function addProcedimento() {
-    setProcedimentos((p) => [...p, { id: crypto.randomUUID(), nome: '', valor: '' }]);
-  }
-  function removeProcedimento(id: string) {
-    setProcedimentos((p) => p.filter((x) => x.id !== id));
-  }
-  function updateProcedimento(id: string, field: 'nome' | 'valor', v: string) {
-    setProcedimentos((p) => p.map((x) => (x.id === id ? { ...x, [field]: v } : x)));
-  }
-
-  const totalProcedimentos = procedimentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-  const total = (Number(valorConsulta) || 0) + totalProcedimentos;
+  const total = Number(valorConsulta) || 0;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -128,7 +96,6 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
             conduta: conduta.trim(),
           }
         : undefined,
-      procedimentos: procedimentos.filter((p) => p.nome.trim()).map((p) => ({ nome: p.nome, valor: Number(p.valor) || 0 })),
       statusPagamento,
       motivo,
     });
@@ -224,46 +191,6 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
           </Card>
         )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Procedimentos extras</CardTitle>
-            {!lockProcedimentos && (
-              <Button type="button" variant="outline" size="sm" onClick={addProcedimento}>
-                <Plus size={14} />
-                Adicionar procedimento
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent>
-            {procedimentos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {lockProcedimentos ? 'Sem procedimentos extras lançados nesta consulta.' : 'Nenhum procedimento extra adicionado. Use este bloco para registrar ultrassom, exames e outros itens que geram repasse.'}
-              </p>
-            ) : lockProcedimentos ? (
-              <ul className="divide-y divide-border">
-                {procedimentos.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between py-3 text-sm">
-                    <span>{p.nome}</span>
-                    <span className="font-semibold tabular-nums">{formatBRL(Number(p.valor) || 0)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="space-y-3">
-                {procedimentos.map((p) => (
-                  <div key={p.id} className="grid grid-cols-12 gap-2">
-                    <Input className="col-span-7" placeholder="Ex: Ultrassom" value={p.nome} onChange={(e) => updateProcedimento(p.id, 'nome', e.target.value)} />
-                    <Input className="col-span-4" type="number" min="0" step="0.01" placeholder="Valor" value={p.valor} onChange={(e) => updateProcedimento(p.id, 'valor', e.target.value)} />
-                    <Button type="button" variant="ghost" size="icon" className="col-span-1" onClick={() => removeProcedimento(p.id)} aria-label="Remover">
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {exibirCamposProntuario && (
           <Card>
             <CardHeader>
@@ -331,7 +258,7 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
                       id="motivo"
                       value={motivo}
                       onChange={(e) => setMotivo(e.target.value)}
-                      placeholder={statusPagamento === 'gratuito' ? 'Ex: Cortesia para filho de funcionário' : 'Ex: Paciente pagará por boleto gerado amanhã'}
+                      placeholder={statusPagamento === 'gratuito' ? 'Ex: Cortesia para filho de funcionário' : 'Ex: Paciente vai pagar por Pix amanhã'}
                       required={statusPagamento === 'gratuito'}
                     />
                   </div>
@@ -348,19 +275,11 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
             <CardTitle>Resumo</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Consulta</span>
-              <span className="font-medium tabular-nums">{formatBRL(Number(valorConsulta) || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Procedimentos ({procedimentos.length})</span>
-              <span className="font-medium tabular-nums">{formatBRL(totalProcedimentos)}</span>
-            </div>
-            <div className="flex justify-between border-t border-border pt-3 text-base">
-              <span className="font-semibold">Bruto do atendimento</span>
+            <div className="flex justify-between border-b border-border pb-3 text-base">
+              <span className="font-semibold">Valor da consulta</span>
               <span className="font-bold tabular-nums">{formatBRL(total)}</span>
             </div>
-            <p className="pt-2 text-xs text-muted-foreground">O repasse será calculado no servidor após o fechamento semanal, com base no contrato do profissional.</p>
+            <p className="pt-1 text-xs text-muted-foreground">O repasse será calculado no servidor após o fechamento semanal, com base no contrato do profissional.</p>
           </CardContent>
         </Card>
 

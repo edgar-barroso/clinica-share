@@ -46,13 +46,13 @@ function RelatorioFinanceiroPageInner() {
   const { page, totalPages, setPage, slice } = usePagination(dataset.length);
   const visiveis = slice(dataset);
   const totalBruto = dataset.reduce(
-    (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+    (s, a) => s + a.valorConsulta,
     0,
   );
   const totalPagos = dataset
     .filter((a) => a.statusPagamento === "pago")
     .reduce(
-      (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
+      (s, a) => s + a.valorConsulta,
       0,
     );
 
@@ -155,7 +155,7 @@ function RelatorioFinanceiroPageInner() {
             <TableBody>
               {visiveis.map((a) => {
                 const bruto =
-                  a.valorConsulta + a.procedimentos.reduce((s, p) => s + p.valor, 0);
+                  a.valorConsulta;
                 return (
                   <TableRow key={a.id}>
                     <TableCell className="whitespace-nowrap text-sm tabular-nums">

@@ -89,10 +89,6 @@ export default function EditarAtendimentoPage({
     valorConsulta: atendimento.valorConsulta,
     usaProntuarioExterno: atendimento.usaProntuarioExterno,
     prontuario: atendimento.prontuarioInterno,
-    procedimentos: atendimento.procedimentos.map((p) => ({
-      nome: p.nome,
-      valor: p.valor,
-    })),
     statusPagamento: atendimento.statusPagamento,
     motivo: atendimento.motivoDescontoOuGratuidade ?? "",
   };
@@ -118,8 +114,8 @@ export default function EditarAtendimentoPage({
         title={`Editar atendimento #${id}`}
         description={
           isProfissional
-            ? "Ajuste o valor da consulta ou o prontuário. Procedimentos extras e pagamento são gerenciados pelo administrativo."
-            : "Ajuste valor, procedimentos extras ou status de pagamento"
+            ? "Ajuste o valor da consulta ou o prontuário. O pagamento é gerenciado pelo administrativo."
+            : "Ajuste valor ou status de pagamento"
         }
       />
 
@@ -128,7 +124,6 @@ export default function EditarAtendimentoPage({
         initial={initial}
         enableProntuarioFields
         lockIdentity={isProfissional}
-        lockProcedimentos={isProfissional}
         lockPayment={isProfissional}
         cancelHref={`/atendimentos/${id}`}
         onSubmit={handleSubmit}

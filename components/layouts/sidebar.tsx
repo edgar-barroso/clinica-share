@@ -11,6 +11,7 @@ import {
   DoorOpen,
   FileBarChart,
   FileSearch,
+  Headset,
   Home,
   Settings,
   Stethoscope,
@@ -21,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 import { useRole } from "@/lib/role";
+import { formatPeriodoLabel, semanaAtual } from "@/lib/mock/data";
 
 type NavItem = { href: string; label: string; icon: typeof BarChart3 };
 
@@ -30,6 +32,7 @@ const navAll: NavItem[] = [
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
+  { href: "/equipe", label: "Equipe", icon: Headset },
   { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
   { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/auditoria", label: "Auditoria", icon: FileSearch },
@@ -110,7 +113,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-border px-6 py-4 text-xs text-muted-foreground">
-        v0.1.0 · Semana 06-12/abr
+        v0.1.0 · Semana {formatPeriodoLabel(semanaAtual(), "semana")}
       </div>
     </aside>
   );

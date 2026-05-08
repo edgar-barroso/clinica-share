@@ -37,7 +37,7 @@ function AtendimentosPageInner() {
     <>
       <PageHeader
         title={isProfissional ? 'Meus atendimentos' : 'Atendimentos'}
-        description={isProfissional ? 'Consultas e procedimentos realizados por você' : 'Registro de consultas e procedimentos realizados na clínica'}
+        description={isProfissional ? 'Consultas realizadas por você' : 'Registro de consultas realizadas na clínica'}
         actions={
           <Link href="/atendimentos/novo" className={buttonVariants()}>
             <Plus size={16} />
@@ -53,7 +53,7 @@ function AtendimentosPageInner() {
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Profissional</TableHead>
+                {!isProfissional && <TableHead>Profissional</TableHead>}
                 <TableHead>Consultório</TableHead>
                 <TableHead className="text-right">Bruto</TableHead>
                 <TableHead>Status</TableHead>
@@ -65,8 +65,7 @@ function AtendimentosPageInner() {
                 const paciente = getPaciente(a.pacienteId);
                 const prof = getProfissional(a.profissionalId);
                 const cons = getConsultorio(a.consultorioId);
-                const procedimentosTotal = a.procedimentos.reduce((s, p) => s + p.valor, 0);
-                const bruto = a.valorConsulta + procedimentosTotal;
+                const bruto = a.valorConsulta;
                 return (
                   <TableRow
                     key={a.id}
@@ -90,16 +89,17 @@ function AtendimentosPageInner() {
                       <p className="text-sm font-medium">{paciente?.nome}</p>
                       <p className="text-xs text-muted-foreground">{paciente?.telefone}</p>
                     </TableCell>
-                    <TableCell>
-                      <p className="text-sm font-medium">{prof?.nome}</p>
-                      <p className="text-xs text-muted-foreground">{prof?.especialidade}</p>
-                    </TableCell>
+                    {!isProfissional && (
+                      <TableCell>
+                        <p className="text-sm font-medium">{prof?.nome}</p>
+                        <p className="text-xs text-muted-foreground">{prof?.especialidade}</p>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <p className="text-sm">{cons?.nome}</p>
                     </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
                       {formatBRL(bruto)}
-                      {a.procedimentos.length > 0 && <div className="text-xs font-normal text-muted-foreground">inclui {a.procedimentos.length} proc.</div>}
                     </TableCell>
                     <TableCell>
                       <AgendamentoStatusBadge status={a.status} />

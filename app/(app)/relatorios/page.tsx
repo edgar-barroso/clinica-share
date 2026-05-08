@@ -16,7 +16,7 @@ const reports = [
     icon: Wallet,
     title: "Financeiro por profissional e período (RE02)",
     description:
-      "Receita bruta, repasse calculado, procedimentos — com filtros por profissional, consultório e período",
+      "Receita bruta e repasse calculado, com filtros por profissional, consultório e período",
   },
   {
     href: "/relatorios/consultorios",

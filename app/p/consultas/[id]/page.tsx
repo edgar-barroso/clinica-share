@@ -10,7 +10,6 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
-  CreditCard,
   MapPin,
   Stethoscope,
   X,
@@ -46,9 +45,7 @@ export default function ConsultaDetailPage({
 
   const prof = getProfissional(consulta.profissionalId);
   const cons = getConsultorio(consulta.consultorioId);
-  const total =
-    consulta.valorConsulta +
-    consulta.procedimentos.reduce((s, p) => s + p.valor, 0);
+  const total = consulta.valorConsulta;
 
   function cancelar() {
     if (!motivo.trim()) {
@@ -202,28 +199,15 @@ export default function ConsultaDetailPage({
               <CardTitle>Pagamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm tabular-nums">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Consulta</span>
-                <span>{formatBRL(consulta.valorConsulta)}</span>
-              </div>
-              {consulta.procedimentos.map((p) => (
-                <div
-                  key={p.nome}
-                  className="flex justify-between text-muted-foreground"
-                >
-                  <span>{p.nome}</span>
-                  <span>{formatBRL(p.valor)}</span>
-                </div>
-              ))}
-              <div className="flex justify-between border-t border-border pt-2 text-base">
-                <span className="font-semibold">Total</span>
+              <div className="flex justify-between text-base">
+                <span className="font-semibold">Valor da consulta</span>
                 <span className="font-bold">{formatBRL(total)}</span>
               </div>
               {consulta.statusPagamento === "pendente" && (
-                <Button className="mt-3 w-full">
-                  <CreditCard size={14} />
-                  Pagar agora
-                </Button>
+                <p className="mt-3 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+                  Pagamento será feito no atendimento presencial (dinheiro, Pix
+                  ou cartão).
+                </p>
               )}
               {consulta.statusPagamento === "pago" && (
                 <div className="mt-3 flex items-center gap-2 rounded-xl bg-success/10 p-3 text-sm text-success">
@@ -238,16 +222,7 @@ export default function ConsultaDetailPage({
             <CardHeader>
               <CardTitle>Precisa de ajuda?</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Link
-                href="#"
-                className={buttonVariants({
-                  variant: "outline",
-                  className: "w-full justify-start",
-                })}
-              >
-                Falar com o consultório
-              </Link>
+            <CardContent>
               <Link
                 href="/p/perfil"
                 className={buttonVariants({

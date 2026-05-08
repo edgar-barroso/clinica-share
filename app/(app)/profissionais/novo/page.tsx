@@ -118,6 +118,17 @@ export default function NovoProfissionalPage() {
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" placeholder="(11) 90000-0000" required />
               </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="senha">Senha</Label>
+                <Input
+                  id="senha"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                  minLength={6}
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="duracao">Duração padrão da consulta (min)</Label>
                 <Input
@@ -159,7 +170,7 @@ export default function NovoProfissionalPage() {
                 >
                   <p className="text-sm font-semibold">Percentual</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Clínica recebe % sobre cada consulta e procedimento
+                    Clínica recebe % sobre cada consulta realizada
                   </p>
                 </button>
                 <button

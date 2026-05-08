@@ -1,4 +1,4 @@
-import type { Atendimento, AuditLog, Consultorio, Paciente, Periodo, Profissional, Repasse } from './types';
+import type { Atendimento, AuditLog, Consultorio, Paciente, Periodo, Profissional, Repasse, Staff } from './types';
 
 export const consultorios: Consultorio[] = [
   {
@@ -190,6 +190,44 @@ export const profissionais: Profissional[] = [
   },
 ];
 
+export const staff: Staff[] = [
+  {
+    id: 's01',
+    nome: 'Joana Ribeiro',
+    cargo: 'auxiliar',
+    email: 'joana.ribeiro@clinicashare.com.br',
+    telefone: '(11) 98000-2001',
+    ativo: true,
+    senhaDefinida: true,
+  },
+  {
+    id: 's02',
+    nome: 'Carla Moreira',
+    cargo: 'atendente',
+    email: 'carla.moreira@clinicashare.com.br',
+    telefone: '(11) 98000-2002',
+    ativo: true,
+    senhaDefinida: true,
+  },
+  {
+    id: 's03',
+    nome: 'Bruno Soares',
+    cargo: 'atendente',
+    email: 'bruno.soares@clinicashare.com.br',
+    telefone: '(11) 98000-2003',
+    ativo: true,
+    senhaDefinida: true,
+  },
+  {
+    id: 's04',
+    nome: 'Renata Pacheco',
+    cargo: 'auxiliar',
+    email: 'renata.pacheco@clinicashare.com.br',
+    telefone: '(11) 98000-2004',
+    ativo: false,
+  },
+];
+
 export const pacientes: Paciente[] = [
   {
     id: 'pt01',
@@ -317,7 +355,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [{ nome: 'Mapeamento de retina', valor: 120 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -330,7 +367,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -343,7 +379,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p06',
     consultorioId: 'c10',
     valorConsulta: 180,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -356,7 +391,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p03',
     consultorioId: 'c05',
     valorConsulta: 220,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -369,7 +403,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p03',
     consultorioId: 'c05',
     valorConsulta: 220,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -384,7 +417,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [{ nome: 'Eletrocardiograma', valor: 180 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -397,7 +429,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: true,
@@ -410,7 +441,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p04',
     consultorioId: 'c06',
     valorConsulta: 260,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -423,7 +453,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p04',
     consultorioId: 'c06',
     valorConsulta: 260,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -438,7 +467,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p06',
     consultorioId: 'c10',
     valorConsulta: 180,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -451,7 +479,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [{ nome: 'Mapeamento de retina', valor: 120 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -464,7 +491,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p03',
     consultorioId: 'c05',
     valorConsulta: 220,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'gratuito',
     motivoDescontoOuGratuidade: 'Cortesia para filho de funcionário',
@@ -480,7 +506,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -493,7 +518,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p04',
     consultorioId: 'c06',
     valorConsulta: 260,
-    procedimentos: [],
     status: 'cancelado',
     statusPagamento: 'gratuito',
     motivoCancelamento: 'Paciente solicitou remarcação por motivo pessoal',
@@ -509,7 +533,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p05',
     consultorioId: 'c08',
     valorConsulta: 300,
-    procedimentos: [{ nome: 'Ultrassom ', valor: 220 }],
     status: 'agendado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -522,7 +545,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p05',
     consultorioId: 'c08',
     valorConsulta: 300,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -535,7 +557,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -550,7 +571,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -563,7 +583,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p03',
     consultorioId: 'c05',
     valorConsulta: 220,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -576,7 +595,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -591,7 +609,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p03',
     consultorioId: 'c05',
     valorConsulta: 220,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -605,7 +622,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p06',
     consultorioId: 'c10',
     valorConsulta: 180,
-    procedimentos: [],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -619,7 +635,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
@@ -633,7 +648,6 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p06',
     consultorioId: 'c10',
     valorConsulta: 180,
-    procedimentos: [],
     status: 'agendado',
     statusPagamento: 'pendente',
     usaProntuarioExterno: false,
@@ -642,8 +656,8 @@ export const atendimentos: Atendimento[] = [
 
   // Histórico expandido — semanas anteriores e próximas (alimenta visão mensal)
   // Semana -3 (~3 semanas antes da atual)
-  { id: 'a025', data: dayISO(-21), hora: '08:30', pacienteId: 'pt02', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a026', data: dayISO(-21), hora: '14:00', pacienteId: 'pt10', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a025', data: dayISO(-21), hora: '08:30', pacienteId: 'pt02', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a026', data: dayISO(-21), hora: '14:00', pacienteId: 'pt10', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
   {
     id: 'a027',
     data: dayISO(-20),
@@ -652,14 +666,13 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [{ nome: 'Eletrocardiograma', valor: 180 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
   },
-  { id: 'a028', data: dayISO(-19), hora: '19:00', pacienteId: 'pt11', profissionalId: 'p04', consultorioId: 'c06', valorConsulta: 260, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a029', data: dayISO(-18), hora: '08:00', pacienteId: 'pt09', profissionalId: 'p06', consultorioId: 'c10', valorConsulta: 180, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a030', data: dayISO(-17), hora: '08:30', pacienteId: 'pt07', profissionalId: 'p05', consultorioId: 'c08', valorConsulta: 300, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a028', data: dayISO(-19), hora: '19:00', pacienteId: 'pt11', profissionalId: 'p04', consultorioId: 'c06', valorConsulta: 260, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a029', data: dayISO(-18), hora: '08:00', pacienteId: 'pt09', profissionalId: 'p06', consultorioId: 'c10', valorConsulta: 180, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a030', data: dayISO(-17), hora: '08:30', pacienteId: 'pt07', profissionalId: 'p05', consultorioId: 'c08', valorConsulta: 300, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
 
   // Semana -2
   {
@@ -670,16 +683,15 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p01',
     consultorioId: 'c03',
     valorConsulta: 280,
-    procedimentos: [{ nome: 'Mapeamento de retina', valor: 120 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
   },
-  { id: 'a032', data: dayISO(-14), hora: '14:00', pacienteId: 'pt14', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a033', data: dayISO(-13), hora: '14:00', pacienteId: 'pt06', profissionalId: 'p02', consultorioId: 'c07', valorConsulta: 350, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a034', data: dayISO(-13), hora: '19:00', pacienteId: 'pt13', profissionalId: 'p04', consultorioId: 'c06', valorConsulta: 260, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a035', data: dayISO(-12), hora: '08:00', pacienteId: 'pt08', profissionalId: 'p06', consultorioId: 'c10', valorConsulta: 180, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a036', data: dayISO(-12), hora: '09:00', pacienteId: 'pt15', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a032', data: dayISO(-14), hora: '14:00', pacienteId: 'pt14', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a033', data: dayISO(-13), hora: '14:00', pacienteId: 'pt06', profissionalId: 'p02', consultorioId: 'c07', valorConsulta: 350, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a034', data: dayISO(-13), hora: '19:00', pacienteId: 'pt13', profissionalId: 'p04', consultorioId: 'c06', valorConsulta: 260, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a035', data: dayISO(-12), hora: '08:00', pacienteId: 'pt08', profissionalId: 'p06', consultorioId: 'c10', valorConsulta: 180, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a036', data: dayISO(-12), hora: '09:00', pacienteId: 'pt15', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
   {
     id: 'a037',
     data: dayISO(-11),
@@ -688,16 +700,15 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [{ nome: 'Holter 24h', valor: 220 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
   },
-  { id: 'a038', data: dayISO(-10), hora: '08:30', pacienteId: 'pt01', profissionalId: 'p05', consultorioId: 'c08', valorConsulta: 300, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a038', data: dayISO(-10), hora: '08:30', pacienteId: 'pt01', profissionalId: 'p05', consultorioId: 'c08', valorConsulta: 300, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
 
   // Semana -1
-  { id: 'a039', data: dayISO(-7), hora: '08:30', pacienteId: 'pt16', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a040', data: dayISO(-7), hora: '14:00', pacienteId: 'pt17', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a039', data: dayISO(-7), hora: '08:30', pacienteId: 'pt16', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a040', data: dayISO(-7), hora: '14:00', pacienteId: 'pt17', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
   {
     id: 'a041',
     data: dayISO(-6),
@@ -706,14 +717,13 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p02',
     consultorioId: 'c07',
     valorConsulta: 350,
-    procedimentos: [{ nome: 'Eletrocardiograma', valor: 180 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
   },
-  { id: 'a042', data: dayISO(-6), hora: '19:00', pacienteId: 'pt19', profissionalId: 'p04', consultorioId: 'c06', valorConsulta: 260, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a043', data: dayISO(-5), hora: '08:00', pacienteId: 'pt20', profissionalId: 'p06', consultorioId: 'c10', valorConsulta: 180, procedimentos: [], status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
-  { id: 'a044', data: dayISO(-5), hora: '14:00', pacienteId: 'pt12', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, procedimentos: [], status: 'realizado', statusPagamento: 'pendente', usaProntuarioExterno: false },
+  { id: 'a042', data: dayISO(-6), hora: '19:00', pacienteId: 'pt19', profissionalId: 'p04', consultorioId: 'c06', valorConsulta: 260, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a043', data: dayISO(-5), hora: '08:00', pacienteId: 'pt20', profissionalId: 'p06', consultorioId: 'c10', valorConsulta: 180, status: 'realizado', statusPagamento: 'pago', usaProntuarioExterno: false },
+  { id: 'a044', data: dayISO(-5), hora: '14:00', pacienteId: 'pt12', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, status: 'realizado', statusPagamento: 'pendente', usaProntuarioExterno: false },
   {
     id: 'a045',
     data: dayISO(-3),
@@ -722,26 +732,25 @@ export const atendimentos: Atendimento[] = [
     profissionalId: 'p05',
     consultorioId: 'c08',
     valorConsulta: 300,
-    procedimentos: [{ nome: 'Ultrassom ', valor: 220 }],
     status: 'realizado',
     statusPagamento: 'pago',
     usaProntuarioExterno: false,
   },
 
   // Semana +1 (após a corrente — agendamentos futuros)
-  { id: 'a046', data: dayISO(8), hora: '08:30', pacienteId: 'pt02', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, procedimentos: [], status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
-  { id: 'a047', data: dayISO(9), hora: '14:00', pacienteId: 'pt05', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, procedimentos: [], status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
-  { id: 'a048', data: dayISO(10), hora: '08:30', pacienteId: 'pt06', profissionalId: 'p05', consultorioId: 'c08', valorConsulta: 300, procedimentos: [], status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
+  { id: 'a046', data: dayISO(8), hora: '08:30', pacienteId: 'pt02', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
+  { id: 'a047', data: dayISO(9), hora: '14:00', pacienteId: 'pt05', profissionalId: 'p03', consultorioId: 'c05', valorConsulta: 220, status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
+  { id: 'a048', data: dayISO(10), hora: '08:30', pacienteId: 'pt06', profissionalId: 'p05', consultorioId: 'c08', valorConsulta: 300, status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
 
   // Semana +2
-  { id: 'a049', data: dayISO(14), hora: '09:15', pacienteId: 'pt03', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, procedimentos: [], status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
-  { id: 'a050', data: dayISO(16), hora: '14:30', pacienteId: 'pt04', profissionalId: 'p02', consultorioId: 'c07', valorConsulta: 350, procedimentos: [], status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
+  { id: 'a049', data: dayISO(14), hora: '09:15', pacienteId: 'pt03', profissionalId: 'p01', consultorioId: 'c03', valorConsulta: 280, status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
+  { id: 'a050', data: dayISO(16), hora: '14:30', pacienteId: 'pt04', profissionalId: 'p02', consultorioId: 'c07', valorConsulta: 350, status: 'agendado', statusPagamento: 'pendente', usaProntuarioExterno: false },
 ];
 
 // Calcula repasses por profissional na semana 06-12/abr
 function calcularReceitaBruta(profId: string, inicio: string, fim: string) {
   const ats = atendimentos.filter((a) => a.profissionalId === profId && a.data >= inicio && a.data <= fim && a.status === 'realizado' && a.statusPagamento === 'pago');
-  return ats.reduce((acc, a) => acc + a.valorConsulta + a.procedimentos.reduce((s, p) => s + p.valor, 0), 0);
+  return ats.reduce((acc, a) => acc + a.valorConsulta, 0);
 }
 
 function repasseDeProfissional(prof: Profissional, inicio: string, fim: string) {
@@ -906,6 +915,10 @@ export function getPaciente(id: string) {
   return pacientes.find((p) => p.id === id);
 }
 
+export function getStaff(id: string) {
+  return staff.find((s) => s.id === id);
+}
+
 export function atendimentosRealizadosNoIntervalo(periodo: Periodo) {
   return atendimentos.filter((a) => a.status === 'realizado' && a.data >= periodo.inicio && a.data <= periodo.fim);
 }
@@ -917,7 +930,7 @@ export function atendimentosRealizadosSemana() {
 export function receitaTotalSemana() {
   return atendimentosRealizadosSemana()
     .filter((a) => a.statusPagamento === 'pago')
-    .reduce((acc, a) => acc + a.valorConsulta + a.procedimentos.reduce((s, p) => s + p.valor, 0), 0);
+    .reduce((acc, a) => acc + a.valorConsulta, 0);
 }
 
 export function receitaPorConsultorio(periodo: Periodo = periodoReferencia) {
@@ -928,7 +941,7 @@ export function receitaPorConsultorio(periodo: Periodo = periodoReferencia) {
   for (const a of atendimentosRealizadosNoIntervalo(periodo)) {
     if (a.statusPagamento === 'pago') {
       const atual = mapa.get(a.consultorioId)!;
-      atual.receita += a.valorConsulta + a.procedimentos.reduce((s, p) => s + p.valor, 0);
+      atual.receita += a.valorConsulta;
       atual.atendimentos += 1;
     }
   }
