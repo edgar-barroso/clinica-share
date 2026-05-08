@@ -1,7 +1,7 @@
 # Plano de Implementação — ClinicaShare
 
 > **Audiência**: equipe de 4 alunos (DevsTech) trabalhando no MVP do Dr. Edson Andrade.
-> **Status**: 2026-05-08 — Fases 0, 1, 2, 3, 4 e 5 ✅ concluídas. 140 testes Vitest + 18 specs Playwright verde. Cobertura `_usecases/repasse/calculate.ts`: **100% statements / 100% lines / 93.75% branches** (RNF-104 ≥ 90% cumprido). Próxima: Fase 6 (Dashboard + Relatórios).
+> **Status**: 2026-05-08 — Fases 0, 1, 2, 3, 4, 5 e 6 ✅ concluídas. 148 testes Vitest + 23 specs Playwright verde. Próximas: Fase 7 (Portal Paciente) + Fase 8 (Configurações + polimento).
 > **Meta**: levar o sistema ao estado **100% implementado e testado** em 8 sprints (Fases 1–8).
 
 ---

@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
-import { ArrowLeft, Download, Gift } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { ArrowLeft, Gift } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Pagination } from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -17,33 +23,45 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
-  atendimentos,
-  getConsultorio,
-  getPaciente,
-  getProfissional,
-} from "@/lib/mock/data";
+  apiRelatorioGratuitas,
+  type RelatorioGratuitasLinha,
+} from "@/lib/api/relatorios";
+import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatDate } from "@/lib/format";
-import { usePagination } from "@/lib/use-pagination";
 
-export default function GratuitasDescontosPage() {
-  return (
-    <Suspense fallback={null}>
-      <GratuitasDescontosPageInner />
-    </Suspense>
-  );
+function mesAtualISO() {
+  const hoje = new Date();
+  const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  return { inicio: fmt(inicio), fim: fmt(fim) };
 }
 
-function GratuitasDescontosPageInner() {
-  const dataset = atendimentos
-    .filter((a) => a.statusPagamento === "gratuito" && a.status === "realizado")
-    .sort((a, b) => b.data.localeCompare(a.data));
-  const { page, totalPages, setPage, slice } = usePagination(dataset.length);
-  const visiveis = slice(dataset);
+export default function RelatorioGratuitasPage() {
+  const padrao = useMemo(() => mesAtualISO(), []);
+  const [dataInicio, setDataInicio] = useState(padrao.inicio);
+  const [dataFim, setDataFim] = useState(padrao.fim);
+  const [linhas, setLinhas] = useState<RelatorioGratuitasLinha[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalRenunciado = dataset.reduce(
-    (s, a) => s + a.valorConsulta,
-    0,
-  );
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { linhas } = await apiRelatorioGratuitas({ dataInicio, dataFim });
+      setLinhas(linhas);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [dataInicio, dataFim]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   return (
     <>
@@ -52,86 +70,90 @@ function GratuitasDescontosPageInner() {
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft size={14} />
-        Todos os relatórios
+        Voltar para relatórios
       </Link>
 
       <PageHeader
-        title="Consultas gratuitas e descontos (RE04)"
-        description="Todas as gratuidades concedidas no período, com justificativa obrigatória (FI06)"
-        actions={
-          <Button variant="outline">
-            <Download size={16} />
-            Exportar CSV
-          </Button>
-        }
+        title="Gratuidades & cortesias"
+        description="RE04 · Atendimentos com motivoDescontoOuGratuidade (FI06)"
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Atendimentos gratuitos</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">{dataset.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Receita renunciada</p>
-          <p className="mt-1 text-xl font-bold text-warning tabular-nums">
-            {formatBRL(totalRenunciado)}
-          </p>
-        </Card>
-      </div>
+      <Card className="mb-6">
+        <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="ini">Início</Label>
+            <Input
+              id="ini"
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="fim">Fim</Label>
+            <Input
+              id="fim"
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {dataset.length === 0 ? (
-        <EmptyState
-          icon={Gift}
-          title="Nenhuma gratuidade no período"
-          description="Gratuidades aparecem aqui sempre que um atendimento é registrado com status 'gratuito' e justificativa."
-        />
-      ) : (
-        <Card>
-          <CardContent className="p-0">
+      <Card>
+        <CardHeader>
+          <CardTitle>{linhas.length} atendimentos no período</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Carregando…
+            </p>
+          ) : linhas.length === 0 ? (
+            <EmptyState
+              icon={Gift}
+              title="Nenhuma gratuidade no período"
+              description="Ótimo — todos os atendimentos foram cobrados normalmente."
+            />
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
-                  <TableHead>Paciente</TableHead>
                   <TableHead>Profissional</TableHead>
-                  <TableHead>Consultório</TableHead>
-                  <TableHead className="text-right">Valor renunciado</TableHead>
-                  <TableHead>Justificativa</TableHead>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead className="text-right">Valor original</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visiveis.map((a) => {
-                  const bruto =
-                    a.valorConsulta;
-                  return (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-sm tabular-nums">
-                        {formatDate(a.data, "dd/MM/yyyy")} {a.hora}
-                      </TableCell>
-                      <TableCell className="text-sm font-medium">
-                        {getPaciente(a.pacienteId)?.nome}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {getProfissional(a.profissionalId)?.nome}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {getConsultorio(a.consultorioId)?.nome}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">
-                        {formatBRL(bruto)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {a.motivoDescontoOuGratuidade ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {linhas.map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="text-sm">{formatDate(l.data, "dd/MM")}</div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {l.hora}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm font-medium">{l.profissional}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {l.especialidade}
+                      </p>
+                    </TableCell>
+                    <TableCell>{l.paciente}</TableCell>
+                    <TableCell className="max-w-md text-sm">{l.motivo}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBRL(Number(l.valorOriginal))}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

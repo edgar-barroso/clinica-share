@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowLeft, Download, Trophy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -16,29 +22,45 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
-  PeriodoSelector,
-  type PeriodoSelectorValue,
-} from "@/components/relatorios/periodo-selector";
-import {
-  consultorios,
-  formatPeriodoLabel,
-  receitaPorConsultorio,
-  semanaAtual,
-} from "@/lib/mock/data";
+  apiRelatorioConsultorios,
+  type RelatorioConsultoriosLinha,
+} from "@/lib/api/relatorios";
+import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL } from "@/lib/format";
 
-export default function RelatorioConsultoriosPage() {
-  const [seletor, setSeletor] = useState<PeriodoSelectorValue>(() => ({
-    tipo: "semana",
-    periodo: semanaAtual(),
-  }));
+function mesAtualISO() {
+  const hoje = new Date();
+  const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  return { inicio: fmt(inicio), fim: fmt(fim) };
+}
 
-  const ranking = useMemo(
-    () => receitaPorConsultorio(seletor.periodo),
-    [seletor.periodo],
-  );
-  const total = ranking.reduce((s, r) => s + r.receita, 0);
-  const label = formatPeriodoLabel(seletor.periodo, seletor.tipo);
+export default function RelatorioConsultoriosPage() {
+  const padrao = useMemo(() => mesAtualISO(), []);
+  const [dataInicio, setDataInicio] = useState(padrao.inicio);
+  const [dataFim, setDataFim] = useState(padrao.fim);
+  const [linhas, setLinhas] = useState<RelatorioConsultoriosLinha[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { linhas } = await apiRelatorioConsultorios({ dataInicio, dataFim });
+      setLinhas(linhas);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [dataInicio, dataFim]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   return (
     <>
@@ -47,84 +69,82 @@ export default function RelatorioConsultoriosPage() {
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft size={14} />
-        Todos os relatórios
+        Voltar para relatórios
       </Link>
 
       <PageHeader
-        title="Ranking de consultórios (RE03)"
-        description={`Receita gerada por sala em ${label}. Sala ociosa pode ser candidata a renegociação de modalidade.`}
-        actions={
-          <Button variant="outline">
-            <Download size={16} />
-            Exportar CSV
-          </Button>
-        }
+        title="Ranking de consultórios"
+        description="RE03 · Quais salas geram mais receita no período"
       />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PeriodoSelector value={seletor} onChange={setSeletor} />
-        <p className="text-sm text-muted-foreground">
-          Total no período:{" "}
-          <span className="font-semibold tabular-nums text-foreground">
-            {formatBRL(total)}
-          </span>
-        </p>
-      </div>
+      <Card className="mb-6">
+        <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="ini">Início</Label>
+            <Input
+              id="ini"
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="fim">Fim</Label>
+            <Input
+              id="fim"
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle>Ranking</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Consultório</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Atendimentos</TableHead>
-                <TableHead className="text-right">Receita</TableHead>
-                <TableHead className="text-right">% do total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ranking.map((r, idx) => {
-                const c = consultorios.find((cc) => cc.id === r.consultorioId)!;
-                const pct = total > 0 ? r.receita / total : 0;
-                const ocioso = r.atendimentos === 0;
-                return (
-                  <TableRow key={r.consultorioId}>
-                    <TableCell>
-                      {idx === 0 && r.receita > 0 ? (
-                        <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                          <Trophy size={14} />
-                        </div>
-                      ) : (
-                        <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-                          #{idx + 1}
-                        </span>
-                      )}
+          {loading ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Carregando…
+            </p>
+          ) : linhas.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Sem atendimentos pagos no período.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Consultório</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Atendimentos</TableHead>
+                  <TableHead className="text-right">Receita</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {linhas.map((l, idx) => (
+                  <TableRow key={l.consultorioId}>
+                    <TableCell className="font-bold tabular-nums">
+                      {idx + 1}
                     </TableCell>
-                    <TableCell>
-                      <p className="text-sm font-medium">{c.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {c.especialidadesCompativeis.slice(0, 2).join(", ")}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={ocioso ? "secondary" : "outline"}>{c.tipo}</Badge>
+                    <TableCell className="font-medium">{l.nome}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {l.tipo}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {r.atendimentos}
+                      {l.qtdAtendimentos}
                     </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
-                      {formatBRL(r.receita)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {(pct * 100).toFixed(1)}%
+                      {formatBRL(Number(l.receita))}
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </>
