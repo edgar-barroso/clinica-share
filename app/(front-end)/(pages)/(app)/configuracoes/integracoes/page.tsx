@@ -1,77 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft, Mail, MessageCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Mail, MessageCircle, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/layouts/page-header";
 
-interface IntegracaoState {
+interface Integracao {
   id: string;
-  nome: string;
+  label: string;
+  status: "ativo" | "planejado";
   descricao: string;
-  icon: typeof MessageCircle;
-  status: "configurado" | "pendente" | "planejado";
-  detalhe?: string;
+  pendencia?: string;
 }
 
-const integracoesIniciais: IntegracaoState[] = [
+const INTEGRACOES: Integracao[] = [
   {
-    id: "whatsapp-ia",
-    nome: "WhatsApp IA para lembretes (AG07)",
+    id: "email",
+    label: "E-mail (reset de senha)",
+    status: "ativo",
     descricao:
-      "Envia lembretes automáticos via WhatsApp Business nos momentos definidos: 2 dias antes, 1 dia antes e no dia da consulta.",
-    icon: MessageCircle,
-    status: "pendente",
-    detalhe:
-      "Custo e aprovação da API WhatsApp Business a definir em R2 (PEND-022).",
+      "Nodemailer + Gmail SMTP. Usado em /forgot-password e bem-vindo ao paciente.",
   },
   {
-    id: "email-transacional",
-    nome: "E-mail transacional (RF-026)",
+    id: "google-oauth",
+    label: "Login com Google",
+    status: "ativo",
     descricao:
-      "Envio de e-mails de recuperação de senha, confirmações de agendamento e recibos.",
-    icon: Mail,
+      "@react-oauth/google + google-auth-library. Cria User automaticamente no primeiro login.",
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp / SMS",
     status: "planejado",
-    detalhe: "Plataforma a definir (ex: SendGrid, Resend, AWS SES).",
+    descricao:
+      "Confirmação de agendamento e lembrete pré-consulta. Provedor a definir.",
+    pendencia: "PEND-022 — escolher provedor (Twilio? Z-API? oficial Meta?)",
+  },
+  {
+    id: "pagamento",
+    label: "Pagamento online",
+    status: "planejado",
+    descricao: "Pagamento via PIX/cartão antes da consulta.",
+    pendencia: "FI09 fora do MVP (DEC-E09). Pagamento exclusivamente presencial.",
   },
 ];
 
-const badgeVariants: Record<
-  IntegracaoState["status"],
-  { variant: "success" | "warning" | "secondary"; label: string }
-> = {
-  configurado: { variant: "success", label: "Configurado" },
-  pendente: { variant: "warning", label: "Pendente" },
-  planejado: { variant: "secondary", label: "Planejado" },
-};
-
 export default function IntegracoesPage() {
-  const [items, setItems] = useState(integracoesIniciais);
-
-  function alternar(id: string) {
-    setItems((list) =>
-      list.map((i) => {
-        if (i.id !== id) return i;
-        const novo =
-          i.status === "configurado"
-            ? { ...i, status: "pendente" as const }
-            : { ...i, status: "configurado" as const };
-        toast.success(
-          `${i.nome}: ${novo.status === "configurado" ? "configurado" : "desconectado"}`,
-          {
-            description:
-              "Protótipo — no sistema real, essa ação dispara conexão com o provedor.",
-          },
-        );
-        return novo;
-      }),
-    );
-  }
-
   return (
     <>
       <Link
@@ -79,58 +59,58 @@ export default function IntegracoesPage() {
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft size={14} />
-        Configurações
+        Voltar para configurações
       </Link>
 
       <PageHeader
-        title="Integrações externas"
-        description="Conexões com serviços de terceiros. No protótipo, nenhuma integração real é feita."
+        title="Integrações"
+        description="Provedores externos e canais de comunicação"
       />
 
-      <Card className="mb-6 border-warning/40 bg-warning/5">
-        <CardContent className="flex items-start gap-3 p-5">
-          <AlertTriangle size={18} className="mt-0.5 text-warning" />
-          <div className="text-sm">
-            <p className="font-semibold">Custos e aprovações externas</p>
-            <p className="mt-1 text-muted-foreground">
-              As integrações marcadas como <em>pendente</em> dependem de aprovação e
-              orçamento com o Dr. Edson. Ver PEND-022 (API WhatsApp) e visao-v1 §4.2.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-6 flex items-start gap-2 rounded-xl border border-dashed border-warning/40 bg-warning/10 p-4 text-xs text-warning">
+        <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+        <span>
+          Esta tela é informativa. Credenciais ficam em variáveis de ambiente
+          (<code>.env</code>) e não são editáveis pela UI por motivos de
+          segurança.
+        </span>
+      </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {items.map((i) => (
-          <Card key={i.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <i.icon size={20} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {INTEGRACOES.map((i) => {
+          const Icon = i.id === "whatsapp" ? MessageCircle : Mail;
+          return (
+            <Card key={i.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex size-10 items-center justify-center rounded-xl ${
+                        i.status === "ativo"
+                          ? "bg-success/10 text-success"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <CardTitle className="text-base">{i.label}</CardTitle>
                   </div>
-                  <div>
-                    <CardTitle className="text-base">{i.nome}</CardTitle>
-                    <p className="mt-1 text-sm text-muted-foreground">{i.descricao}</p>
-                    {i.detalhe && (
-                      <p className="mt-2 text-xs text-muted-foreground">{i.detalhe}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge variant={badgeVariants[i.status].variant}>
-                    {badgeVariants[i.status].label}
+                  <Badge variant={i.status === "ativo" ? "success" : "outline"}>
+                    {i.status === "ativo" ? "Ativo" : "Planejado"}
                   </Badge>
-                  {i.status !== "planejado" && (
-                    <Button size="sm" variant="outline" onClick={() => alternar(i.id)}>
-                      {i.status === "configurado" ? "Desconectar" : "Configurar"}
-                    </Button>
-                  )}
                 </div>
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{i.descricao}</p>
+                {i.pendencia && (
+                  <p className="mt-3 rounded-lg border border-dashed border-border bg-muted/30 p-2 text-xs">
+                    {i.pendencia}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </>
   );

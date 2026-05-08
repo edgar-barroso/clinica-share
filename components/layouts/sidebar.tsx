@@ -22,7 +22,19 @@ import {
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 import { useRole } from "@/lib/role";
-import { formatPeriodoLabel, semanaAtual } from "@/lib/mock/data";
+
+function semanaAtualLabel(): string {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dow = hoje.getDay();
+  const segunda = new Date(hoje);
+  segunda.setDate(hoje.getDate() + (dow === 0 ? -6 : 1 - dow));
+  const domingo = new Date(segunda);
+  domingo.setDate(segunda.getDate() + 6);
+  const fmt = (d: Date) =>
+    `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${fmt(segunda)}–${fmt(domingo)}`;
+}
 
 type NavItem = { href: string; label: string; icon: typeof BarChart3 };
 
@@ -113,7 +125,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-border px-6 py-4 text-xs text-muted-foreground">
-        v0.1.0 · Semana {formatPeriodoLabel(semanaAtual(), "semana")}
+        v0.1.0 · Semana {semanaAtualLabel()}
       </div>
     </aside>
   );

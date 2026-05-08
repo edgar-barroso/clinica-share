@@ -1,5 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import type { StatusAgendamento, StatusPagamento, StatusRepasse } from "@/lib/mock/types";
+import type {
+  StatusAgendamento,
+  StatusPagamento,
+  StatusRepasse,
+} from "@prisma/client";
 
 export function PaymentStatusBadge({ status }: { status: StatusPagamento }) {
   const map = {
