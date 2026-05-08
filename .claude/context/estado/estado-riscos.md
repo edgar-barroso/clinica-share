@@ -54,6 +54,12 @@
 | R-021 | Dr. Edson rejeita a proposta DEC-E09 em R2 e exige FI09 reativado; equipe precisa retomar arquitetura Asaas (conta-mãe + walletId, split, estorno, tributário PEND-040) com prazo apertado <!-- NOVO --> | Média | Alto | Alta | Apresentar DEC-E09 em R2 com argumentação clara: foco no problema central de R1 (controle de repasse), redução LGPD/PCI, IFQ "Excitante" ≠ "Normal", economia de ~19h e ~R$ 2.566 (planilha-custos-v2); manter FI09 marcado como "removido proposto" e não "removido" para reverter rápido se rejeitado; ter rascunho de arquitetura Asaas pronto como fallback (já documentado em conversa com equipe) | Equipe (comunicação + planejamento) | Aberto |
 | R-022 | Pagamento exclusivamente presencial pode aumentar taxa de no-show (paciente sem "skin in the game") e gerar inadimplência (paciente atendido sem pagar e sai sem cobrança) <!-- NOVO --> | Média | Médio | Média | Reforçar lembretes WhatsApp (AG07) como principal redutor de no-show; auxiliar marca status `pendente` no atendimento e cobra no fechamento semanal (FI07); PEND-027 endereça política de no-show; em última análise, se inadimplência for problema, FI09 pode voltar com sinal/caução parcial | Equipe (modelagem + comunicação) | Aberto |
 
+### Riscos da antecipação de infra (2026-05-08) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-023 | Schema do Prisma divergir dos modelos validados em R2; equipe precisa descartar/reescrever migrations <!-- NOVO --> | Baixa | Baixo | Baixa | Schema atual contém apenas `HealthCheck` (placeholder); nenhuma entidade de domínio foi modelada antes da R2; migrations descartáveis até primeiro requisito real (DEC-A13) | Equipe (modelagem + codificação) | Aberto |
+| R-024 | Conflito de porta entre Postgres do clinica-share e outros projetos locais que usam 5432 (ex: ar-lens-marketplace) <!-- NOVO --> | Alta | Baixo | Média | Postgres do clinica-share publicado na porta host **5433** (DEC-A11); `.env.example` documenta a porta; isolamento via Docker network nominalmente nomeado | Equipe (implementação) | Mitigado |
+
 ### Legenda
 - **Probabilidade:** Baixa / Média / Alta
 - **Impacto:** Baixo / Médio / Alto / Crítico
@@ -64,4 +70,4 @@
 |---|---|---|---|
 | _(nenhum)_ | | | |
 
-## Última atualização: 2026-05-07 (+R-021 cliente rejeitar remoção FI09; +R-022 no-show e inadimplência sem pagamento antecipado)
+## Última atualização: 2026-05-08 (+R-023 schema Prisma divergir de R2; +R-024 conflito de porta Postgres mitigado via 5433)

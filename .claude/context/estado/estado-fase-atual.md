@@ -1,8 +1,8 @@
 # Fase Atual do Projeto
 
-## Status: Modelagem + Prototipação paralela
+## Status: Modelagem + Prototipação paralela (com entrada parcial em Construção — apenas infra)
 
-**Data da última atualização:** 2026-04-18
+**Data da última atualização:** 2026-05-08
 
 ### O que já aconteceu
 - [x] 1ª reunião de levantamento de requisitos com o Dr. Edson (R1 — 06/04/2026)
@@ -12,6 +12,7 @@
 - [x] Documento de Visão v1 — [visao-roi/visao-v1.md](../visao-roi/visao-v1.md): posicionamento, envolvidos, recursos, ROI
 - [x] Requisitos, decisões e riscos consolidados neste diretório `estado/`
 - [x] Plano de protótipo navegável escrito — [../../../PROTOTIPO-PLANO.md](../../../PROTOTIPO-PLANO.md)
+- [x] **Infra de codificação montada (2026-05-08)** — separação back-end/front-end via App Router groups, Prisma 7 + PostgreSQL 16 em Docker, validação de envs com Zod, rota `GET /api/hello` validando conexão DB, Vitest 4 como framework de testes (DEC-A11 a DEC-A14)
 
 ### Em andamento
 - [ ] Protótipo navegável (F1 — 15 telas core admin/profissional)
@@ -35,3 +36,4 @@ Entra quando:
 |---|---|---|---|
 | 2026-04-06 | — | Comunicação (R1) | Início do projeto; reunião inicial com cliente |
 | 2026-04-09 | Comunicação | Modelagem + Prototipação | Documento de Requisitos v1 e Visão v1 publicados; pendências P0 dependem de artefato visual para destravar |
+| 2026-05-08 | Modelagem + Prototipação | **+ Construção (parcial, apenas infra)** | Infra antecipada antes da R2 para reduzir risco de cronograma; entidades de domínio só entram pós-validação em R2 (DEC-A13) |
