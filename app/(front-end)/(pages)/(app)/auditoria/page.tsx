@@ -1,10 +1,19 @@
 "use client";
 
-import { Suspense } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ShieldCheck } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Pagination } from "@/components/ui/pagination";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,94 +23,138 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layouts/page-header";
-import { auditoria } from "@/lib/mock/data";
-import { formatDateTime } from "@/lib/format";
-import { usePagination } from "@/lib/use-pagination";
+import {
+  apiListAuditoria,
+  type AuditLogItem,
+} from "@/lib/api/auditoria";
+import { apiErrorMessage } from "@/lib/api-client";
 
 export default function AuditoriaPage() {
-  return (
-    <Suspense fallback={null}>
-      <AuditoriaPageInner />
-    </Suspense>
-  );
-}
+  const [entidade, setEntidade] = useState("");
+  const [campo, setCampo] = useState("");
+  const [logs, setLogs] = useState<AuditLogItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-function AuditoriaPageInner() {
-  const ordenado = [...auditoria].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-  const { page, totalPages, setPage, slice } = usePagination(ordenado.length);
-  const visiveis = slice(ordenado);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { logs } = await apiListAuditoria({
+        entidade: entidade || undefined,
+        campo: campo || undefined,
+      });
+      setLogs(logs);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [entidade, campo]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   return (
     <>
       <PageHeader
         title="Auditoria"
-        description="Toda alteração financeira é registrada automaticamente (RNF-102)"
+        description="Trilha de alterações financeiras (RNF-102 / RF-025)"
       />
 
-      <Card className="mb-6 border-info/30 bg-info/5">
-        <CardContent className="flex items-start gap-3 p-5">
-          <div className="mt-0.5 rounded-xl bg-info/10 p-2 text-info">
-            <ShieldCheck size={18} />
+      <Card className="mb-6">
+        <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="entidade">Entidade</Label>
+            <Select
+              id="entidade"
+              value={entidade}
+              onChange={(e) => setEntidade(e.target.value)}
+            >
+              <option value="">Todas</option>
+              <option value="Atendimento">Atendimento</option>
+              <option value="Repasse">Repasse</option>
+              <option value="Profissional">Profissional</option>
+            </Select>
           </div>
-          <div className="text-sm">
-            <p className="font-semibold">Rastreabilidade total</p>
-            <p className="mt-1 text-muted-foreground">
-              Cada registro desta tela cumpre a regra inegociável <code className="rounded bg-muted px-1 py-0.5 text-xs">user_id, timestamp, entidade, campo, valor antes, valor depois, motivo</code>.
-              Dados clínicos de pacientes não são registrados (RNF-105).
-            </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="campo">Campo</Label>
+            <Input
+              id="campo"
+              value={campo}
+              onChange={(e) => setCampo(e.target.value)}
+              placeholder="Ex: status, valorConsulta"
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle>{logs.length} registros</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Quando</TableHead>
-                <TableHead>Quem</TableHead>
-                <TableHead>Entidade</TableHead>
-                <TableHead>Campo</TableHead>
-                <TableHead>De → Para</TableHead>
-                <TableHead>Motivo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visiveis.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground tabular-nums">
-                    {formatDateTime(l.timestamp)}
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm font-medium">{l.userNome}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{l.userId}</p>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{l.entidade}</Badge>
-                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                      #{l.entidadeId}
-                    </p>
-                  </TableCell>
-                  <TableCell>
-                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{l.campo}</code>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm tabular-nums">
-                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive">
-                        {l.valorAntes}
+          {loading ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Carregando…
+            </p>
+          ) : logs.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title="Nenhum registro de auditoria"
+              description="Mutações financeiras serão registradas aqui."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quando</TableHead>
+                  <TableHead>Quem</TableHead>
+                  <TableHead>Entidade</TableHead>
+                  <TableHead>Campo</TableHead>
+                  <TableHead>Antes → Depois</TableHead>
+                  <TableHead>Motivo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="text-sm">
+                        {new Date(l.timestamp).toLocaleDateString("pt-BR")}
+                      </div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {new Date(l.timestamp).toLocaleTimeString("pt-BR")}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm font-medium">{l.userNome}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{l.entidade}</Badge>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {l.entidadeId.slice(0, 8)}…
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">{l.campo}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">
+                        {l.valorAntes || "—"}
                       </span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-xs text-success">
+                      {" → "}
+                      <span className="text-sm font-medium">
                         {l.valorDepois}
                       </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{l.motivo}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                    </TableCell>
+                    <TableCell className="max-w-md text-sm">
+                      {l.motivo}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </>

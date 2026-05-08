@@ -1,71 +1,94 @@
 "use client";
 
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   Calendar,
-  CalendarClock,
-  CheckCircle2,
   Clock,
-  MapPin,
-  Stethoscope,
-  X,
+  DoorOpen,
+  FileText,
+  User,
+  XCircle,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/layouts/page-header";
 import {
   AgendamentoStatusBadge,
   PaymentStatusBadge,
 } from "@/components/financial/status-badge";
+import { PageHeader } from "@/components/layouts/page-header";
 import {
-  atendimentos,
-  getConsultorio,
-  getProfissional,
-} from "@/lib/mock/data";
+  apiCancelarAgendamento,
+  apiGetAgendamento,
+  type AgendamentoListItem,
+} from "@/lib/api/agendamentos";
+import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatDateLong } from "@/lib/format";
 
-export default function ConsultaDetailPage({
+export default function MinhaConsultaDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const original = atendimentos.find((a) => a.id === id);
-  if (!original) notFound();
-  const router = useRouter();
-  const [consulta, setConsulta] = useState(original);
-  const [showCancelar, setShowCancelar] = useState(false);
+  const [a, setA] = useState<AgendamentoListItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showCancel, setShowCancel] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const prof = getProfissional(consulta.profissionalId);
-  const cons = getConsultorio(consulta.consultorioId);
-  const total = consulta.valorConsulta;
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { agendamento } = await apiGetAgendamento(id);
+      setA(agendamento);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
-  function cancelar() {
-    if (!motivo.trim()) {
-      toast.warning("Informe o motivo do cancelamento (AG06)");
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  async function handleCancelar() {
+    if (motivo.trim().length < 3) {
+      toast.warning("Informe um motivo (mínimo 3 caracteres)");
       return;
     }
-    setConsulta((c) => ({
-      ...c,
-      status: "cancelado",
-      motivoCancelamento: motivo.trim(),
-    }));
-    setShowCancelar(false);
-    toast.success("Consulta cancelada", {
-      description: "Enviamos o cancelamento ao consultório. Sem cobrança de taxa.",
-    });
-    setTimeout(() => router.push("/p/consultas"), 800);
+    setSubmitting(true);
+    try {
+      await apiCancelarAgendamento(id, motivo.trim());
+      toast.success("Consulta cancelada");
+      setShowCancel(false);
+      await fetchData();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  const podeCancelar = consulta.status === "agendado";
-  const podeReagendar = consulta.status === "agendado";
+  if (loading || !a) {
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        Carregando…
+      </p>
+    );
+  }
+
+  const podeCancelar = a.status === "agendado";
 
   return (
     <>
@@ -74,173 +97,120 @@ export default function ConsultaDetailPage({
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft size={14} />
-        Minhas consultas
+        Voltar para minhas consultas
       </Link>
 
       <PageHeader
-        title={`Consulta #${consulta.id}`}
-        description={`${formatDateLong(consulta.data)} · ${consulta.hora}`}
+        title="Detalhes da consulta"
+        description={`${formatDateLong(a.data)} · ${a.hora}`}
         actions={
-          !showCancelar && (podeCancelar || podeReagendar) ? (
-            <div className="flex gap-2">
-              {podeReagendar && (
-                <Link
-                  href={`/p/agendar?remarcacao=${consulta.id}`}
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  <CalendarClock size={16} />
-                  Reagendar
-                </Link>
-              )}
-              {podeCancelar && (
-                <Button
-                  variant="outline"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setShowCancelar(true)}
-                >
-                  <X size={16} />
-                  Cancelar consulta
-                </Button>
-              )}
-            </div>
-          ) : undefined
+          podeCancelar && (
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setShowCancel((s) => !s)}
+            >
+              <XCircle size={14} />
+              Cancelar consulta
+            </Button>
+          )
         }
       />
 
+      {showCancel && (
+        <Card className="mb-6 border-destructive/40 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-sm">Confirmar cancelamento</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="motivo">Motivo</Label>
+              <Input
+                id="motivo"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Ex: Conflito de horário no trabalho"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCancel(false)}
+                disabled={submitting}
+              >
+                Voltar
+              </Button>
+              <Button
+                onClick={handleCancelar}
+                disabled={submitting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {submitting ? "Cancelando..." : "Confirmar cancelamento"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
-                <CardTitle>Informações da consulta</CardTitle>
+                <CardTitle>Informações</CardTitle>
                 <div className="flex gap-2">
-                  <AgendamentoStatusBadge status={consulta.status} />
-                  <PaymentStatusBadge status={consulta.statusPagamento} />
+                  <AgendamentoStatusBadge status={a.status} />
+                  <PaymentStatusBadge status={a.statusPagamento} />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <InfoRow
-                icon={Calendar}
-                label="Data"
-                value={formatDateLong(consulta.data)}
-              />
-              <InfoRow icon={Clock} label="Horário" value={consulta.hora} />
-              <InfoRow
-                icon={Stethoscope}
+              <Info icon={Calendar} label="Data" value={formatDateLong(a.data)} />
+              <Info icon={Clock} label="Horário" value={a.hora} />
+              <Info
+                icon={User}
                 label="Profissional"
-                value={`${prof?.nome} · ${prof?.especialidade}`}
+                value={`${a.profissional.nome} · ${a.profissional.especialidade}`}
               />
-              <InfoRow
-                icon={MapPin}
-                label="Consultório"
-                value={cons?.nome ?? "—"}
-              />
+              <Info icon={DoorOpen} label="Consultório" value={a.consultorio.nome} />
+              {a.observacoes && (
+                <div className="sm:col-span-2">
+                  <Info icon={FileText} label="Observações" value={a.observacoes} />
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {showCancelar && (
-            <Card className="border-destructive/40 bg-destructive/5">
-              <CardHeader>
-                <CardTitle className="text-destructive">
-                  Cancelar consulta (AG06)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Sem cobrança de taxa. O motivo abaixo é obrigatório e fica
-                  registrado para o consultório.
-                </p>
-                <div className="space-y-1.5">
-                  <Label htmlFor="motivo">Motivo do cancelamento</Label>
-                  <Textarea
-                    id="motivo"
-                    placeholder="Ex: tive um imprevisto e não posso comparecer"
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    required
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowCancelar(false)}
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={cancelar}
-                  >
-                    Confirmar cancelamento
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {consulta.motivoCancelamento && (
-            <Card className="border-destructive/40 bg-destructive/5">
-              <CardHeader>
-                <CardTitle className="text-sm">Motivo do cancelamento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{consulta.motivoCancelamento}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <aside className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pagamento</CardTitle>
+              <CardTitle>Valor</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm tabular-nums">
-              <div className="flex justify-between text-base">
-                <span className="font-semibold">Valor da consulta</span>
-                <span className="font-bold">{formatBRL(total)}</span>
-              </div>
-              {consulta.statusPagamento === "pendente" && (
-                <p className="mt-3 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-                  Pagamento será feito no atendimento presencial (dinheiro, Pix
-                  ou cartão).
-                </p>
-              )}
-              {consulta.statusPagamento === "pago" && (
-                <div className="mt-3 flex items-center gap-2 rounded-xl bg-success/10 p-3 text-sm text-success">
-                  <CheckCircle2 size={14} />
-                  Pagamento confirmado
-                </div>
-              )}
+            <CardContent>
+              <p className="text-2xl font-bold tabular-nums">
+                {formatBRL(Number(a.valorConsulta))}
+              </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Precisa de ajuda?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link
-                href="/p/perfil"
-                className={buttonVariants({
-                  variant: "outline",
-                  className: "w-full justify-start",
-                })}
-              >
-                Atualizar meus dados
-              </Link>
-            </CardContent>
-          </Card>
+          {a.motivoCancelamento && (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardHeader>
+                <CardTitle className="text-sm">Motivo do cancelamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">{a.motivoCancelamento}</p>
+              </CardContent>
+            </Card>
+          )}
         </aside>
       </div>
     </>
   );
 }
 
-function InfoRow({
+function Info({
   icon: Icon,
   label,
   value,
