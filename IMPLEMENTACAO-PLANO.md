@@ -1,7 +1,7 @@
 # Plano de Implementação — ClinicaShare
 
 > **Audiência**: equipe de 4 alunos (DevsTech) trabalhando no MVP do Dr. Edson Andrade.
-> **Status**: 2026-05-08 — Fases 0, 1, 2, 3 e 4 ✅ concluídas. 117 testes Vitest + 15 specs Playwright verde. Próxima: Fase 5 (Repasse — CRÍTICO RNF-104, cobertura ≥ 90%).
+> **Status**: 2026-05-08 — Fases 0, 1, 2, 3, 4 e 5 ✅ concluídas. 140 testes Vitest + 18 specs Playwright verde. Cobertura `_usecases/repasse/calculate.ts`: **100% statements / 100% lines / 93.75% branches** (RNF-104 ≥ 90% cumprido). Próxima: Fase 6 (Dashboard + Relatórios).
 > **Meta**: levar o sistema ao estado **100% implementado e testado** em 8 sprints (Fases 1–8).
 
 ---
@@ -394,7 +394,7 @@ Componentes:
 
 ---
 
-### Fase 5 — Repasse (1 sprint, CRÍTICO RNF-104)
+### Fase 5 — Repasse (100% concluída ✅ 2026-05-08, RNF-104 cumprido)
 
 **Objetivo**: cálculo automático de repasse no servidor + listagem + marcar pago. Esta é a **única fase com cobertura mínima de 90%** porque erro no cálculo destrói confiança do cliente (R-001).
 
@@ -436,23 +436,45 @@ interface CalculateOutput {
 - [ ] [/financeiro/repasses](app/(front-end)/(pages)/(app)/financeiro/repasses/page.tsx)
 - [ ] [/financeiro/repasses/[id]](app/(front-end)/(pages)/(app)/financeiro/repasses/[id]/page.tsx)
 
-**Testes obrigatórios** (cobertura ≥ 90% no usecase):
-- [ ] Modalidade percentual sem gratuidades → repasse correto
-- [ ] Modalidade percentual com 1 gratuidade → desconta da base
-- [ ] Modalidade aluguel-fixo: 3 atendimentos no mesmo turno = 1 turno
-- [ ] Modalidade aluguel-fixo: 2 turnos diferentes mesmo dia = 2 turnos
-- [ ] Período sem atendimentos → repasse zero
-- [ ] Atendimento `pendente` ignorado
-- [ ] Arredondamento: 100.005 → 100.01
-- [ ] Geração idempotente (mesma chamada 2x não duplica)
-- [ ] `marcar-pago` por usuário sem role admin/aux → 403
-- [ ] Audit log gravado em `marcar-pago`
+**Testes** (cobertura `_usecases/repasse/calculate.ts`: 100% lines / 100% statements / 100% functions / 93.75% branches):
+- [x] Modalidade percentual sem gratuidades → repasse correto (200+150+250)*0.3 = 180
+- [x] Modalidade percentual ignora gratuito/pendente/cancelado/nao_compareceu
+- [x] Modalidade aluguel-fixo: 3 atendimentos no mesmo turno = 1 turno
+- [x] Modalidade aluguel-fixo: 2 turnos diferentes mesmo dia = 2 turnos
+- [x] Modalidade aluguel-fixo: turno noite (>= 18:00) conta separadamente
+- [x] Modalidade aluguel-fixo: gratuito ainda conta turno (uso da sala)
+- [x] Período sem atendimentos → repasse zero
+- [x] Ignora atendimentos fora do período
+- [x] Arredondamento half-up: 100.005 → 100.01
+- [x] Profissional sem percentualRepasse / valorAluguelPorTurno → erro
+- [x] Profissional inexistente → NaoEncontrado
+- [x] Geração idempotente (mesma chamada 2x não duplica — `@@unique`)
+- [x] POST `/marcar-pago` por profissional → 403
+- [x] POST `/gerar` por profissional → 403
+- [x] Audit log gravado em `marcar-pago`
+- [x] RBAC GET `/repasses` — profissional vê só os próprios
+- [x] RBAC GET `/repasses/[id]` — profissional não-dono → 403
+
+Total: **23 testes Vitest novos** (12 unit calculate + 11 integration) — total **140 verde**
+
+**Rotas implementadas**:
+- [x] `POST /api/repasses/gerar` — admin/aux. Idempotente
+- [x] `GET /api/repasses` — RBAC; profissional vê só os próprios
+- [x] `GET /api/repasses/[id]` — RBAC + breakdown calculado em tempo real
+- [x] `POST /api/repasses/[id]/marcar-pago` — admin/aux + audit log
+
+**Páginas migradas**:
+- [x] [/financeiro/repasses](app/(front-end)/(pages)/(app)/financeiro/repasses/page.tsx) — botão "Gerar repasse" + tabela com pagar inline
+- [x] [/financeiro/repasses/[id]](app/(front-end)/(pages)/(app)/financeiro/repasses/[id]/page.tsx) — detalhe com breakdown (modalidade, turnos, atendimentos)
+
+**Playwright** `e2e/repasse-flow.spec.ts`: 3 specs (gerar+idempotência, marcar pago com audit, lista UI + detalhe) — total **18 specs verde**
 
 **DoD**:
-- [ ] Cobertura `_usecases/repasse/` ≥ 90%
-- [ ] Cálculo SEMPRE no servidor (RNF-103, DEC-A04)
-- [ ] Valores em `Decimal` Postgres (RNF-101); nada de float
-- [ ] Páginas mostram cálculo vindo da API, sem nenhum `lib/mock`
+- [x] Cobertura `_usecases/repasse/` ≥ 90% (atingido 100% lines, 93.75% branches)
+- [x] Cálculo SEMPRE no servidor (RNF-103, DEC-A04) — Prisma.Decimal puro, zero float
+- [x] Valores em `Decimal` Postgres (RNF-101); arredondamento half-up
+- [x] Páginas mostram cálculo vindo da API, sem `lib/mock`
+- [x] Helper `_lib/turnos.ts` com `horaToTurno()` (PEND-014 — manhã <13:00, tarde <18:00, noite ≥18:00)
 
 **RFs cobertas**: FI03, FI04, FI07, FI08
 
