@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowLeft, Ban, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -19,11 +23,22 @@ import {
   getProfissional,
 } from "@/lib/mock/data";
 import { formatDate } from "@/lib/format";
+import { usePagination } from "@/lib/use-pagination";
 
 export default function CancelamentosPage() {
+  return (
+    <Suspense fallback={null}>
+      <CancelamentosPageInner />
+    </Suspense>
+  );
+}
+
+function CancelamentosPageInner() {
   const dataset = atendimentos
     .filter((a) => a.status === "cancelado")
     .sort((a, b) => b.data.localeCompare(a.data));
+  const { page, totalPages, setPage, slice } = usePagination(dataset.length);
+  const visiveis = slice(dataset);
 
   return (
     <>
@@ -66,7 +81,7 @@ export default function CancelamentosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dataset.map((a) => (
+                {visiveis.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="text-sm tabular-nums">
                       {formatDate(a.data, "dd/MM/yyyy")} {a.hora}
@@ -87,6 +102,7 @@ export default function CancelamentosPage() {
                 ))}
               </TableBody>
             </Table>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </CardContent>
         </Card>
       )}

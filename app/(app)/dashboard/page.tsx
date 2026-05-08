@@ -5,33 +5,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/layouts/page-header";
 import { MetricStat } from "@/components/dashboard/metric-stat";
 import { ReceitaChart } from "@/components/dashboard/receita-chart";
+import { TopConsultoriosCard } from "@/components/dashboard/top-consultorios-card";
 import {
   atendimentos,
-  consultorios,
+  diasDaSemana,
+  periodoReferencia,
   profissionais,
-  receitaPorConsultorio,
-  receitaTotalSemana,
   repasses,
 } from "@/lib/mock/data";
-import { formatBRL, formatDateLong } from "@/lib/format";
+import { formatBRL, formatDate, formatDateLong } from "@/lib/format";
 
 export default function DashboardPage() {
-  const receitaTotal = receitaTotalSemana();
   const repassesAbertos = repasses
     .filter((r) => r.status === "aberto")
     .reduce((s, r) => s + r.valorRepasse, 0);
   const repassesPagos = repasses
     .filter((r) => r.status === "pago")
     .reduce((s, r) => s + r.valorRepasse, 0);
+  const repassesTotalAReceber = repassesAbertos + repassesPagos;
   const ativos = profissionais.filter((p) => p.ativo).length;
 
-  // Receita por dia 06-12/abr
-  const dias = ["06", "07", "08", "09", "10", "11", "12"];
-  const chartData = dias.map((d) => {
+  // Receita por dia da semana corrente
+  const chartData = diasDaSemana().map((iso) => {
     const total = atendimentos
       .filter(
         (a) =>
-          a.data === `2026-04-${d}` &&
+          a.data === iso &&
           a.status === "realizado" &&
           a.statusPagamento === "pago",
       )
@@ -39,24 +38,22 @@ export default function DashboardPage() {
         (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
         0,
       );
-    return { dia: `${d}/04`, receita: total };
+    return { dia: formatDate(iso, "dd/MM"), receita: total };
   });
-
-  const ranking = receitaPorConsultorio().slice(0, 3);
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description={`Visão geral da clínica · Semana de ${formatDateLong("2026-04-06")} a ${formatDateLong("2026-04-12")}`}
+        description={`Visão geral da clínica · Semana de ${formatDateLong(periodoReferencia.inicio)} a ${formatDateLong(periodoReferencia.fim)}`}
         actions={
           <>
             <Button variant="outline">
               <Download size={16} />
               Exportar relatório
             </Button>
-            <Link href="/financeiro/fechamento" className={buttonVariants()}>
-              Fechamento semanal
+            <Link href="/financeiro/repasses" className={buttonVariants()}>
+              Repasses
             </Link>
           </>
         }
@@ -64,8 +61,8 @@ export default function DashboardPage() {
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricStat
-          label="Receita total"
-          value={formatBRL(receitaTotal)}
+          label="Repasses total a receber"
+          value={formatBRL(repassesTotalAReceber)}
           delta={0.12}
           deltaLabel="vs semana anterior"
           icon={Wallet}
@@ -106,37 +103,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Top consultórios</CardTitle>
-            <CardDescription>Ranking por receita na semana</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {ranking.map((r, idx) => {
-              const c = consultorios.find((cc) => cc.id === r.consultorioId)!;
-              return (
-                <div key={c.id} className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
-                    #{idx + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{c.nome}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {c.especialidadesCompativeis[0]} · {r.atendimentos} atend.
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold tabular-nums">{formatBRL(r.receita)}</p>
-                </div>
-              );
-            })}
-            <Link
-              href="/consultorios"
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              Ver todos os consultórios →
-            </Link>
-          </CardContent>
-        </Card>
+        <TopConsultoriosCard />
       </section>
 
       <section className="mt-8">
@@ -149,7 +116,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <Link
-              href="/financeiro/fechamento"
+              href="/financeiro/repasses"
               className="rounded-xl border border-border p-4 transition-colors hover:bg-muted"
             >
               <p className="text-sm font-semibold">Fechar a semana</p>

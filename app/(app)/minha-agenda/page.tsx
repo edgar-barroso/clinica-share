@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, Clock, ShieldAlert } from "lucide-react";
+import { CalendarDays, Clock, Settings, ShieldAlert } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -40,12 +40,28 @@ export default function MinhaAgendaPage() {
       .sort((a, b) => `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`));
   }, [atendimentos, profissionalId]);
 
-  function handleTransition(id: string, to: StatusAgendamento) {
+  function handleTransition(
+    id: string,
+    to: StatusAgendamento,
+    motivo?: string,
+  ) {
     setAtendimentos((list) =>
-      list.map((a) => (a.id === id ? { ...a, status: to } : a)),
+      list.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              status: to,
+              ...(to === "cancelado" && motivo
+                ? { motivoCancelamento: motivo }
+                : {}),
+            }
+          : a,
+      ),
     );
     toast.success(toastMessage(to), {
-      description: `Registrado por ${userNome}`,
+      description: motivo
+        ? `Registrado por ${userNome} · "${motivo}"`
+        : `Registrado por ${userNome}`,
     });
   }
 
@@ -88,6 +104,15 @@ export default function MinhaAgendaPage() {
       <PageHeader
         title="Minha agenda"
         description={`${userNome} · próximos atendimentos`}
+        actions={
+          <Link
+            href={`/profissionais/${profissionalId}/editar`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Settings size={14} />
+            Meu perfil
+          </Link>
+        }
       />
 
       <div className="mb-6 flex items-center gap-2 rounded-xl border border-dashed border-warning/40 bg-warning/10 p-3 text-xs text-warning">
@@ -158,7 +183,9 @@ export default function MinhaAgendaPage() {
                         <AppointmentActions
                           atendimento={a}
                           role={role}
-                          onTransition={(to) => handleTransition(a.id, to)}
+                          onTransition={(to, motivo) =>
+                            handleTransition(a.id, to, motivo)
+                          }
                         />
                       </CardContent>
                     </Card>

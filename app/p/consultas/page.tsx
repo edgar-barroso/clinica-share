@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Calendar, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -28,8 +29,17 @@ import {
 import { formatBRL, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
+import { usePagination } from "@/lib/use-pagination";
 
 export default function MinhasConsultasPage() {
+  return (
+    <Suspense fallback={null}>
+      <MinhasConsultasPageInner />
+    </Suspense>
+  );
+}
+
+function MinhasConsultasPageInner() {
   const router = useRouter();
   const { pacienteId } = useCurrentUser();
   const [tab, setTab] = useState<"futuras" | "historico">("futuras");
@@ -38,9 +48,9 @@ export default function MinhasConsultasPage() {
     if (!pacienteId) router.replace("/entrar");
   }, [pacienteId, router]);
 
-  if (!pacienteId) return null;
-
-  const todas = atendimentos.filter((a) => a.pacienteId === pacienteId);
+  const todas = pacienteId
+    ? atendimentos.filter((a) => a.pacienteId === pacienteId)
+    : [];
   const futuras = todas
     .filter((a) => a.status === "agendado" || a.status === "em_atendimento")
     .sort((a, b) => `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`));
@@ -49,6 +59,15 @@ export default function MinhasConsultasPage() {
     .sort((a, b) => `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`));
 
   const lista = tab === "futuras" ? futuras : historico;
+  const { page, totalPages, setPage, slice } = usePagination(lista.length);
+  const visiveis = slice(lista);
+
+  function handleTabChange(novaTab: "futuras" | "historico") {
+    setTab(novaTab);
+    setPage(1);
+  }
+
+  if (!pacienteId) return null;
 
   return (
     <>
@@ -66,7 +85,7 @@ export default function MinhasConsultasPage() {
       <div className="mb-6 inline-flex rounded-xl border border-border bg-card p-1 text-sm">
         <button
           type="button"
-          onClick={() => setTab("futuras")}
+          onClick={() => handleTabChange("futuras")}
           className={cn(
             "rounded-lg px-4 py-1.5 font-medium transition-colors",
             tab === "futuras"
@@ -78,7 +97,7 @@ export default function MinhasConsultasPage() {
         </button>
         <button
           type="button"
-          onClick={() => setTab("historico")}
+          onClick={() => handleTabChange("historico")}
           className={cn(
             "rounded-lg px-4 py-1.5 font-medium transition-colors",
             tab === "historico"
@@ -127,7 +146,7 @@ export default function MinhasConsultasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lista.map((a) => {
+                {visiveis.map((a) => {
                   const prof = getProfissional(a.profissionalId);
                   const cons = getConsultorio(a.consultorioId);
                   const bruto =
@@ -169,6 +188,7 @@ export default function MinhasConsultasPage() {
                 })}
               </TableBody>
             </Table>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </CardContent>
         </Card>
       )}

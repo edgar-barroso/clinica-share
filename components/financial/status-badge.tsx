@@ -11,7 +11,16 @@ export function PaymentStatusBadge({ status }: { status: StatusPagamento }) {
   return <Badge variant={variant}>{label}</Badge>;
 }
 
-export function RepasseStatusBadge({ status }: { status: StatusRepasse }) {
+export function RepasseStatusBadge({
+  status,
+  atrasado = false,
+}: {
+  status: StatusRepasse;
+  atrasado?: boolean;
+}) {
+  if (atrasado && status === "aberto") {
+    return <Badge variant="danger">Atrasado</Badge>;
+  }
   const map = {
     aberto: { variant: "warning" as const, label: "Em aberto" },
     pago: { variant: "success" as const, label: "Pago" },

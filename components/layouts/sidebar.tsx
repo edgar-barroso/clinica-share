@@ -19,6 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/lib/current-user";
 import { useRole } from "@/lib/role";
 
 type NavItem = { href: string; label: string; icon: typeof BarChart3 };
@@ -29,7 +30,7 @@ const navAll: NavItem[] = [
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
   { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/auditoria", label: "Auditoria", icon: FileSearch },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
@@ -43,25 +44,36 @@ const navPaciente: NavItem[] = [
 ];
 
 const navProfissional: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/minha-agenda", label: "Minha agenda", icon: Calendar },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
 ];
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
+  auxiliar: ["/dashboard", "/atendimentos", "/financeiro/repasses", "/relatorios", "/auditoria"],
   atendente: ["/agenda", "/atendimentos"],
 };
 
 export function Sidebar() {
   const pathname = usePathname();
   const { role } = useRole();
+  const { profissionalId } = useCurrentUser();
   const items =
     role === "paciente"
       ? navPaciente
       : role === "profissional"
-        ? navProfissional
+        ? [
+            ...navProfissional,
+            ...(profissionalId
+              ? [
+                  {
+                    href: `/profissionais/${profissionalId}/editar`,
+                    label: "Meu perfil",
+                    icon: User,
+                  },
+                ]
+              : []),
+          ]
         : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
 
   return (

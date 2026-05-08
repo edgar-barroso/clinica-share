@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, DoorOpen, Pencil, TrendingUp } from "lucide-react";
+import { ArrowLeft, Pencil, TrendingUp } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +13,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layouts/page-header";
+import { ConsultorioMetrics } from "@/components/consultorios/consultorio-metrics";
 import {
   atendimentos,
   getConsultorio,
   getPaciente,
   getProfissional,
-  receitaPorConsultorio,
 } from "@/lib/mock/data";
 import { formatBRL, formatDate } from "@/lib/format";
 import { PaymentStatusBadge } from "@/components/financial/status-badge";
@@ -35,9 +35,6 @@ export default async function ConsultorioDetailPage({
   const atsDaSala = atendimentos
     .filter((a) => a.consultorioId === c.id && a.status !== "cancelado")
     .sort((a, b) => `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`));
-  const ranking = receitaPorConsultorio();
-  const r = ranking.find((x) => x.consultorioId === c.id);
-  const posicao = ranking.findIndex((x) => x.consultorioId === c.id) + 1;
 
   return (
     <>
@@ -63,40 +60,7 @@ export default async function ConsultorioDetailPage({
         }
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Receita da semana</p>
-            <TrendingUp size={18} className="text-primary" />
-          </div>
-          <p className="mt-2 text-2xl font-bold tabular-nums">
-            {formatBRL(r?.receita ?? 0)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {posicao > 0 ? `#${posicao} de ${ranking.length} consultórios` : "sem receita"}
-          </p>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Atendimentos na semana</p>
-            <Calendar size={18} className="text-muted-foreground" />
-          </div>
-          <p className="mt-2 text-2xl font-bold tabular-nums">{r?.atendimentos ?? 0}</p>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Status</p>
-            <DoorOpen size={18} className="text-muted-foreground" />
-          </div>
-          <p className="mt-2">
-            {r && r.atendimentos > 0 ? (
-              <Badge variant="success">Ativo</Badge>
-            ) : (
-              <Badge variant="secondary">Ocioso</Badge>
-            )}
-          </p>
-        </Card>
-      </div>
+      <ConsultorioMetrics consultorioId={c.id} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

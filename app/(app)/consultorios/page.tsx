@@ -1,21 +1,42 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { DoorOpen, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layouts/page-header";
-import { consultorios, receitaPorConsultorio } from "@/lib/mock/data";
+import {
+  PeriodoSelector,
+  type PeriodoSelectorValue,
+} from "@/components/relatorios/periodo-selector";
+import {
+  consultorios,
+  formatPeriodoLabel,
+  receitaPorConsultorio,
+  semanaAtual,
+} from "@/lib/mock/data";
 import { formatBRL } from "@/lib/format";
 
 export default function ConsultoriosPage() {
-  const ranking = receitaPorConsultorio();
-  const mapReceita = new Map(ranking.map((r) => [r.consultorioId, r]));
+  const [seletor, setSeletor] = useState<PeriodoSelectorValue>(() => ({
+    tipo: "semana",
+    periodo: semanaAtual(),
+  }));
+
+  const mapReceita = useMemo(() => {
+    const ranking = receitaPorConsultorio(seletor.periodo);
+    return new Map(ranking.map((r) => [r.consultorioId, r]));
+  }, [seletor.periodo]);
+
+  const label = formatPeriodoLabel(seletor.periodo, seletor.tipo);
 
   return (
     <>
       <PageHeader
         title="Consultórios"
-        description="12 salas cadastradas · desempenho da semana 06-12 de abril"
+        description={`12 salas cadastradas · desempenho de ${label}`}
         actions={
           <Link href="/consultorios/novo" className={buttonVariants()}>
             <Plus size={16} />
@@ -23,6 +44,10 @@ export default function ConsultoriosPage() {
           </Link>
         }
       />
+
+      <div className="mb-4">
+        <PeriodoSelector value={seletor} onChange={setSeletor} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {consultorios.map((c) => {
@@ -64,7 +89,7 @@ export default function ConsultoriosPage() {
                 </div>
                 <div className="flex items-end justify-between border-t border-border pt-3">
                   <div>
-                    <p className="text-xs text-muted-foreground">Receita da semana</p>
+                    <p className="text-xs text-muted-foreground">Receita do período</p>
                     <p className="text-lg font-semibold tabular-nums">{formatBRL(receita)}</p>
                   </div>
                   <div className="text-right">

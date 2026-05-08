@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowLeft, Download, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -19,11 +23,22 @@ import {
   getProfissional,
 } from "@/lib/mock/data";
 import { formatBRL, formatDate } from "@/lib/format";
+import { usePagination } from "@/lib/use-pagination";
 
 export default function GratuitasDescontosPage() {
+  return (
+    <Suspense fallback={null}>
+      <GratuitasDescontosPageInner />
+    </Suspense>
+  );
+}
+
+function GratuitasDescontosPageInner() {
   const dataset = atendimentos
     .filter((a) => a.statusPagamento === "gratuito" && a.status === "realizado")
     .sort((a, b) => b.data.localeCompare(a.data));
+  const { page, totalPages, setPage, slice } = usePagination(dataset.length);
+  const visiveis = slice(dataset);
 
   const totalRenunciado = dataset.reduce(
     (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
@@ -85,7 +100,7 @@ export default function GratuitasDescontosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dataset.map((a) => {
+                {visiveis.map((a) => {
                   const bruto =
                     a.valorConsulta +
                     a.procedimentos.reduce((s, p) => s + p.valor, 0);
@@ -114,6 +129,7 @@ export default function GratuitasDescontosPage() {
                 })}
               </TableBody>
             </Table>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </CardContent>
         </Card>
       )}

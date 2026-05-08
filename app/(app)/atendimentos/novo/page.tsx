@@ -37,6 +37,7 @@ function NovoAtendimentoPageInner() {
         consultorioId: origem.consultorioId,
         valorConsulta: origem.valorConsulta,
         usaProntuarioExterno: origem.usaProntuarioExterno,
+        prontuario: origem.prontuarioInterno,
         procedimentos: origem.procedimentos.map((p) => ({
           nome: p.nome,
           valor: p.valor,
@@ -69,6 +70,7 @@ function NovoAtendimentoPageInner() {
         mode="create"
         initial={initial}
         lockIdentity={!!origem}
+        enableProntuarioFields={!!origem}
         callout={
           origem
             ? {

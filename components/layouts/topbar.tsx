@@ -1,11 +1,10 @@
 "use client";
 
-import { Bell, LogOut, Search } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { MobileSidebarTrigger } from "./mobile-sidebar";
 import { RoleSwitcher } from "./role-switcher";
 import { useRole } from "@/lib/role";
@@ -55,11 +54,6 @@ export function Topbar() {
       <div className="flex-1 md:hidden" />
 
       <RoleSwitcher />
-
-      <Button variant="ghost" size="icon" aria-label="Notificações" className="relative">
-        <Bell size={18} />
-        <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-destructive" />
-      </Button>
 
       <div ref={menuRef} className="relative">
         <button

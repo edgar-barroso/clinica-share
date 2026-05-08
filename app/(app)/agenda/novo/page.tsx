@@ -17,11 +17,22 @@ import { consultorios, profissionais } from "@/lib/mock/data";
 const HORARIOS_MANHA = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"];
 const HORARIOS_TARDE = ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"];
 
+function amanhaISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function NovoAgendamentoPage() {
   const router = useRouter();
   const [horario, setHorario] = useState<string | null>(null);
   const [pacienteId, setPacienteId] = useState("pt01");
   const [ocupados] = useState(new Set(["09:30", "14:00", "14:30", "15:30"]));
+  const [dataPadrao] = useState(amanhaISO);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,7 +110,7 @@ export default function NovoAgendamentoPage() {
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="data">Data</Label>
-                <Input id="data" type="date" defaultValue="2026-04-14" required />
+                <Input id="data" type="date" defaultValue={dataPadrao} required />
               </div>
 
               <div>

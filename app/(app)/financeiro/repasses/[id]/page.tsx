@@ -22,6 +22,7 @@ import {
   atendimentos,
   getPaciente,
   getProfissional,
+  periodoReferencia,
   repasses as mockRepasses,
 } from "@/lib/mock/data";
 import { formatBRL, formatDate, formatPercent } from "@/lib/format";
@@ -50,7 +51,7 @@ export default function RepasseDetailPage({
     setRepasse((r) => ({
       ...r,
       status: "pago",
-      dataPagamento: "2026-04-13",
+      dataPagamento: periodoReferencia.dataPagamento,
     }));
     toast.success("Repasse marcado como pago", {
       description:
@@ -79,10 +80,10 @@ export default function RepasseDetailPage({
             </Button>
           ) : (
             <Link
-              href="/financeiro/fechamento"
+              href="/financeiro/repasses"
               className={buttonVariants({ variant: "outline" })}
             >
-              Ver fechamento
+              Ver todos os repasses
             </Link>
           )
         }

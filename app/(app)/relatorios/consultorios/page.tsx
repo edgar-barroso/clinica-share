@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Download, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,12 +15,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layouts/page-header";
-import { consultorios, receitaPorConsultorio } from "@/lib/mock/data";
+import {
+  PeriodoSelector,
+  type PeriodoSelectorValue,
+} from "@/components/relatorios/periodo-selector";
+import {
+  consultorios,
+  formatPeriodoLabel,
+  receitaPorConsultorio,
+  semanaAtual,
+} from "@/lib/mock/data";
 import { formatBRL } from "@/lib/format";
 
 export default function RelatorioConsultoriosPage() {
-  const ranking = receitaPorConsultorio();
+  const [seletor, setSeletor] = useState<PeriodoSelectorValue>(() => ({
+    tipo: "semana",
+    periodo: semanaAtual(),
+  }));
+
+  const ranking = useMemo(
+    () => receitaPorConsultorio(seletor.periodo),
+    [seletor.periodo],
+  );
   const total = ranking.reduce((s, r) => s + r.receita, 0);
+  const label = formatPeriodoLabel(seletor.periodo, seletor.tipo);
 
   return (
     <>
@@ -31,7 +52,7 @@ export default function RelatorioConsultoriosPage() {
 
       <PageHeader
         title="Ranking de consultórios (RE03)"
-        description="Receita gerada por sala na semana 06 a 12 de abril. Sala ociosa pode ser candidata a renegociação de modalidade."
+        description={`Receita gerada por sala em ${label}. Sala ociosa pode ser candidata a renegociação de modalidade.`}
         actions={
           <Button variant="outline">
             <Download size={16} />
@@ -39,6 +60,16 @@ export default function RelatorioConsultoriosPage() {
           </Button>
         }
       />
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <PeriodoSelector value={seletor} onChange={setSeletor} />
+        <p className="text-sm text-muted-foreground">
+          Total no período:{" "}
+          <span className="font-semibold tabular-nums text-foreground">
+            {formatBRL(total)}
+          </span>
+        </p>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -61,7 +92,7 @@ export default function RelatorioConsultoriosPage() {
                 return (
                   <TableRow key={r.consultorioId}>
                     <TableCell>
-                      {idx === 0 ? (
+                      {idx === 0 && r.receita > 0 ? (
                         <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                           <Trophy size={14} />
                         </div>

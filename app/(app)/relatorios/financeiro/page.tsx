@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowLeft, Download, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
@@ -21,14 +25,26 @@ import {
   getConsultorio,
   getPaciente,
   getProfissional,
+  periodoReferencia,
   profissionais,
 } from "@/lib/mock/data";
 import { formatBRL, formatDate } from "@/lib/format";
+import { usePagination } from "@/lib/use-pagination";
 
 export default function RelatorioFinanceiroPage() {
+  return (
+    <Suspense fallback={null}>
+      <RelatorioFinanceiroPageInner />
+    </Suspense>
+  );
+}
+
+function RelatorioFinanceiroPageInner() {
   const dataset = atendimentos
     .filter((a) => a.status === "realizado")
     .sort((a, b) => `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`));
+  const { page, totalPages, setPage, slice } = usePagination(dataset.length);
+  const visiveis = slice(dataset);
   const totalBruto = dataset.reduce(
     (s, a) => s + a.valorConsulta + a.procedimentos.reduce((ss, p) => ss + p.valor, 0),
     0,
@@ -71,11 +87,15 @@ export default function RelatorioFinanceiroPage() {
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor="inicio">Início</Label>
-            <Input id="inicio" type="date" defaultValue="2026-04-06" />
+            <Input
+              id="inicio"
+              type="date"
+              defaultValue={periodoReferencia.inicio}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="fim">Fim</Label>
-            <Input id="fim" type="date" defaultValue="2026-04-12" />
+            <Input id="fim" type="date" defaultValue={periodoReferencia.fim} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="prof">Profissional</Label>
@@ -133,7 +153,7 @@ export default function RelatorioFinanceiroPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {dataset.map((a) => {
+              {visiveis.map((a) => {
                 const bruto =
                   a.valorConsulta + a.procedimentos.reduce((s, p) => s + p.valor, 0);
                 return (
@@ -161,6 +181,7 @@ export default function RelatorioFinanceiroPage() {
               })}
             </TableBody>
           </Table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </CardContent>
       </Card>
     </>

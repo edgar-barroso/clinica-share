@@ -31,6 +31,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { useCurrentUser } from "@/lib/current-user";
 import { useRole } from "@/lib/role";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,7 @@ const navAll: NavItem[] = [
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
   { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/auditoria", label: "Auditoria", icon: FileSearch },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
@@ -57,8 +58,8 @@ const navPaciente: NavItem[] = [
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
-  profissional: ["/dashboard", "/agenda", "/atendimentos"],
+  auxiliar: ["/dashboard", "/atendimentos", "/financeiro/repasses", "/relatorios", "/auditoria"],
+  profissional: ["/agenda", "/atendimentos"],
   atendente: ["/agenda", "/atendimentos"],
   paciente: navPaciente.map((n) => n.href),
 };
@@ -68,6 +69,7 @@ export function MobileSidebarTrigger() {
   const isClient = useIsClient();
   const pathname = usePathname();
   const { role } = useRole();
+  const { profissionalId } = useCurrentUser();
 
   useEffect(() => {
     if (!open) return;
@@ -82,7 +84,21 @@ export function MobileSidebarTrigger() {
     };
   }, [open]);
 
-  const items = role === "paciente" ? navPaciente : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
+  const baseItems =
+    role === "paciente"
+      ? navPaciente
+      : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
+  const items =
+    role === "profissional" && profissionalId
+      ? [
+          ...baseItems,
+          {
+            href: `/profissionais/${profissionalId}/editar`,
+            label: "Meu perfil",
+            icon: User,
+          },
+        ]
+      : baseItems;
 
   const overlay = open ? (
     <>

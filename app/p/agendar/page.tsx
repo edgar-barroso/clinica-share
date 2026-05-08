@@ -9,7 +9,7 @@ import {
   Check,
   Clock,
   CreditCard,
-  Landmark,
+  Info,
   QrCode,
   Stethoscope,
 } from "lucide-react";
@@ -40,7 +40,7 @@ const HORARIOS = [
   { periodo: "Tarde", slots: ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"] },
 ];
 
-type Pagamento = "pix" | "cartao" | "boleto" | "na_consulta";
+type Pagamento = "pix" | "cartao" | "na_consulta";
 
 function initials(name: string) {
   const parts = name.split(" ").filter((x) => !["Dr.", "Dra."].includes(x));
@@ -111,7 +111,8 @@ function AgendarPageInner() {
     : null;
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
-  const hoje = new Date("2026-04-19T00:00:00");
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
   const datasDisponiveis = Array.from({ length: 14 }).map((_, i) => {
     const d = new Date(hoje);
     d.setDate(hoje.getDate() + i);
@@ -377,6 +378,16 @@ function AgendarPageInner() {
 
               {step === "pagamento" && (
                 <div className="space-y-4">
+                  <div className="flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground">
+                    <Info size={14} className="mt-0.5 shrink-0 text-primary" />
+                    <span>
+                      Você está pagando agora apenas o valor da consulta. Caso
+                      o profissional realize procedimentos extras durante o
+                      atendimento (ex.: exames, ultrassom, ECG), eles podem ser
+                      cobrados à parte na clínica.
+                    </span>
+                  </div>
+
                   <div>
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Pagar agora
@@ -395,13 +406,6 @@ function AgendarPageInner() {
                         icon={CreditCard}
                         label="Cartão"
                         hint="Parcele em até 3x sem juros"
-                      />
-                      <PaymentOption
-                        active={pagamento === "boleto"}
-                        onClick={() => setPagamento("boleto")}
-                        icon={Landmark}
-                        label="Boleto"
-                        hint="Compensação em 2 dias úteis"
                       />
                     </div>
                   </div>
@@ -450,9 +454,7 @@ function AgendarPageInner() {
                         ? "Pix"
                         : pagamento === "cartao"
                           ? "Cartão"
-                          : pagamento === "boleto"
-                            ? "Boleto"
-                            : "Na consulta"
+                          : "Na consulta"
                     }
                   />
                 )}

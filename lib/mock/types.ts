@@ -1,5 +1,10 @@
 export type Turno = "manha" | "tarde" | "noite";
 
+export interface Periodo {
+  inicio: string;
+  fim: string;
+}
+
 export interface Consultorio {
   id: string;
   nome: string;
@@ -25,11 +30,37 @@ export interface Profissional {
   turnosFixos: Array<{ dia: number; turno: Turno; consultorioId: string }>;
 }
 
+export type Sexo = "M" | "F" | "outro";
+
+export interface EnderecoPaciente {
+  cep: string;
+  rua: string;
+  numero: string;
+  cidade: string;
+  uf: string;
+}
+
+export interface PlanoPaciente {
+  temPlano: boolean;
+  operadora?: string;
+  numeroCarteirinha?: string;
+}
+
 export interface Paciente {
   id: string;
   nome: string;
   telefone: string;
   email: string;
+  cpf?: string;
+  dataNascimento?: string;
+  sexo?: Sexo;
+  endereco?: EnderecoPaciente;
+  plano?: PlanoPaciente;
+  /**
+   * Indica se a credencial de acesso ao portal foi configurada (PEND-036).
+   * Senha em si nunca é guardada no mock — em produção será hash.
+   */
+  senhaDefinida?: boolean;
 }
 
 export type StatusPagamento = "pago" | "pendente" | "gratuito";
@@ -43,6 +74,12 @@ export type StatusAgendamento =
 export interface ProcedimentoExtra {
   nome: string;
   valor: number;
+}
+
+export interface ProntuarioInterno {
+  evolucao: string;
+  diagnostico: string;
+  conduta: string;
 }
 
 export interface Atendimento {
@@ -59,6 +96,7 @@ export interface Atendimento {
   motivoDescontoOuGratuidade?: string;
   motivoCancelamento?: string;
   usaProntuarioExterno: boolean;
+  prontuarioInterno?: ProntuarioInterno;
   observacoes?: string;
 }
 

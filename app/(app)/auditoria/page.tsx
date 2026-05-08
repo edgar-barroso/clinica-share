@@ -1,6 +1,10 @@
+"use client";
+
+import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -12,9 +16,20 @@ import {
 import { PageHeader } from "@/components/layouts/page-header";
 import { auditoria } from "@/lib/mock/data";
 import { formatDateTime } from "@/lib/format";
+import { usePagination } from "@/lib/use-pagination";
 
 export default function AuditoriaPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuditoriaPageInner />
+    </Suspense>
+  );
+}
+
+function AuditoriaPageInner() {
   const ordenado = [...auditoria].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const { page, totalPages, setPage, slice } = usePagination(ordenado.length);
+  const visiveis = slice(ordenado);
 
   return (
     <>
@@ -52,7 +67,7 @@ export default function AuditoriaPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ordenado.map((l) => (
+              {visiveis.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground tabular-nums">
                     {formatDateTime(l.timestamp)}
@@ -86,6 +101,7 @@ export default function AuditoriaPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </CardContent>
       </Card>
     </>

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
-  Bot,
   CreditCard,
   Mail,
   MessageCircle,
@@ -53,15 +52,6 @@ const integracoesIniciais: IntegracaoState[] = [
     icon: Mail,
     status: "planejado",
     detalhe: "Plataforma a definir (ex: SendGrid, Resend, AWS SES).",
-  },
-  {
-    id: "ia-triagem",
-    nome: "IA auxiliar (futura)",
-    descricao:
-      "Uso experimental de IA para triagem, sugestão de especialidade e análise de padrões de ocupação.",
-    icon: Bot,
-    status: "planejado",
-    detalhe: "Fora do escopo do MVP. Cadastrada como ideia para fase futura.",
   },
 ];
 

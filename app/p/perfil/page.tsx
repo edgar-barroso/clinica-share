@@ -1,10 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { Bell, ChevronRight, FileLock2, LogOut, Mail, MessageCircle, Phone, Shield } from 'lucide-react';
+import { LogOut, Mail, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,8 +15,6 @@ import { useCurrentUser } from '@/lib/current-user';
 export default function PerfilPage() {
   const router = useRouter();
   const { pacienteId } = useCurrentUser();
-  const [notifWhats, setNotifWhats] = useState(true);
-  const [notifEmail, setNotifEmail] = useState(true);
 
   useEffect(() => {
     if (!pacienteId) router.replace('/entrar');
@@ -30,7 +27,7 @@ export default function PerfilPage() {
 
   return (
     <>
-      <PageHeader title="Meu perfil" description="Dados pessoais, preferências de notificação e configurações de privacidade" />
+      <PageHeader title="Meu perfil" description="Seus dados pessoais e de contato" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -68,46 +65,9 @@ export default function PerfilPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Lembretes e notificações (AG07)</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ToggleRow
-                icon={MessageCircle}
-                label="Lembretes via WhatsApp"
-                description="2 dias antes, 1 dia antes e no dia da consulta"
-                checked={notifWhats}
-                onToggle={() => {
-                  setNotifWhats((v) => !v);
-                  toast.success(notifWhats ? 'Lembretes por WhatsApp desativados' : 'Lembretes por WhatsApp ativados');
-                }}
-              />
-              <ToggleRow
-                icon={Bell}
-                label="Notificações por e-mail"
-                description="Confirmações e recibos"
-                checked={notifEmail}
-                onToggle={() => {
-                  setNotifEmail((v) => !v);
-                  toast.success(notifEmail ? 'Notificações por e-mail desativadas' : 'Notificações por e-mail ativadas');
-                }}
-              />
-            </CardContent>
-          </Card>
         </div>
 
         <aside className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Privacidade e segurança</CardTitle>
-            </CardHeader>
-            <CardContent className="divide-y divide-border p-0">
-              <MenuItem icon={Shield} label="LGPD" subtitle="Seus dados e consentimentos" href="#" />
-              <MenuItem icon={FileLock2} label="Recibos e comprovantes" subtitle="Histórico de pagamentos" href="#" />
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Sair</CardTitle>
@@ -152,34 +112,3 @@ function InfoItem({ icon: Icon, label, value }: { icon: typeof Mail; label: stri
   );
 }
 
-function ToggleRow({ icon: Icon, label, description, checked, onToggle }: { icon: typeof Bell; label: string; description: string; checked: boolean; onToggle: () => void }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <Icon size={16} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-      <button type="button" role="switch" aria-checked={checked} onClick={onToggle} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-muted'}`}>
-        <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${!checked && '-translate-x-5'}`} />
-      </button>
-    </div>
-  );
-}
-
-function MenuItem({ icon: Icon, label, subtitle, href }: { icon: typeof Shield; label: string; subtitle?: string; href: string }) {
-  return (
-    <Link href={href} className="flex items-center gap-3 p-4 transition-colors hover:bg-muted/40">
-      <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-        <Icon size={15} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-      </div>
-      <ChevronRight size={14} className="text-muted-foreground" />
-    </Link>
-  );
-}

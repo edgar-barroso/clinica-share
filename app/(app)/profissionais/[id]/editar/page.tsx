@@ -4,14 +4,21 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { ShieldAlert, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/layouts/page-header";
 import { consultorios, getProfissional } from "@/lib/mock/data";
+import { useCurrentUser } from "@/lib/current-user";
 import { formatBRL, formatPercent } from "@/lib/format";
 
 const TURNOS = [
@@ -44,6 +51,11 @@ export default function EditarProfissionalPage({
   const original = getProfissional(id);
   if (!original) notFound();
   const router = useRouter();
+  const { role, profissionalId } = useCurrentUser();
+
+  const isProfissional = role === "profissional";
+  const isOwnProfile = isProfissional && profissionalId === id;
+  const isOtherProfissional = isProfissional && profissionalId !== id;
 
   const [nome, setNome] = useState(original.nome);
   const [especialidade, setEspecialidade] = useState(original.especialidade);
@@ -96,6 +108,133 @@ export default function EditarProfissionalPage({
       description: "Audit log registrado para cada campo alterado.",
     });
     setTimeout(() => router.push(`/profissionais/${id}`), 600);
+  }
+
+  if (isOtherProfissional) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-sm font-medium">
+          Você só pode editar o seu próprio perfil.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          O cadastro de outros profissionais é gerenciado pelo administrativo.
+        </p>
+        <Link
+          href="/minha-agenda"
+          className="mt-4 inline-block text-sm text-primary hover:underline"
+        >
+          Voltar para minha agenda
+        </Link>
+      </div>
+    );
+  }
+
+  if (isOwnProfile) {
+    return (
+      <>
+        <PageHeader
+          title="Meu perfil"
+          description="Configure preferências da sua agenda. Contrato, turnos fixos e status são gerenciados pelo administrativo."
+          actions={
+            <Link
+              href="/minha-agenda"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Cancelar
+            </Link>
+          }
+        />
+
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+        >
+          <div className="space-y-6 lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Identificação</CardTitle>
+                <CardDescription>
+                  Dados cadastrais — alterações precisam passar pelo administrativo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ReadonlyField label="Nome" value={original.nome} />
+                <ReadonlyField
+                  label="Especialidade"
+                  value={original.especialidade}
+                />
+                <ReadonlyField
+                  label="Conselho profissional"
+                  value={original.conselho}
+                />
+                <ReadonlyField label="E-mail" value={original.email} />
+                <ReadonlyField label="Telefone" value={original.telefone} />
+                <ReadonlyField
+                  label="Status"
+                  value={original.ativo ? "Ativo" : "Inativo"}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Duração da consulta</CardTitle>
+                <CardDescription>
+                  Tempo padrão usado para gerar slots na sua agenda. Altera quanto
+                  o sistema reserva por consulta.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1.5 sm:max-w-xs">
+                  <Label htmlFor="duracao">Duração (minutos) *</Label>
+                  <Input
+                    id="duracao"
+                    type="number"
+                    min="10"
+                    step="5"
+                    value={duracao}
+                    onChange={(e) => setDuracao(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo 10 minutos · valores em múltiplos de 5.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <aside className="lg:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle>Resumo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="rounded-xl bg-muted/50 p-3 text-xs">
+                  <p>
+                    <span className="text-muted-foreground">
+                      Duração atual:
+                    </span>{" "}
+                    <span className="font-medium tabular-nums">
+                      {original.duracaoConsultaMinutos} min
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Nova duração:</span>{" "}
+                    <span className="font-medium tabular-nums">
+                      {duracao} min
+                    </span>
+                  </p>
+                </div>
+                <Button type="submit" className="w-full" size="lg">
+                  Salvar alterações
+                </Button>
+              </CardContent>
+            </Card>
+          </aside>
+        </form>
+      </>
+    );
   }
 
   return (
@@ -385,5 +524,16 @@ export default function EditarProfissionalPage({
         </aside>
       </form>
     </>
+  );
+}
+
+function ReadonlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-medium">{value}</p>
+    </div>
   );
 }

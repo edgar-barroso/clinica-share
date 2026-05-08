@@ -20,7 +20,7 @@ export default function EditarAtendimentoPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { role } = useCurrentUser();
+  const { role, profissionalId } = useCurrentUser();
 
   const atendimento = useMemo(
     () => atendimentos.find((a) => a.id === id),
@@ -59,6 +59,27 @@ export default function EditarAtendimentoPage({
     );
   }
 
+  const isProfissional = role === "profissional";
+
+  if (isProfissional && profissionalId !== atendimento.profissionalId) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-sm font-medium">
+          Você só pode editar suas próprias consultas.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Esta consulta foi atendida por outro profissional.
+        </p>
+        <Link
+          href={`/atendimentos/${id}`}
+          className="mt-4 inline-block text-sm text-primary hover:underline"
+        >
+          Voltar para o atendimento
+        </Link>
+      </div>
+    );
+  }
+
   const initial: Partial<AtendimentoFormValues> = {
     data: atendimento.data,
     hora: atendimento.hora,
@@ -67,6 +88,7 @@ export default function EditarAtendimentoPage({
     consultorioId: atendimento.consultorioId,
     valorConsulta: atendimento.valorConsulta,
     usaProntuarioExterno: atendimento.usaProntuarioExterno,
+    prontuario: atendimento.prontuarioInterno,
     procedimentos: atendimento.procedimentos.map((p) => ({
       nome: p.nome,
       valor: p.valor,
@@ -94,12 +116,20 @@ export default function EditarAtendimentoPage({
 
       <PageHeader
         title={`Editar atendimento #${id}`}
-        description="Ajuste valor, procedimentos extras ou status de pagamento"
+        description={
+          isProfissional
+            ? "Ajuste o valor da consulta ou o prontuário. Procedimentos extras e pagamento são gerenciados pelo administrativo."
+            : "Ajuste valor, procedimentos extras ou status de pagamento"
+        }
       />
 
       <AtendimentoForm
         mode="edit"
         initial={initial}
+        enableProntuarioFields
+        lockIdentity={isProfissional}
+        lockProcedimentos={isProfissional}
+        lockPayment={isProfissional}
         cancelHref={`/atendimentos/${id}`}
         onSubmit={handleSubmit}
       />
