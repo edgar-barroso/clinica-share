@@ -12,6 +12,7 @@ Histórico da Revisão
 | Data | Versão | Descrição | Autor |
 |---|---|---|---|
 | 09/04/2026 | 1.0 | Construção da primeira versão do documento, a partir dos dados colhidos na reunião com o cliente. | David Halan (Gerente de projetos) · Leonardo Albuquerque (Analista de Sistemas) · José Edgar (Dev/WD) · Guilherme Mesquita (DBA) |
+| 07/05/2026 | 1.1 | Remoção de FI09 (pagamento online via PIX/cartão/boleto) do escopo proposto pela equipe (DEC-E09). Pagamento passa a ser exclusivamente presencial no atendimento (FI10 promovido). **Pendente confirmação do cliente em R2 — PEND-045.** | Equipe DevsTech |
 
 Índice Analítico
 
@@ -276,7 +277,7 @@ Fechamento financeiro semanal com relatório de prestação de contas
 
 Histórico de repasses pagos e em aberto, com rastreabilidade completa de cada alteração
 
-Registro de forma de pagamento: Pix, cartão ou boleto
+Pagamento da consulta é realizado exclusivamente de forma presencial no atendimento (dinheiro, Pix presencial ou cartão na maquininha do consultório). Sistema registra apenas o status `pago`/`pendente`/`gratuito` — não processa transações financeiras com o paciente. *(v1.1, DEC-E09, pendente confirmação cliente em PEND-045)*
 
 
 ## 5.5 Módulo de Relatórios e Dashboard

@@ -48,6 +48,12 @@
 | R-019 | Protótipo sem persistência entre páginas pode confundir Dr. Edson na demo — marcar "Chegou" e navegar desfaz a transição <!-- NOVO --> | Alta | Baixo | Média | Toasts claros por transição ("Registrado por X"); banner "protótipo sem persistência" visível; roteiro de demo executa todas as ações sem mudar de tela; README orienta | Equipe (comunicação) | Aberto |
 | R-020 | Role simulado sem `profissionalId` real impede validação semântica — profissional é sempre `p01` (Dra. Nirmala) <!-- NOVO --> | Média | Baixo | Baixa | Nota no seletor de role; PEND-032 e implementação de auth real resolverão. Demo usa apenas o profissional mapeado | Equipe (implementação) | Aberto |
 
+### Riscos da remoção proposta de FI09 (2026-05-07) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-021 | Dr. Edson rejeita a proposta DEC-E09 em R2 e exige FI09 reativado; equipe precisa retomar arquitetura Asaas (conta-mãe + walletId, split, estorno, tributário PEND-040) com prazo apertado <!-- NOVO --> | Média | Alto | Alta | Apresentar DEC-E09 em R2 com argumentação clara: foco no problema central de R1 (controle de repasse), redução LGPD/PCI, IFQ "Excitante" ≠ "Normal", economia de ~19h e ~R$ 2.566 (planilha-custos-v2); manter FI09 marcado como "removido proposto" e não "removido" para reverter rápido se rejeitado; ter rascunho de arquitetura Asaas pronto como fallback (já documentado em conversa com equipe) | Equipe (comunicação + planejamento) | Aberto |
+| R-022 | Pagamento exclusivamente presencial pode aumentar taxa de no-show (paciente sem "skin in the game") e gerar inadimplência (paciente atendido sem pagar e sai sem cobrança) <!-- NOVO --> | Média | Médio | Média | Reforçar lembretes WhatsApp (AG07) como principal redutor de no-show; auxiliar marca status `pendente` no atendimento e cobra no fechamento semanal (FI07); PEND-027 endereça política de no-show; em última análise, se inadimplência for problema, FI09 pode voltar com sinal/caução parcial | Equipe (modelagem + comunicação) | Aberto |
+
 ### Legenda
 - **Probabilidade:** Baixa / Média / Alta
 - **Impacto:** Baixo / Médio / Alto / Crítico
@@ -58,4 +64,4 @@
 |---|---|---|---|
 | _(nenhum)_ | | | |
 
-## Última atualização: 2026-04-19 (+R-019/020 protótipo sem persistência + role simulado sem profissionalId real)
+## Última atualização: 2026-05-07 (+R-021 cliente rejeitar remoção FI09; +R-022 no-show e inadimplência sem pagamento antecipado)

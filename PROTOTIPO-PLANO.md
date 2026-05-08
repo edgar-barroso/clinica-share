@@ -14,7 +14,7 @@ Durante a construção deste plano descobri contradição entre o **doc de requi
 |---|---|---|
 | Prontuário eletrônico | **Fora** do MVP (DEC-001) | **Dentro**: AT03 (Alta prioridade), campos a definir em R2 |
 | Agendamento online (paciente) | **Fora** do MVP (DEC-002) | **Dentro**: AG01 (Alta prioridade), portal web |
-| Portal do paciente | **Fora** do MVP (DEC-003) | **Dentro**: AG01, AG06, FI09 confirmados |
+| Portal do paciente | **Fora** do MVP (DEC-003) | **Dentro**: AG01, AG06 confirmados (FI09 removido em 2026-05-07 via DEC-E09 — pendente PEND-045) |
 | Requisitos funcionais confirmados | Nenhum | **36 casos de uso** em 6 módulos, prioridade Alta/Média |
 | Atores | Não listados | **5 atores** com níveis de acesso definidos |
 
@@ -109,11 +109,11 @@ Total: **35 telas**, cobrindo os 36 casos de uso confirmados.
 |---|---|---|---|
 | 30 | `/p` | home (minhas consultas próximas) | F3 |
 | 31 | `/p/consultas` | lista completa | F3 |
-| 32 | `/p/agendar` | fluxo multi-step (escolher especialidade → profissional → data → horário → pagamento) | F3 |
+| 32 | `/p/agendar` | fluxo multi-step (escolher especialidade → profissional → data → horário) — pagamento é presencial no atendimento (FI10) | F3 |
 | 33 | `/p/consultas/[id]` | detalhe + cancelar | F3 |
 | 34 | `/p/perfil` | dados do paciente | F3 |
 
-Casos de uso cobertos: **AG01, AG06, FI09**.
+Casos de uso cobertos: **AG01, AG06, FI10** (pagamento exclusivamente presencial — FI09 removido via DEC-E09).
 
 ### 3.4 Utilitárias (2)
 | # | Arquivo | Fase |
@@ -134,7 +134,7 @@ Telas: 1, 2, 5, 6, 7, 8, 11, 14, 15, 17, 18, 20, 29 (dashboard), e sidebar/topba
 Telas: 3, 4, 9, 10, 12, 13, 16, 19, 21-28, utilitárias.
 
 ### F3 — Portal do paciente (5 telas)
-Telas: 30-34. Executar somente se F1+F2 forem aprovados pelo cliente; depende de definição de gateway de pagamento (FI09 pendente).
+Telas: 30-34. Executar somente se F1+F2 forem aprovados pelo cliente. Sem dependência de gateway de pagamento — pagamento exclusivamente presencial via FI10 (DEC-E09, pendente PEND-045).
 
 ### Fora do protótipo (mas listado na planilha)
 - **AT03 (prontuário)**: escopo em aberto para R2. Mockar só a aba vazia em `/atendimentos/[id]` com mensagem "Campos a definir na R2".
@@ -276,7 +276,7 @@ lib/
 
 **Alternativa descartada:** começar direto pela F3 (paciente) — seria mais visualmente impactante, mas o core do produto (RE01+FI03+FI07) é o que destrava o Dr. Edson. Paciente vem depois.
 
-**Pendência:** confirmar com Dr. Edson em R2 antes de F3: FI09 (gateway de pagamento — Pix/cartão/boleto) exige integração externa. O protótipo pode mostrar as telas mas sem integração real.
+**Pendência:** confirmar com Dr. Edson em R2 a remoção proposta de FI09 (DEC-E09 / PEND-045). Se rejeitada, retomar arquitetura Asaas conta-mãe + walletId conforme rascunho discutido com a equipe.
 
 ## 10. Próximos passos (após sua aprovação)
 

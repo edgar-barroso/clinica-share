@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CreditCard,
-  Mail,
-  MessageCircle,
-} from "lucide-react";
+import { AlertTriangle, ArrowLeft, Mail, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,15 +28,6 @@ const integracoesIniciais: IntegracaoState[] = [
     status: "pendente",
     detalhe:
       "Custo e aprovação da API WhatsApp Business a definir em R2 (PEND-022).",
-  },
-  {
-    id: "gateway-pagamento",
-    nome: "Gateway de pagamento (FI09)",
-    descricao:
-      "Permite ao paciente pagar a consulta via Pix, cartão ou boleto no momento do agendamento online.",
-    icon: CreditCard,
-    status: "planejado",
-    detalhe: "Requisito FI09 (Média prioridade). Implementação planejada para F3.",
   },
   {
     id: "email-transacional",

@@ -258,7 +258,7 @@ export function AtendimentoForm({ mode, initial, callout, cancelHref, submitLabe
                       id="motivo"
                       value={motivo}
                       onChange={(e) => setMotivo(e.target.value)}
-                      placeholder={statusPagamento === 'gratuito' ? 'Ex: Cortesia para filho de funcionário' : 'Ex: Paciente vai pagar por Pix amanhã'}
+                      placeholder={statusPagamento === 'gratuito' ? 'Ex: Cortesia para filho de funcionário' : 'Ex: Paciente vai pagar na próxima visita'}
                       required={statusPagamento === 'gratuito'}
                     />
                   </div>

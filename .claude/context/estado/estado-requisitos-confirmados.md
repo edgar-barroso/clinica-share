@@ -59,8 +59,8 @@
 | FI06 | Descontos concedidos são registrados com justificativa e visíveis ao administrador | Alta | B | R1 | N | Confirmado |
 | FI07 | Fechamento financeiro é semanal; sistema gera relatório de prestação de contas por período | Alta | M | R1 | N | Confirmado |
 | FI08 | Sistema registra aluguel fixo por turno utilizado por profissional | Alta | B | R1 | N | Confirmado |
-| FI09 | Paciente pode pagar via Pix, cartão ou boleto no momento do agendamento online | Média | A | R1 | X | Confirmado |
-| FI10 | Paciente pode optar por **pagar no momento do atendimento** (presencial), ao invés de pagar online no agendamento <!-- NOVO --> | Alta | B | Equipe | E | **Proposto — validar em R2 (PEND-026/027/028)** |
+| ~~FI09~~ | ~~Paciente pode pagar via Pix, cartão ou boleto no momento do agendamento online~~ <!-- ALTERADO: removido proposto, ver DEC-E09 --> | ~~Média~~ | ~~A~~ | R1 | ~~X~~ | **REMOVIDO proposto (DEC-E09) — validar em R2 via PEND-045** |
+| FI10 | Sistema registra pagamento **exclusivamente presencial** no momento do atendimento (dinheiro, Pix presencial via QR estático/dinâmico do profissional, cartão na maquininha do consultório). Estado de pagamento (`pago`/`pendente`/`gratuito`) é registrado pelo profissional ou pelo auxiliar financeiro <!-- ALTERADO: promovido a único modelo após remoção de FI09 (DEC-E09) --> | Alta | B | Equipe | N | **Proposto — único modelo de pagamento; validar em R2 (PEND-026/027/028)** |
 | FI11 | Auxiliar/admin pode editar valor, procedimentos e status de pagamento de atendimento após registro (corrige erros operacionais) <!-- NOVO --> | Alta | B | Equipe | N | **Proposto — validar em R2 (PEND-031)** |
 
 ### Módulo de Relatórios e Dashboard (RE)
@@ -121,10 +121,11 @@ Se qualquer critério falhar, o requisito volta como pendência para a próxima 
 
 ## Resumo
 - **5 atores** confirmados
-- **29 RF oficiais** (R1) + **6 RF de controle de acesso** (equipe) + **3 RF propostos de auth paciente (RF-027/028/029)** + **1 RF proposto de pagamento presencial (FI10)** + **5 RF propostos de fluxo operacional (AG08, AG09, AT05, AT06, FI11)** = **35 confirmados + 9 propostos**
+- **28 RF oficiais** (R1, sem FI09) + **6 RF de controle de acesso** (equipe) + **3 RF propostos de auth paciente (RF-027/028/029)** + **1 RF proposto de pagamento presencial promovido (FI10)** + **5 RF propostos de fluxo operacional (AG08, AG09, AT05, AT06, FI11)** = **34 confirmados + 9 propostos** (FI09 marcado como removido proposto, pendente confirmação cliente)
 - **4 RNF oficiais** + **6 RNF internos (regras inegociáveis)** = **10 RNF**
 - Limites quantitativos de RNF03 (tempo de resposta, disponibilidade) **pendentes — R2**
 - Campos do prontuário (AT03) **pendentes — R2**
 - Auto-cadastro e Google OAuth do paciente **propostos — validar em R2** (PEND-023, PEND-024, PEND-025)
+- **FI09 (pagamento online)** removido proposto (DEC-E09) — pendente confirmação cliente em R2 (PEND-045). FI10 promovido a único modelo de pagamento.
 
-## Última atualização: 2026-04-19 (+AG08/AG09/AT05/AT06/FI11 fluxo operacional proposto)
+## Última atualização: 2026-05-07 (FI09 removido proposto via DEC-E09; FI10 promovido a único modelo de pagamento)

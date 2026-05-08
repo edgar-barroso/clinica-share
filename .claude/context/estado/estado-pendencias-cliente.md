@@ -15,6 +15,7 @@
 | PEND-015 | Como o consultório alocado por turno é definido para cada profissional | R1 ata §4 | 2026-04-09 | Aberta | R2 |
 | PEND-017 | Campos mínimos que o prontuário eletrônico (AT03) deve ter | R1 ata §4 | 2026-04-09 | Aberta | R2 |
 | PEND-030 | Fluxo do dia do atendimento — consolida: (a) atendente marca chegada? (b) profissional registra durante ou após? (c) tolerância antes de `nao_compareceu`? (d) pagamento presencial (FI10) é registrado quando? <!-- NOVO --> | Equipe (AG08/AT05/AT06/FI10) | 2026-04-19 | Aberta | R2 |
+| PEND-045 | **Dr. Edson aprova a remoção de FI09 (pagamento online via PIX/cartão/boleto) do MVP?** Equipe propõe, via DEC-E09, que pagamentos sejam exclusivamente presenciais no atendimento. Justificativa: redução de risco LGPD/PCI, eliminação da complexidade de gateway/split/estorno/tributário, foco no problema central de controle de repasse. FI09 era classificado como "Excitante" no IFQ — não "Normal". Sem aprovação, FI09 volta como confirmado e arquitetura Asaas precisa ser planejada. <!-- NOVO --> | Equipe (DEC-E09) | 2026-05-07 | Aberta | **R2 — apresentar como decisão de escopo proposta** |
 
 ### P1 — importantes, não bloqueiam totalmente
 | ID | Pendência | Origem | Data abertura | Status | Levar para |
@@ -36,9 +37,9 @@
 | PEND-023 | Paciente pode se auto-cadastrar pelo portal, ou cadastro é sempre iniciado pela clínica/atendente? <!-- NOVO --> | Equipe (DEC-E04, RF-027) | 2026-04-19 | Aberta | R2 |
 | PEND-024 | Sistema aceita Google como provedor de login do paciente? Outros provedores (Apple, Facebook)? <!-- NOVO --> | Equipe (DEC-A08, RF-028) | 2026-04-19 | Aberta | R2 |
 | PEND-025 | Dados mínimos obrigatórios no auto-cadastro do paciente: CPF obrigatório? Data de nascimento? Endereço? (relaciona com PEND-007 LGPD) <!-- NOVO --> | Equipe (RF-027) | 2026-04-19 | Aberta | R2 |
-| PEND-026 | Todos os profissionais aceitam "pagar na hora da consulta" (FI10)? Ou alguns exigem pagamento antecipado? <!-- NOVO --> | Equipe (FI10) | 2026-04-19 | Aberta | R2 |
-| PEND-027 | Se paciente optou por pagar na hora e não comparece (no-show), cobra alguma coisa? Relaciona com DEC-R1-07 (cancelamento sem taxa) <!-- NOVO --> | Equipe (FI10) | 2026-04-19 | Aberta | R2 |
-| PEND-028 | Forma de pagamento no local precisa ser declarada no agendamento (dinheiro/cartão/Pix presencial) ou é livre no momento do atendimento? <!-- NOVO --> | Equipe (FI10) | 2026-04-19 | Aberta | R2 |
+| PEND-026 | Todos os profissionais aceitam pagamento exclusivamente presencial (FI10 promovido via DEC-E09)? Algum exigia antecipação que agora fica inviável? <!-- ALTERADO: dependente de PEND-045 --> | Equipe (FI10, DEC-E09) | 2026-04-19 | Aberta | R2 (depende de PEND-045) |
+| PEND-027 | Se paciente não comparece (no-show), há cobrança? Política agora é mais sensível porque não há sinal/cobrança antecipada; relaciona com DEC-R1-07 (cancelamento sem taxa) e R-022 (risco de no-show com pagamento 100% presencial) <!-- ALTERADO: criticidade aumenta após DEC-E09 --> | Equipe (FI10, DEC-E09, R-022) | 2026-04-19 | Aberta | R2 (depende de PEND-045) |
+| PEND-028 | Forma de pagamento no local é livre no momento do atendimento (dinheiro/cartão na maquininha do profissional/Pix com chave do profissional) ou clínica define um padrão? <!-- ALTERADO --> | Equipe (FI10, DEC-E09) | 2026-04-19 | Aberta | R2 (depende de PEND-045) |
 | PEND-031 | Quem pode editar atendimento após status `realizado`? Há janela de tempo? (admin só? auxiliar também? profissional?) <!-- NOVO --> | Equipe (FI11) | 2026-04-19 | Aberta | R2 |
 | PEND-032 | Paciente reagenda livremente pelo portal, ou cada reagendamento precisa aprovação da atendente? <!-- NOVO --> | Equipe (AG09) | 2026-04-19 | Aberta | R2 |
 | PEND-033 | Notificações cross-actor (atendente vê cancelamento do paciente, profissional vê novo agendamento) são requisito explícito ou expectativa implícita? <!-- NOVO --> | Equipe | 2026-04-19 | Aberta | R2 |
@@ -57,4 +58,4 @@
 | PEND-012 | Como as consultas são registradas hoje | Processo manual descentralizado: WhatsApp + caderno + planilhas individuais (ver ata-R1 §2) | ata-R1 §2 | 2026-04-06 |
 | PEND-009 | Mobile x desktop | RNF01 confirma que sistema deve funcionar em desktop, tablet e celular | requisitos-v1 §4 | 2026-04-09 |
 
-## Última atualização: 2026-04-19 (+PEND-030 P0 fluxo do dia + PEND-031/032/033 P1 fluxo operacional)
+## Última atualização: 2026-05-07 (+PEND-045 P0 validação de remoção de FI09; PEND-026/027/028 reclassificadas como dependentes de PEND-045)

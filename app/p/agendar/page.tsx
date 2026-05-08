@@ -7,9 +7,7 @@ import { toast } from "sonner";
 import {
   CalendarClock,
   Check,
-  Clock,
-  CreditCard,
-  QrCode,
+  MapPin,
   Stethoscope,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,7 +23,6 @@ const STEPS = [
   { key: "profissional", label: "Profissional" },
   { key: "data", label: "Data" },
   { key: "horario", label: "Horário" },
-  { key: "pagamento", label: "Pagamento" },
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
@@ -38,8 +35,6 @@ const HORARIOS = [
   { periodo: "Manhã", slots: ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00"] },
   { periodo: "Tarde", slots: ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"] },
 ];
-
-type Pagamento = "pix" | "cartao" | "na_consulta";
 
 function initials(name: string) {
   const parts = name.split(" ").filter((x) => !["Dr.", "Dra."].includes(x));
@@ -96,7 +91,6 @@ function AgendarPageInner() {
   );
   const [data, setData] = useState<string | null>(null);
   const [horario, setHorario] = useState<string | null>(null);
-  const [pagamento, setPagamento] = useState<Pagamento>("pix");
 
   const profissionaisFiltrados = useMemo(
     () =>
@@ -109,6 +103,7 @@ function AgendarPageInner() {
     ? profissionais.find((p) => p.id === profId)
     : null;
   const stepIndex = STEPS.findIndex((s) => s.key === step);
+  const isUltimoStep = step === "horario";
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -129,8 +124,6 @@ function AgendarPageInner() {
         return !!data;
       case "horario":
         return !!horario;
-      case "pagamento":
-        return true;
     }
   }
 
@@ -145,12 +138,12 @@ function AgendarPageInner() {
   function finalizar() {
     if (consultaOriginal) {
       toast.success("Consulta reagendada", {
-        description: `Consulta #${consultaOriginal.id} cancelada com motivo "Remarcado" e nova criada. Protótipo — não persistido.`,
+        description: `Consulta #${consultaOriginal.id} cancelada com motivo "Remarcado" e nova criada. Pagamento será feito presencialmente no atendimento. Protótipo — não persistido.`,
       });
     } else {
       toast.success("Consulta agendada", {
         description:
-          "Você receberá lembretes via WhatsApp 2 dias e 1 dia antes (AG07).",
+          "Pagamento será feito presencialmente no atendimento. Você receberá lembretes via WhatsApp 2 dias e 1 dia antes (AG07).",
       });
     }
     setTimeout(() => router.push("/p/consultas"), 800);
@@ -177,7 +170,7 @@ function AgendarPageInner() {
         description={
           consultaOriginal
             ? `Remarcando a consulta de ${formatDateLong(consultaOriginal.data)} às ${consultaOriginal.hora}`
-            : "Escolha a especialidade, o profissional, o horário e a forma de pagamento (AG01 + FI09)"
+            : "Escolha a especialidade, o profissional e o horário (AG01). O pagamento é feito presencialmente no atendimento (FI10)."
         }
         actions={
           <Link
@@ -230,7 +223,7 @@ function AgendarPageInner() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (step === "pagamento") finalizar();
+          if (isUltimoStep && canAdvance()) finalizar();
           else if (canAdvance()) next();
         }}
         className="grid grid-cols-1 gap-6 lg:grid-cols-3"
@@ -243,7 +236,6 @@ function AgendarPageInner() {
                 {step === "profissional" && "Escolha o profissional"}
                 {step === "data" && "Qual data prefere?"}
                 {step === "horario" && "Escolha o horário"}
-                {step === "pagamento" && "Forma de pagamento"}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -374,46 +366,6 @@ function AgendarPageInner() {
                   ))}
                 </div>
               )}
-
-              {step === "pagamento" && (
-                <div className="space-y-4">
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Pagar agora
-                    </p>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <PaymentOption
-                        active={pagamento === "pix"}
-                        onClick={() => setPagamento("pix")}
-                        icon={QrCode}
-                        label="Pix"
-                        hint="Aprovação em 1 segundo"
-                      />
-                      <PaymentOption
-                        active={pagamento === "cartao"}
-                        onClick={() => setPagamento("cartao")}
-                        icon={CreditCard}
-                        label="Cartão"
-                        hint="Parcele em até 3x sem juros"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Ou pagar depois
-                    </p>
-                    <PaymentOption
-                      active={pagamento === "na_consulta"}
-                      onClick={() => setPagamento("na_consulta")}
-                      icon={Clock}
-                      label="Pagar na hora da consulta"
-                      hint="Você paga no atendimento presencial (dinheiro, Pix ou cartão)"
-                      full
-                    />
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -435,18 +387,6 @@ function AgendarPageInner() {
                   value={data ? formatDateLong(data) : null}
                 />
                 <DefItem label="Horário" value={horario} mono />
-                {step === "pagamento" && (
-                  <DefItem
-                    label="Pagamento"
-                    value={
-                      pagamento === "pix"
-                        ? "Pix"
-                        : pagamento === "cartao"
-                          ? "Cartão"
-                          : "Na consulta"
-                    }
-                  />
-                )}
               </dl>
               {valorBase > 0 && (
                 <div className="space-y-1 border-t border-border pt-3">
@@ -454,13 +394,19 @@ function AgendarPageInner() {
                     <span>Total</span>
                     <span className="tabular-nums">{formatBRL(valorBase)}</span>
                   </div>
-                  {step === "pagamento" && pagamento === "na_consulta" && (
-                    <p className="text-xs text-muted-foreground">
-                      A pagar no atendimento presencial.
-                    </p>
-                  )}
                 </div>
               )}
+              <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <MapPin size={14} className="mt-0.5 shrink-0 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Pagamento presencial</p>
+                  <p className="mt-0.5">
+                    O pagamento é feito diretamente com o profissional no consultório
+                    (dinheiro, Pix ou cartão na maquininha). Sem cobrança
+                    antecipada.
+                  </p>
+                </div>
+              </div>
               <div className="flex gap-2 pt-2">
                 {stepIndex > 0 && (
                   <Button
@@ -472,21 +418,13 @@ function AgendarPageInner() {
                     Voltar
                   </Button>
                 )}
-                {step !== "pagamento" ? (
-                  <Button
-                    type="submit"
-                    disabled={!canAdvance()}
-                    className="flex-1"
-                  >
-                    Continuar
-                  </Button>
-                ) : (
-                  <Button type="submit" className="flex-1">
-                    {pagamento === "na_consulta"
-                      ? "Confirmar agendamento"
-                      : "Confirmar e pagar"}
-                  </Button>
-                )}
+                <Button
+                  type="submit"
+                  disabled={!canAdvance()}
+                  className="flex-1"
+                >
+                  {isUltimoStep ? "Confirmar agendamento" : "Continuar"}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -518,54 +456,5 @@ function DefItem({
         {value ?? "— selecione —"}
       </dd>
     </div>
-  );
-}
-
-function PaymentOption({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-  hint,
-  full,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: typeof QrCode;
-  label: string;
-  hint: string;
-  full?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-xl border p-4 text-left transition-colors",
-        full
-          ? "flex w-full items-center gap-4"
-          : "flex flex-col items-start gap-2",
-        active
-          ? "border-primary bg-primary/5"
-          : "border-border bg-card hover:bg-muted",
-      )}
-    >
-      <div
-        className={cn(
-          full &&
-            "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          full && (active ? "bg-primary/10" : "bg-muted"),
-        )}
-      >
-        <Icon
-          size={20}
-          className={active ? "text-primary" : "text-muted-foreground"}
-        />
-      </div>
-      <div className={full ? "min-w-0 flex-1" : "contents"}>
-        <p className="text-sm font-semibold">{label}</p>
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      </div>
-    </button>
   );
 }
