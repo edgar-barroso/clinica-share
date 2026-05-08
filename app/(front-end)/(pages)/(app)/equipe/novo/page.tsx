@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
-import { toast } from "sonner";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/layouts/page-header";
-import { apiCreateStaff, type CargoStaff } from "@/lib/api/staff";
-import { apiErrorMessage } from "@/lib/api-client";
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState, type FormEvent } from 'react';
+import { toast } from 'sonner';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/layouts/page-header';
+import { apiCreateStaff, type CargoStaff } from '@/lib/api/staff';
+import { apiErrorMessage } from '@/lib/api-client';
 
 const CARGO_LABEL: Record<CargoStaff, string> = {
-  atendente: "Atendente",
-  auxiliar: "Auxiliar Financeiro",
+  atendente: 'Atendente',
+  auxiliar: 'Auxiliar Financeiro',
 };
 
 export default function NovoMembroPage() {
@@ -28,13 +28,11 @@ export default function NovoMembroPage() {
 function NovoMembroPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const cargoInicial = (searchParams.get("cargo") as CargoStaff | null) ?? "atendente";
-  const [cargo, setCargo] = useState<CargoStaff>(
-    cargoInicial === "auxiliar" ? "auxiliar" : "atendente",
-  );
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
+  const cargoInicial = (searchParams.get('cargo') as CargoStaff | null) ?? 'atendente';
+  const [cargo, setCargo] = useState<CargoStaff>(cargoInicial === 'auxiliar' ? 'auxiliar' : 'atendente');
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -43,10 +41,9 @@ function NovoMembroPageInner() {
     try {
       await apiCreateStaff({ nome, cargo, email, telefone });
       toast.success(`${CARGO_LABEL[cargo]} cadastrado`, {
-        description:
-          "Acesso ainda pendente — defina senha do usuário em uma fase futura.",
+        description: 'Acesso ainda pendente — defina senha do usuário em uma fase futura.',
       });
-      router.push("/equipe");
+      router.push('/equipe');
       router.refresh();
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -60,7 +57,7 @@ function NovoMembroPageInner() {
         title="Novo membro da equipe"
         description="Cadastre um atendente ou auxiliar financeiro"
         actions={
-          <Link href="/equipe" className={buttonVariants({ variant: "outline" })}>
+          <Link href="/equipe" className={buttonVariants({ variant: 'outline' })}>
             Cancelar
           </Link>
         }
@@ -73,33 +70,13 @@ function NovoMembroPageInner() {
               <CardTitle>Cargo</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setCargo("atendente")}
-                className={`rounded-xl border p-4 text-left transition-colors ${
-                  cargo === "atendente"
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-card hover:bg-muted"
-                }`}
-              >
+              <button type="button" onClick={() => setCargo('atendente')} className={`rounded-xl border p-4 text-left transition-colors ${cargo === 'atendente' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
                 <p className="text-sm font-semibold">Atendente</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Recebe pacientes, agenda consultas e registra chegada
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Recebe pacientes, agenda consultas e registra chegada</p>
               </button>
-              <button
-                type="button"
-                onClick={() => setCargo("auxiliar")}
-                className={`rounded-xl border p-4 text-left transition-colors ${
-                  cargo === "auxiliar"
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-card hover:bg-muted"
-                }`}
-              >
+              <button type="button" onClick={() => setCargo('auxiliar')} className={`rounded-xl border p-4 text-left transition-colors ${cargo === 'auxiliar' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
                 <p className="text-sm font-semibold">Auxiliar Financeiro</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Confere repasses, registra pagamentos e audita atendimentos
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Confere repasses, registra pagamentos e audita atendimentos</p>
               </button>
             </CardContent>
           </Card>
@@ -111,34 +88,15 @@ function NovoMembroPageInner() {
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="nome">Nome completo</Label>
-                <Input
-                  id="nome"
-                  placeholder="Joana Ribeiro"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  required
-                />
+                <Input id="nome" placeholder="Joana Ribeiro" value={nome} onChange={(e) => setNome(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="nome@clinicashare.com.br"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <Input id="email" type="email" placeholder="nome@clinicashare.com.br" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  placeholder="(11) 90000-0000"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  required
-                />
+                <Input id="telefone" placeholder="(11) 90000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} required />
               </div>
             </CardContent>
           </Card>
@@ -152,17 +110,12 @@ function NovoMembroPageInner() {
             <CardContent className="space-y-3 text-sm">
               <div className="rounded-xl bg-muted/50 p-3 text-xs">
                 <p>
-                  <span className="text-muted-foreground">Cargo:</span>{" "}
-                  <span className="font-medium">{CARGO_LABEL[cargo]}</span>
+                  <span className="text-muted-foreground">Cargo:</span> <span className="font-medium">{CARGO_LABEL[cargo]}</span>
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Após cadastro, o membro fica com <strong>acesso pendente</strong>. A
-                criação do User com senha será feita em uma fase futura via convite por
-                e-mail.
-              </p>
+
               <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-                {submitting ? "Cadastrando..." : "Cadastrar membro"}
+                {submitting ? 'Cadastrando...' : 'Cadastrar membro'}
               </Button>
             </CardContent>
           </Card>

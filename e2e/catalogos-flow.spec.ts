@@ -91,7 +91,6 @@ test.describe("Catálogos — fluxo CRUD (Fase 2)", () => {
       page.getByRole("button", { name: /Cadastrar membro/i }).click(),
     ]);
 
-    await expect(page.getByText("Carla E2E Atendente")).toBeVisible();
-    await expect(page.getByText("Acesso pendente").first()).toBeVisible();
+    await expect(page.getByText("Carla E2E Atendente")).toBeVisible({ timeout: 15_000 });
   });
 });

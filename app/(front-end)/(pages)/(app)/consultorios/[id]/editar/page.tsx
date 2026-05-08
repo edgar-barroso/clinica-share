@@ -1,17 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
-import { use, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, Textarea } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
-import { consultorios } from "@/lib/mock/data";
+import {
+  apiGetConsultorio,
+  apiUpdateConsultorio,
+  apiDeactivateConsultorio,
+} from "@/lib/api/consultorios";
+import { apiErrorMessage } from "@/lib/api-client";
+
+const TIPOS = [
+  "Consultório Clínico",
+  "Consultório Especializado",
+  "Consultório Pediátrico",
+  "Consultório Psicológico",
+  "Consultório Ginecológico",
+  "Consultório Fisioterapia",
+  "Consultório Nutrição",
+  "Consultório Dermatológico",
+  "Sala de Procedimentos",
+];
 
 const ESPECIALIDADES = [
   "Clínica geral",
@@ -36,23 +54,39 @@ export default function EditarConsultorioPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const original = consultorios.find((c) => c.id === id);
-  if (!original) notFound();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
-  const [nome, setNome] = useState(original.nome);
-  const [tipo, setTipo] = useState(original.tipo);
-  const [equipamentos, setEquipamentos] = useState<string[]>(original.equipamentos);
+  const [nome, setNome] = useState("");
+  const [tipo, setTipo] = useState(TIPOS[0]);
+  const [equipamentos, setEquipamentos] = useState<string[]>([]);
   const [novoEq, setNovoEq] = useState("");
-  const [especialidades, setEspecialidades] = useState<string[]>(
-    original.especialidadesCompativeis,
-  );
+  const [especialidades, setEspecialidades] = useState<string[]>([]);
   const [showDelete, setShowDelete] = useState(false);
+
+  useEffect(() => {
+    apiGetConsultorio(id)
+      .then((res) => {
+        const c = res.consultorio;
+        setNome(c.nome);
+        setTipo(c.tipo);
+        setEquipamentos(c.equipamentos);
+        setEspecialidades(c.especialidadesCompativeis);
+      })
+      .catch((err) => {
+        if ((err as { status?: number })?.status === 404) setNotFound(true);
+        else toast.error(apiErrorMessage(err));
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
 
   function addEquipamento() {
     const v = novoEq.trim();
-    if (!v || equipamentos.includes(v)) {
-      if (v) toast.warning("Equipamento já está na lista");
+    if (!v) return;
+    if (equipamentos.includes(v)) {
+      toast.warning("Equipamento já está na lista");
       return;
     }
     setEquipamentos((arr) => [...arr, v]);
@@ -65,30 +99,76 @@ export default function EditarConsultorioPage({
     );
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (especialidades.length === 0) {
       toast.warning("Selecione ao menos uma especialidade");
       return;
     }
-    toast.success("Alterações salvas", {
-      description: "Audit log registrado para cada campo alterado (RNF-102).",
-    });
-    setTimeout(() => router.push(`/consultorios/${id}`), 600);
+    setSubmitting(true);
+    try {
+      await apiUpdateConsultorio(id, {
+        nome,
+        tipo,
+        equipamentos,
+        especialidadesCompativeis: especialidades,
+      });
+      toast.success("Alterações salvas");
+      router.push(`/consultorios/${id}`);
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      setSubmitting(false);
+    }
   }
 
-  function confirmarDelete() {
-    toast.success("Consultório desativado", {
-      description:
-        "No sistema real, consultórios com histórico não são excluídos — ficam marcados como inativos.",
-    });
-    setTimeout(() => router.push("/consultorios"), 800);
+  async function confirmarDesativacao() {
+    try {
+      await apiDeactivateConsultorio(id);
+      toast.success("Consultório desativado");
+      router.push("/consultorios");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Skeleton className="mb-6 h-12 w-full max-w-md" />
+        <Skeleton className="h-96 w-full" />
+      </>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <Card className="p-10 text-center">
+        <p className="text-sm text-muted-foreground">Consultório não encontrado.</p>
+        <Link
+          href="/consultorios"
+          className={`${buttonVariants({ variant: "outline" })} mt-4 inline-flex`}
+        >
+          <ArrowLeft size={14} />
+          Voltar
+        </Link>
+      </Card>
+    );
   }
 
   return (
     <>
+      <Link
+        href={`/consultorios/${id}`}
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft size={14} />
+        Voltar
+      </Link>
+
       <PageHeader
-        title={`Editar ${original.nome}`}
+        title={`Editar ${nome}`}
         description="Altere informações, equipamentos e especialidades compatíveis"
         actions={
           <Link
@@ -118,28 +198,11 @@ export default function EditarConsultorioPage({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="tipo">Tipo</Label>
-                <Select
-                  id="tipo"
-                  value={tipo}
-                  onChange={(e) => setTipo(e.target.value)}
-                >
-                  <option>Consultório Clínico</option>
-                  <option>Consultório Especializado</option>
-                  <option>Consultório Pediátrico</option>
-                  <option>Consultório Psicológico</option>
-                  <option>Consultório Ginecológico</option>
-                  <option>Consultório Fisioterapia</option>
-                  <option>Consultório Nutrição</option>
-                  <option>Consultório Dermatológico</option>
-                  <option>Sala de Procedimentos</option>
+                <Select id="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                  {TIPOS.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
                 </Select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  placeholder="Iluminação, layout, restrições…"
-                />
               </div>
             </CardContent>
           </Card>
@@ -235,8 +298,7 @@ export default function EditarConsultorioPage({
                 <div className="space-y-3 rounded-xl bg-destructive/5 p-4">
                   <p className="text-sm">
                     Tem certeza? O consultório será marcado como inativo e não aparecerá
-                    mais em novos agendamentos. Histórico e atendimentos passados
-                    permanecem intactos.
+                    em novos agendamentos. Histórico permanece intacto.
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -249,7 +311,7 @@ export default function EditarConsultorioPage({
                     <Button
                       type="button"
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={confirmarDelete}
+                      onClick={confirmarDesativacao}
                     >
                       Confirmar desativação
                     </Button>
@@ -276,11 +338,8 @@ export default function EditarConsultorioPage({
                   <span className="font-medium">{especialidades.length}</span>
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Cada campo alterado gera entrada em /auditoria (RNF-102).
-              </p>
-              <Button type="submit" className="w-full" size="lg">
-                Salvar alterações
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? "Salvando..." : "Salvar alterações"}
               </Button>
             </CardContent>
           </Card>

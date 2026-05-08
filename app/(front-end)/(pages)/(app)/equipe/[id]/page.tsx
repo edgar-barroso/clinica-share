@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, Headset, KeyRound, Mail, Pencil, Phone, ShieldCheck, Trash2, Wallet, X } from 'lucide-react';
+import { ArrowLeft, Headset, Mail, Pencil, Phone, Trash2, Wallet, X } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
-import { getStaff } from '@/lib/mock/data';
-import type { CargoStaff } from '@/lib/mock/types';
+import { apiGetStaff, apiDeactivateStaff, type Staff, type CargoStaff } from '@/lib/api/staff';
+import { apiErrorMessage } from '@/lib/api-client';
 
 const CARGO_LABEL: Record<CargoStaff, string> = {
   atendente: 'Atendente',
@@ -35,25 +36,56 @@ function initials(name: string) {
 
 export default function StaffDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const s = getStaff(id);
-  if (!s) notFound();
-
   const router = useRouter();
+  const [staff, setStaff] = useState<Staff | null>(null);
+  const [loading, setLoading] = useState(true);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const Icon = CARGO_ICON[s.cargo];
 
-  function remover() {
-    toast.success(`${s!.nome} removido`, {
-      description: 'Acesso revogado e registro arquivado (protótipo, não persistido).',
-    });
-    setTimeout(() => router.push('/equipe'), 600);
+  useEffect(() => {
+    apiGetStaff(id)
+      .then((res) => setStaff(res.staff))
+      .catch((err) => toast.error(apiErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  async function remover() {
+    if (!staff) return;
+    try {
+      await apiDeactivateStaff(staff.id);
+      toast.success(`${staff.nome} desativado`);
+      router.push('/equipe');
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    }
   }
 
-  function resetarSenha() {
-    toast.success('Convite de redefinição enviado', {
-      description: `Um link foi enviado para ${s!.email} (protótipo, não persistido).`,
-    });
+  if (loading) {
+    return (
+      <>
+        <Skeleton className="mb-4 h-5 w-32" />
+        <Skeleton className="mb-6 h-12 w-full max-w-md" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Skeleton className="h-44 lg:col-span-1" />
+          <Skeleton className="h-44" />
+        </div>
+      </>
+    );
   }
+
+  if (!staff) {
+    return (
+      <Card className="p-10 text-center">
+        <p className="text-sm text-muted-foreground">Membro não encontrado ou indisponível.</p>
+        <Link href="/equipe" className={`${buttonVariants({ variant: 'outline' })} mt-4 inline-flex`}>
+          <ArrowLeft size={14} />
+          Voltar para equipe
+        </Link>
+      </Card>
+    );
+  }
+
+  const Icon = CARGO_ICON[staff.cargo];
 
   return (
     <>
@@ -63,17 +95,17 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
       </Link>
 
       <PageHeader
-        title={s.nome}
-        description={CARGO_LABEL[s.cargo]}
+        title={staff.nome}
+        description={CARGO_LABEL[staff.cargo]}
         actions={
           <div className="flex gap-2">
-            <Link href={`/equipe/${s.id}/editar`} className={buttonVariants({ variant: 'outline' })}>
+            <Link href={`/equipe/${staff.id}/editar`} className={buttonVariants({ variant: 'outline' })}>
               <Pencil size={16} />
               Editar
             </Link>
             <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmRemove(true)}>
               <Trash2 size={16} />
-              Remover
+              Desativar
             </Button>
           </div>
         }
@@ -83,23 +115,20 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
         <Card className="p-5 lg:col-span-1">
           <div className="flex items-center gap-3">
             <Avatar className="size-14 bg-primary/10 text-lg text-primary">
-              <AvatarFallback>{initials(s.nome)}</AvatarFallback>
+              <AvatarFallback>{initials(staff.nome)}</AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-semibold">{s.nome}</p>
-              <p className="text-xs text-muted-foreground">{CARGO_LABEL[s.cargo]}</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {s.ativo ? <Badge variant="success">Ativo</Badge> : <Badge variant="secondary">Inativo</Badge>}
-                {s.senhaDefinida === false && <Badge variant="warning">Acesso pendente</Badge>}
-              </div>
+              <p className="text-sm font-semibold">{staff.nome}</p>
+              <p className="text-xs text-muted-foreground">{CARGO_LABEL[staff.cargo]}</p>
+              <div className="mt-1 flex flex-wrap gap-1">{staff.ativo ? <Badge variant="success">Ativo</Badge> : <Badge variant="secondary">Inativo</Badge>}</div>
             </div>
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <p className="flex items-center gap-2 text-muted-foreground">
-              <Mail size={14} /> {s.email}
+              <Mail size={14} /> {staff.email}
             </p>
             <p className="flex items-center gap-2 text-muted-foreground">
-              <Phone size={14} /> {s.telefone}
+              <Phone size={14} /> {staff.telefone}
             </p>
           </div>
         </Card>
@@ -109,12 +138,12 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
             <p className="text-sm text-muted-foreground">Função na clínica</p>
             <Icon size={16} className="text-muted-foreground" />
           </div>
-          <p className="mt-2 text-base font-semibold">{CARGO_LABEL[s.cargo]}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{CARGO_DESC[s.cargo]}</p>
+          <p className="mt-2 text-base font-semibold">{CARGO_LABEL[staff.cargo]}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{CARGO_DESC[staff.cargo]}</p>
         </Card>
       </div>
 
-      {confirmRemove && <ConfirmRemoveDialog nome={s.nome} onCancel={() => setConfirmRemove(false)} onConfirm={remover} />}
+      {confirmRemove && <ConfirmRemoveDialog nome={staff.nome} onCancel={() => setConfirmRemove(false)} onConfirm={remover} />}
     </>
   );
 }
@@ -144,8 +173,8 @@ function ConfirmRemoveDialog({ nome, onCancel, onConfirm }: ConfirmRemoveDialogP
               <Trash2 size={18} />
             </div>
             <div>
-              <h2 className="text-base font-semibold">Remover {nome}?</h2>
-              <p className="text-xs text-muted-foreground">O acesso será revogado imediatamente e o registro fica arquivado em /auditoria.</p>
+              <h2 className="text-base font-semibold">Desativar {nome}?</h2>
+              <p className="text-xs text-muted-foreground">O acesso será revogado imediatamente. O registro continua arquivado e pode ser reativado depois.</p>
             </div>
           </div>
           <button type="button" onClick={onCancel} aria-label="Fechar" className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
@@ -158,7 +187,7 @@ function ConfirmRemoveDialog({ nome, onCancel, onConfirm }: ConfirmRemoveDialogP
             Cancelar
           </Button>
           <Button type="button" className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onConfirm}>
-            Remover
+            Desativar
           </Button>
         </div>
       </div>

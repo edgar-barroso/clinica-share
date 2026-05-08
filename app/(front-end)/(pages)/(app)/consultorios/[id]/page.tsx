@@ -1,40 +1,79 @@
+"use client";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, TrendingUp } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
-import { ConsultorioMetrics } from "@/components/consultorios/consultorio-metrics";
 import {
-  atendimentos,
-  getConsultorio,
-  getPaciente,
-  getProfissional,
-} from "@/lib/mock/data";
-import { formatBRL, formatDate } from "@/lib/format";
-import { PaymentStatusBadge } from "@/components/financial/status-badge";
+  apiGetConsultorio,
+  apiDeactivateConsultorio,
+  type Consultorio,
+} from "@/lib/api/consultorios";
+import { apiErrorMessage } from "@/lib/api-client";
 
-export default async function ConsultorioDetailPage({
+export default function ConsultorioDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const c = getConsultorio(id);
-  if (!c) notFound();
+  const { id } = use(params);
+  const router = useRouter();
+  const [c, setC] = useState<Consultorio | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  const atsDaSala = atendimentos
-    .filter((a) => a.consultorioId === c.id && a.status !== "cancelado")
-    .sort((a, b) => `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`));
+  useEffect(() => {
+    apiGetConsultorio(id)
+      .then((res) => setC(res.consultorio))
+      .catch((err) => {
+        if ((err as { status?: number })?.status === 404) setNotFound(true);
+        else toast.error(apiErrorMessage(err));
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  async function desativar() {
+    if (!c) return;
+    if (!confirm(`Desativar ${c.nome}?`)) return;
+    try {
+      await apiDeactivateConsultorio(c.id);
+      toast.success("Consultório desativado");
+      router.push("/consultorios");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Skeleton className="mb-6 h-12 w-full max-w-md" />
+        <Skeleton className="h-64 w-full" />
+      </>
+    );
+  }
+
+  if (notFound || !c) {
+    return (
+      <Card className="p-10 text-center">
+        <p className="text-sm text-muted-foreground">Consultório não encontrado.</p>
+        <Link
+          href="/consultorios"
+          className={`${buttonVariants({ variant: "outline" })} mt-4 inline-flex`}
+        >
+          <ArrowLeft size={14} />
+          Voltar
+        </Link>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -48,19 +87,29 @@ export default async function ConsultorioDetailPage({
 
       <PageHeader
         title={c.nome}
-        description={`${c.tipo} · ${c.especialidadesCompativeis.join(", ")}`}
+        description={`${c.tipo} · ${c.especialidadesCompativeis.join(", ") || "—"}`}
         actions={
-          <Link
-            href={`/consultorios/${c.id}/editar`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            <Pencil size={16} />
-            Editar consultório
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/consultorios/${c.id}/editar`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <Pencil size={16} />
+              Editar
+            </Link>
+            {c.ativo && (
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={desativar}
+              >
+                <Trash2 size={16} />
+                Desativar
+              </Button>
+            )}
+          </div>
         }
       />
-
-      <ConsultorioMetrics consultorioId={c.id} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -68,54 +117,11 @@ export default async function ConsultorioDetailPage({
             <CardHeader>
               <CardTitle>Atendimentos recentes</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              {atsDaSala.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">
-                  Nenhum atendimento realizado nesta sala ainda.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Paciente</TableHead>
-                      <TableHead>Profissional</TableHead>
-                      <TableHead className="text-right">Bruto</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {atsDaSala.slice(0, 8).map((a) => {
-                      const paciente = getPaciente(a.pacienteId);
-                      const prof = getProfissional(a.profissionalId);
-                      const bruto =
-                        a.valorConsulta;
-                      return (
-                        <TableRow key={a.id}>
-                          <TableCell className="text-sm tabular-nums">
-                            {formatDate(a.data, "dd/MM")} {a.hora}
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">
-                            {paciente?.nome}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {prof?.nome}
-                            <p className="text-xs text-muted-foreground">
-                              {prof?.especialidade}
-                            </p>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums">
-                            {formatBRL(bruto)}
-                          </TableCell>
-                          <TableCell>
-                            <PaymentStatusBadge status={a.statusPagamento} />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Histórico de atendimentos será exibido aqui após a Fase 4 (registro de
+                atendimentos via API).
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -123,16 +129,35 @@ export default async function ConsultorioDetailPage({
         <aside className="space-y-4">
           <Card>
             <CardHeader>
+              <CardTitle>Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {c.ativo ? (
+                <Badge variant="success">Ativo</Badge>
+              ) : (
+                <Badge variant="secondary">Inativo</Badge>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Equipamentos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-1.5">
-                {c.equipamentos.map((eq) => (
-                  <Badge key={eq} variant="outline">
-                    {eq}
-                  </Badge>
-                ))}
-              </div>
+              {c.equipamentos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum equipamento cadastrado.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {c.equipamentos.map((eq) => (
+                    <Badge key={eq} variant="outline">
+                      {eq}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -141,17 +166,20 @@ export default async function ConsultorioDetailPage({
               <CardTitle>Especialidades compatíveis</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {c.especialidadesCompativeis.map((esp) => (
-                  <div
-                    key={esp}
-                    className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2 text-sm"
-                  >
-                    <span>{esp}</span>
-                    <TrendingUp size={14} className="text-muted-foreground" />
-                  </div>
-                ))}
-              </div>
+              {c.especialidadesCompativeis.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma cadastrada.</p>
+              ) : (
+                <div className="space-y-2">
+                  {c.especialidadesCompativeis.map((esp) => (
+                    <div
+                      key={esp}
+                      className="rounded-xl bg-muted/50 px-3 py-2 text-sm"
+                    >
+                      {esp}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </aside>

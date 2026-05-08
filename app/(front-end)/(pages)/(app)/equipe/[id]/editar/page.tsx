@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
-import { use, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
-import { getStaff } from "@/lib/mock/data";
-import type { CargoStaff } from "@/lib/mock/types";
+import { apiGetStaff, apiUpdateStaff, type CargoStaff } from "@/lib/api/staff";
+import { apiErrorMessage } from "@/lib/api-client";
 
 const CARGO_LABEL: Record<CargoStaff, string> = {
   atendente: "Atendente",
@@ -25,22 +26,68 @@ export default function EditarMembroPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const original = getStaff(id);
-  if (!original) notFound();
-
   const router = useRouter();
-  const [nome, setNome] = useState(original.nome);
-  const [email, setEmail] = useState(original.email);
-  const [telefone, setTelefone] = useState(original.telefone);
-  const [cargo, setCargo] = useState<CargoStaff>(original.cargo);
-  const [ativo, setAtivo] = useState(original.ativo);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [cargo, setCargo] = useState<CargoStaff>("atendente");
+  const [ativo, setAtivo] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    apiGetStaff(id)
+      .then((res) => {
+        setNome(res.staff.nome);
+        setEmail(res.staff.email);
+        setTelefone(res.staff.telefone);
+        setCargo(res.staff.cargo);
+        setAtivo(res.staff.ativo);
+      })
+      .catch((err) => {
+        if ((err as { status?: number })?.status === 404) setNotFound(true);
+        else toast.error(apiErrorMessage(err));
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    toast.success("Alterações salvas", {
-      description: "Audit log registrado para cada campo alterado.",
-    });
-    setTimeout(() => router.push(`/equipe/${id}`), 600);
+    setSubmitting(true);
+    try {
+      await apiUpdateStaff(id, { nome, email, telefone, cargo, ativo });
+      toast.success("Alterações salvas");
+      router.push(`/equipe/${id}`);
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Skeleton className="mb-4 h-5 w-32" />
+        <Skeleton className="h-96 w-full" />
+      </>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <Card className="p-10 text-center">
+        <p className="text-sm text-muted-foreground">Membro não encontrado.</p>
+        <Link
+          href="/equipe"
+          className={`${buttonVariants({ variant: "outline" })} mt-4 inline-flex`}
+        >
+          <ArrowLeft size={14} />
+          Voltar para equipe
+        </Link>
+      </Card>
+    );
   }
 
   return (
@@ -54,7 +101,7 @@ export default function EditarMembroPage({
       </Link>
 
       <PageHeader
-        title={`Editar ${original.nome}`}
+        title={`Editar ${nome}`}
         description="Atualize cargo, dados de contato ou status de acesso"
         actions={
           <Link
@@ -66,10 +113,7 @@ export default function EditarMembroPage({
         }
       />
 
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 gap-6 lg:grid-cols-3"
-      >
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
@@ -171,13 +215,11 @@ export default function EditarMembroPage({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Status:</span>{" "}
-                  <span className="font-medium">
-                    {ativo ? "Ativo" : "Inativo"}
-                  </span>
+                  <span className="font-medium">{ativo ? "Ativo" : "Inativo"}</span>
                 </p>
               </div>
-              <Button type="submit" className="w-full" size="lg">
-                Salvar alterações
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? "Salvando..." : "Salvar alterações"}
               </Button>
             </CardContent>
           </Card>

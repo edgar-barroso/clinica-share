@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MobileSidebarTrigger } from "./mobile-sidebar";
-import { RoleSwitcher } from "./role-switcher";
 import { useRole } from "@/lib/role";
 import { cn } from "@/lib/utils";
 
@@ -52,8 +51,6 @@ export function Topbar() {
       </div>
 
       <div className="flex-1 md:hidden" />
-
-      <RoleSwitcher />
 
       <div ref={menuRef} className="relative">
         <button

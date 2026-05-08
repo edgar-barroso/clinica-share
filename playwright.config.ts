@@ -5,6 +5,9 @@ export default defineConfig({
   testMatch: "**/*.spec.ts",
   timeout: 60_000,
   fullyParallel: false,
+  // Specs compartilham o mesmo Postgres e cada uma faz beforeAll que limpa
+  // tabelas — paralelismo causaria race entre workers
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
