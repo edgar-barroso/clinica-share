@@ -1,22 +1,21 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { CalendarDays, Clock, Plus, ShieldAlert } from 'lucide-react';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
-import { AgendamentoStatusBadge, PaymentStatusBadge } from '@/components/financial/status-badge';
-import { PageHeader } from '@/components/layouts/page-header';
-import { AppointmentActions } from '@/components/agenda/appointment-actions';
-import { atendimentos as atendimentosSeed, getConsultorio, getPaciente, getProfissional } from '@/lib/mock/data';
-import { formatBRL, formatDate, formatDateLong } from '@/lib/format';
-import { toastMessage } from '@/lib/appointment-transitions';
-import { useCurrentUser } from '@/lib/current-user';
-import type { Atendimento, StatusAgendamento } from '@/lib/mock/types';
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { CalendarDays, Plus } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/layouts/page-header";
+import { AgendaList } from "./_components/agenda-list";
+import {
+  apiListAgendamentos,
+  type AgendamentoListItem,
+} from "@/lib/api/agendamentos";
+import { apiErrorMessage } from "@/lib/api-client";
+import { formatDate, formatDateLong } from "@/lib/format";
 
-function buildDiasSemana() {
+function buildDiasSemana(): { data: string; dia: string; num: string }[] {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const dow = hoje.getDay();
@@ -28,53 +27,54 @@ function buildDiasSemana() {
   return Array.from({ length: 5 }).map((_, i) => {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
-    const abbr = formatDate(d, 'EEE').replace(/\.$/, '');
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const iso = `${yyyy}-${mm}-${dd}`;
+    const abbr = formatDate(d, "EEE").replace(/\.$/, "");
     return {
       data: iso,
       dia: abbr.charAt(0).toUpperCase() + abbr.slice(1),
-      num: String(d.getDate()).padStart(2, '0'),
+      num: String(d.getDate()).padStart(2, "0"),
     };
   });
 }
 
 export default function AgendaPage() {
-  const { role, userNome } = useCurrentUser();
   const DIAS = useMemo(() => buildDiasSemana(), []);
   const hojeIso = useMemo(() => {
     const h = new Date();
     h.setHours(0, 0, 0, 0);
-    return h.toISOString().slice(0, 10);
+    const yyyy = h.getFullYear();
+    const mm = String(h.getMonth() + 1).padStart(2, "0");
+    const dd = String(h.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   }, []);
-  const [atendimentos, setAtendimentos] = useState<Atendimento[]>(atendimentosSeed);
-  const [diaSelecionado, setDiaSelecionado] = useState(() => DIAS.find((d) => d.data === hojeIso)?.data ?? DIAS[0].data);
+  const [diaSelecionado, setDiaSelecionado] = useState(
+    () => DIAS.find((d) => d.data === hojeIso)?.data ?? DIAS[0].data,
+  );
+  const [agendamentos, setAgendamentos] = useState<AgendamentoListItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const ats = atendimentos.filter((a) => a.data === diaSelecionado && a.status !== 'cancelado').sort((a, b) => a.hora.localeCompare(b.hora));
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { agendamentos } = await apiListAgendamentos({ data: diaSelecionado });
+      setAgendamentos(
+        agendamentos
+          .filter((a) => a.status !== "cancelado")
+          .sort((a, b) => a.hora.localeCompare(b.hora)),
+      );
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [diaSelecionado]);
 
-  function handleTransition(
-    id: string,
-    to: StatusAgendamento,
-    motivo?: string,
-  ) {
-    setAtendimentos((list) =>
-      list.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              status: to,
-              ...(to === "cancelado" && motivo
-                ? { motivoCancelamento: motivo }
-                : {}),
-            }
-          : a,
-      ),
-    );
-    toast.success(toastMessage(to), {
-      description: motivo
-        ? `Registrado por ${userNome} · "${motivo}"`
-        : `Registrado por ${userNome}`,
-    });
-  }
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   return (
     <>
@@ -89,11 +89,6 @@ export default function AgendaPage() {
         }
       />
 
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-        <ShieldAlert size={14} />
-        <span>Protótipo · ações refletem nesta tela mas não persistem entre navegações</span>
-      </div>
-
       <div className="mb-6 grid grid-cols-5 gap-2">
         {DIAS.map((d) => (
           <Button
@@ -102,7 +97,9 @@ export default function AgendaPage() {
             variant="ghost"
             onClick={() => setDiaSelecionado(d.data)}
             className={`h-auto flex-col gap-1 rounded-xl border p-3 ${
-              d.data === diaSelecionado ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted'
+              d.data === diaSelecionado
+                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                : "border-border bg-card text-foreground hover:bg-muted"
             }`}
           >
             <span className="text-xs font-medium uppercase">{d.dia}</span>
@@ -111,53 +108,20 @@ export default function AgendaPage() {
         ))}
       </div>
 
-      {ats.length === 0 ? (
-        <EmptyState icon={CalendarDays} title="Nenhum atendimento neste dia" description="Aproveite para revisar prontuários ou ajustar a agenda." />
+      {loading ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
+      ) : agendamentos.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="Nenhum atendimento neste dia"
+          description="Aproveite para revisar prontuários ou ajustar a agenda."
+        />
       ) : (
-        <div className="space-y-3">
-          {ats.map((a) => {
-            const paciente = getPaciente(a.pacienteId);
-            const prof = getProfissional(a.profissionalId);
-            const cons = getConsultorio(a.consultorioId);
-            const bruto = a.valorConsulta;
-            return (
-              <Card key={a.id}>
-                <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="flex size-14 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Clock size={14} />
-                      <span className="mt-0.5 text-sm font-bold tabular-nums">{a.hora}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-base">{paciente?.nome}</CardTitle>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {prof?.nome} · {prof?.especialidade}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{cons?.nome}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <AgendamentoStatusBadge status={a.status} />
-                    <PaymentStatusBadge status={a.statusPagamento} />
-                    <p className="text-sm font-semibold tabular-nums">{formatBRL(bruto)}</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                  <Link href={`/atendimentos/${a.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-                    Ver detalhes
-                  </Link>
-                  <AppointmentActions
-                    atendimento={a}
-                    role={role}
-                    onTransition={(to, motivo) =>
-                      handleTransition(a.id, to, motivo)
-                    }
-                  />
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <AgendaList
+          agendamentos={agendamentos}
+          onChange={fetchData}
+          showProfissional
+        />
       )}
     </>
   );

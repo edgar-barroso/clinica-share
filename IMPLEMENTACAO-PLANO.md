@@ -1,7 +1,7 @@
 # Plano de Implementação — ClinicaShare
 
 > **Audiência**: equipe de 4 alunos (DevsTech) trabalhando no MVP do Dr. Edson Andrade.
-> **Status**: 2026-05-08 — fundação pronta, 44 páginas mockadas, auth real implementada.
+> **Status**: 2026-05-08 — Fases 0, 1, 2 e 3 ✅ concluídas. 97 testes Vitest + 11 specs Playwright verde. Próxima: Fase 4 (Atendimento + Pagamento).
 > **Meta**: levar o sistema ao estado **100% implementado e testado** em 8 sprints (Fases 1–8).
 
 ---
@@ -251,10 +251,10 @@ Rotas:
 - `DELETE /api/consultorios/[id]` — soft delete (`ativo: false`, admin)
 
 Páginas a migrar de mock para API:
-- [ ] [/consultorios](app/(front-end)/(pages)/(app)/consultorios/page.tsx)
-- [ ] [/consultorios/novo](app/(front-end)/(pages)/(app)/consultorios/novo/page.tsx)
-- [ ] [/consultorios/[id]](app/(front-end)/(pages)/(app)/consultorios/[id]/page.tsx)
-- [ ] [/consultorios/[id]/editar](app/(front-end)/(pages)/(app)/consultorios/[id]/editar/page.tsx)
+- [x] [/consultorios](app/(front-end)/(pages)/(app)/consultorios/page.tsx)
+- [x] [/consultorios/novo](app/(front-end)/(pages)/(app)/consultorios/novo/page.tsx)
+- [x] [/consultorios/[id]](app/(front-end)/(pages)/(app)/consultorios/[id]/page.tsx)
+- [x] [/consultorios/[id]/editar](app/(front-end)/(pages)/(app)/consultorios/[id]/editar/page.tsx)
 
 **Trilha B — Profissionais + TurnoFixo** (RFs: AG03, AG04, FI01, FI02, CO02, CO03)
 
@@ -265,10 +265,10 @@ Rotas:
 - `DELETE /api/profissionais/[id]/turnos-fixos/[turnoId]` — remove turno
 
 Páginas:
-- [ ] [/profissionais](app/(front-end)/(pages)/(app)/profissionais/page.tsx)
-- [ ] [/profissionais/novo](app/(front-end)/(pages)/(app)/profissionais/novo/page.tsx)
-- [ ] [/profissionais/[id]](app/(front-end)/(pages)/(app)/profissionais/[id]/page.tsx)
-- [ ] [/profissionais/[id]/editar](app/(front-end)/(pages)/(app)/profissionais/[id]/editar/page.tsx)
+- [x] [/profissionais](app/(front-end)/(pages)/(app)/profissionais/page.tsx)
+- [x] [/profissionais/novo](app/(front-end)/(pages)/(app)/profissionais/novo/page.tsx)
+- [x] [/profissionais/[id]](app/(front-end)/(pages)/(app)/profissionais/[id]/page.tsx)
+- [x] [/profissionais/[id]/editar](app/(front-end)/(pages)/(app)/profissionais/[id]/editar/page.tsx)
 
 **Trilha C — Equipe/Staff**
 
@@ -278,19 +278,19 @@ Rotas:
 - `POST /api/staff/[id]/convidar` — envia e-mail tipo reset para definir senha (cria User vinculado, `senhaDefinida=false`)
 
 Páginas:
-- [ ] [/equipe](app/(front-end)/(pages)/(app)/equipe/page.tsx)
-- [ ] [/equipe/novo](app/(front-end)/(pages)/(app)/equipe/novo/page.tsx)
-- [ ] [/equipe/[id]](app/(front-end)/(pages)/(app)/equipe/[id]/page.tsx)
-- [ ] [/equipe/[id]/editar](app/(front-end)/(pages)/(app)/equipe/[id]/editar/page.tsx)
+- [x] [/equipe](app/(front-end)/(pages)/(app)/equipe/page.tsx)
+- [x] [/equipe/novo](app/(front-end)/(pages)/(app)/equipe/novo/page.tsx)
+- [x] [/equipe/[id]](app/(front-end)/(pages)/(app)/equipe/[id]/page.tsx)
+- [x] [/equipe/[id]/editar](app/(front-end)/(pages)/(app)/equipe/[id]/editar/page.tsx)
 
 **Testes**:
-- [ ] 1 suite Vitest por trilha (CRUD + RBAC); ~10 testes por trilha
-- [ ] 1 spec Playwright: "admin cria consultório → vê na lista → edita → desativa"
+- [x] 1 suite Vitest por trilha (CRUD + RBAC); ~10 testes por trilha *(13+15+9 testes)*
+- [x] 6 specs Playwright: 3 em catalogos-flow (criar→listar) + 3 em catalogos-detalhe-editar (editar+RBAC)
 
 **DoD**:
-- [ ] Nenhuma das 12 páginas dessa fase importa `lib/mock/data.ts`
-- [ ] Build/tsc/tests verdes
-- [ ] AuditLog populado em alterações de contrato (Profissional.percentualRepasse, valorAluguelPorTurno)
+- [x] Nenhuma das 12 páginas dessa fase importa `lib/mock/data.ts`
+- [x] Build/tsc/tests verdes
+- [x] AuditLog populado em alterações de contrato (Profissional.percentualRepasse, valorAluguelPorTurno)
 
 **Bloqueios**:
 - PEND-014 (turnos exatos) → usar default 7-12/13-18/18-20 até R2 confirmar
@@ -300,7 +300,7 @@ Páginas:
 
 ---
 
-### Fase 3 — Pacientes + Agendamento (1 sprint)
+### Fase 3 — Pacientes + Agendamento (100% concluída ✅ 2026-05-08)
 
 **Objetivo**: ligar fluxo de agendamento operacional (atendente cria, paciente vê) e implementar transições agendado → em_atendimento.
 
@@ -309,31 +309,36 @@ Páginas:
 **Entregáveis**:
 
 Rotas pacientes (admin/atendente CRUD; paciente vê só o próprio):
-- `GET /api/pacientes` (admin/atendente)
-- `POST /api/pacientes` (admin/atendente — usado pelo combobox `/components/paciente/novo-paciente-dialog.tsx`)
-- `GET/PATCH /api/pacientes/[id]` (RBAC: paciente lê o próprio; admin/atendente edita)
+- [x] `GET /api/pacientes` (admin/atendente) — busca por nome/cpf/email/telefone via `q`
+- [x] `POST /api/pacientes` (admin/atendente — usado pelo combobox `/components/paciente/novo-paciente-dialog.tsx`)
+- [x] `GET/PATCH /api/pacientes/[id]` (RBAC: paciente lê o próprio; admin/atendente edita)
 
 Rotas agendamentos:
-- `GET /api/agendamentos` — filtro por role (RF-023): profissional vê só os próprios; admin/aux/atendente vê todos
-- `POST /api/agendamentos` — cria (AG01 paciente, AG02 atendente). Constraint AG05 (@@unique data+hora+consultorioId) → 409
-- `PATCH /api/agendamentos/[id]/cancelar` — AG06 (motivo obrigatório). Audit log
-- `PATCH /api/agendamentos/[id]/marcar-chegada` — AG08 (atendente OU admin/aux). Transição agendado→em_atendimento
+- [x] `GET /api/agendamentos` — filtro por role (RF-023): profissional vê só os próprios; paciente vê só os seus; admin/aux/atendente vê todos
+- [x] `POST /api/agendamentos` — cria (AG01 paciente, AG02 atendente). Constraint AG05 (@@unique data+hora+consultorioId) → 409
+- [x] `POST /api/agendamentos/[id]/cancelar` — AG06 (motivo obrigatório). Audit log
+- [x] `POST /api/agendamentos/[id]/marcar-chegada` — AG08 (atendente OU admin/aux). Transição agendado→em_atendimento
 
-Páginas a migrar:
-- [ ] [/agenda](app/(front-end)/(pages)/(app)/agenda/page.tsx)
-- [ ] [/agenda/novo](app/(front-end)/(pages)/(app)/agenda/novo/page.tsx)
-- [ ] [/minha-agenda](app/(front-end)/(pages)/(app)/minha-agenda/page.tsx) — usa filtro `profissionalId` automático
+Páginas migradas (mock removido, API real):
+- [x] [/agenda](app/(front-end)/(pages)/(app)/agenda/page.tsx) — date picker + AgendaList
+- [x] [/agenda/novo](app/(front-end)/(pages)/(app)/agenda/novo/page.tsx) — form com PacienteCombobox + Selects
+- [x] [/minha-agenda](app/(front-end)/(pages)/(app)/minha-agenda/page.tsx) — RBAC server-side filtra por profissionalId
+
+Componentes refeitos:
+- [x] [components/paciente/paciente-combobox.tsx](components/paciente/paciente-combobox.tsx) — busca debounced via API
+- [x] [components/paciente/novo-paciente-dialog.tsx](components/paciente/novo-paciente-dialog.tsx) — chama `apiCreatePaciente`
+- [x] [agenda/_components/agenda-list.tsx](app/(front-end)/(pages)/(app)/agenda/_components/agenda-list.tsx) — componente compartilhado para /agenda e /minha-agenda
 
 **Testes**:
-- [ ] Vitest: criar agendamento, conflito (409), filtro por role, cancelar com/sem motivo, marcar chegada
-- [ ] Playwright: "atendente cria agendamento na agenda → marca chegada → status muda na UI"
+- [x] Vitest: 22 testes (10 paciente + 12 agendamento) — total **97 verde**
+- [x] Playwright `e2e/agenda-flow.spec.ts`: 4 specs (criar via UI, conflito AG05, marcar chegada, cancelar com audit) — total **11 specs verde**
 
 **DoD**:
-- [ ] AuditLog gravado em cancelamento e em transições
-- [ ] PaginatedQuery server-side (substitui `usePagination` client-side em `/agenda`)
+- [x] AuditLog gravado em cancelamento e em transição agendado→em_atendimento
+- [x] `cleanAuthData()` em `e2e/helpers/db.ts` atualizado para limpar todas as FKs (atendimento, auditLog, repasse, etc.)
 
-**Bloqueios**:
-- PEND-030 (fluxo do dia) — implementar com decisão atual (atendente chega → profissional finaliza)
+**Bloqueios resolvidos**:
+- PEND-030 (fluxo do dia) — implementado conforme decisão: atendente marca chegada → profissional finaliza no Fase 4
 
 **RFs cobertas**: AG01, AG02, AG05, AG06, AG08, RF-023, RF-027
 
@@ -626,22 +631,22 @@ Páginas:
 | `/configuracoes` | estática | 8 | hub |
 | `/configuracoes/turnos` | estática | 8 | `/api/configuracoes/turnos` |
 | `/configuracoes/integracoes` | estática | 8 | `/api/configuracoes/integracoes` |
-| `/consultorios` | mock | 2A | `/api/consultorios` |
-| `/consultorios/novo` | mock | 2A | `POST /api/consultorios` |
-| `/consultorios/[id]` | mock | 2A | `/api/consultorios/[id]` |
-| `/consultorios/[id]/editar` | mock | 2A | `PATCH /api/consultorios/[id]` |
-| `/equipe` | mock | 2C | `/api/staff` |
-| `/equipe/novo` | mock | 2C | `POST /api/staff` |
-| `/equipe/[id]` | mock | 2C | `/api/staff/[id]` |
-| `/equipe/[id]/editar` | mock | 2C | `PATCH /api/staff/[id]` |
+| `/consultorios` | API ✅ | 2A | `/api/consultorios` |
+| `/consultorios/novo` | API ✅ | 2A | `POST /api/consultorios` |
+| `/consultorios/[id]` | API ✅ | 2A | `/api/consultorios/[id]` |
+| `/consultorios/[id]/editar` | API ✅ | 2A | `PATCH /api/consultorios/[id]` |
+| `/equipe` | API ✅ | 2C | `/api/staff` |
+| `/equipe/novo` | API ✅ | 2C | `POST /api/staff` |
+| `/equipe/[id]` | API ✅ | 2C | `/api/staff/[id]` |
+| `/equipe/[id]/editar` | API ✅ | 2C | `PATCH /api/staff/[id]` |
 | `/financeiro` | redirect | 5 | — |
 | `/financeiro/repasses` | mock | 5 | `/api/repasses` |
 | `/financeiro/repasses/[id]` | mock | 5 | `/api/repasses/[id]` |
 | `/minha-agenda` | mock | 3 | `/api/agendamentos?profissionalId=me` |
-| `/profissionais` | mock | 2B | `/api/profissionais` |
-| `/profissionais/novo` | mock | 2B | `POST /api/profissionais` |
-| `/profissionais/[id]` | mock | 2B | `/api/profissionais/[id]` |
-| `/profissionais/[id]/editar` | mock | 2B | `PATCH /api/profissionais/[id]` |
+| `/profissionais` | API ✅ | 2B | `/api/profissionais` |
+| `/profissionais/novo` | API ✅ | 2B | `POST /api/profissionais` |
+| `/profissionais/[id]` | API ✅ | 2B | `/api/profissionais/[id]` |
+| `/profissionais/[id]/editar` | API ✅ | 2B | `PATCH /api/profissionais/[id]` |
 | `/relatorios` | estática | 6 | hub |
 | `/relatorios/financeiro` | mock | 6 | `/api/relatorios/financeiro` |
 | `/relatorios/consultorios` | mock | 6 | `/api/relatorios/consultorios` |

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Calendar, CheckCircle2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -12,10 +12,43 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/layouts/page-header";
 import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
-import { consultorios, profissionais } from "@/lib/mock/data";
+import {
+  apiListProfissionais,
+  type Profissional,
+} from "@/lib/api/profissionais";
+import {
+  apiListConsultorios,
+  type Consultorio,
+} from "@/lib/api/consultorios";
+import {
+  apiCreateAgendamento,
+  apiListAgendamentos,
+} from "@/lib/api/agendamentos";
+import { apiErrorMessage } from "@/lib/api-client";
+import { formatDateLong } from "@/lib/format";
 
-const HORARIOS_MANHA = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"];
-const HORARIOS_TARDE = ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"];
+const HORARIOS_MANHA = [
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+];
+const HORARIOS_TARDE = [
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
+  "17:00",
+  "17:30",
+];
 
 function amanhaISO() {
   const d = new Date();
@@ -29,21 +62,92 @@ function amanhaISO() {
 
 export default function NovoAgendamentoPage() {
   const router = useRouter();
+  const [pacienteId, setPacienteId] = useState("");
+  const [profissionalId, setProfissionalId] = useState("");
+  const [consultorioId, setConsultorioId] = useState("");
+  const [data, setData] = useState(amanhaISO);
   const [horario, setHorario] = useState<string | null>(null);
-  const [pacienteId, setPacienteId] = useState("pt01");
-  const [ocupados] = useState(new Set(["09:30", "14:00", "14:30", "15:30"]));
-  const [dataPadrao] = useState(amanhaISO);
+  const [observacoes, setObservacoes] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
+  const [ocupados, setOcupados] = useState<Set<string>>(new Set());
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiListProfissionais({ ativo: true })
+      .then((res) => {
+        setProfissionais(res.profissionais);
+        if (res.profissionais.length > 0 && !profissionalId) {
+          setProfissionalId(res.profissionais[0].id);
+        }
+      })
+      .catch((err) => toast.error(apiErrorMessage(err)));
+
+    apiListConsultorios({ ativo: true })
+      .then((res) => {
+        setConsultorios(res.consultorios);
+        if (res.consultorios.length > 0 && !consultorioId) {
+          setConsultorioId(res.consultorios[0].id);
+        }
+      })
+      .catch((err) => toast.error(apiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Carrega ocupados quando (profissional, data) mudam
+  useEffect(() => {
+    if (!profissionalId || !data) {
+      setOcupados(new Set());
+      return;
+    }
+    apiListAgendamentos({ data, profissionalId })
+      .then((res) => {
+        const set = new Set<string>();
+        for (const a of res.agendamentos) {
+          if (a.status !== "cancelado") set.add(a.hora);
+        }
+        setOcupados(set);
+      })
+      .catch((err) => toast.error(apiErrorMessage(err)));
+  }, [profissionalId, data]);
+
+  const dataLabel = useMemo(() => {
+    if (!data) return "—";
+    try {
+      return formatDateLong(data);
+    } catch {
+      return data;
+    }
+  }, [data]);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!horario) {
       toast.warning("Escolha um horário disponível");
       return;
     }
-    toast.success("Agendamento criado", {
-      description: "Um SMS/WhatsApp de confirmação seria enviado ao paciente.",
-    });
-    setTimeout(() => router.push("/agenda"), 600);
+    if (!pacienteId) {
+      toast.warning("Selecione um paciente");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await apiCreateAgendamento({
+        pacienteId,
+        profissionalId,
+        consultorioId,
+        data,
+        hora: horario,
+        observacoes: observacoes.trim() || undefined,
+      });
+      toast.success("Agendamento criado");
+      router.push("/agenda");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -74,14 +178,26 @@ export default function NovoAgendamentoPage() {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Busque pelo telefone do WhatsApp. Se o paciente ainda não estiver
-                  cadastrado, use <span className="font-medium">&quot;Cadastrar novo paciente&quot;</span>.
+                  Busque pelo nome, CPF, e-mail ou telefone. Se o paciente
+                  ainda não estiver cadastrado, use{" "}
+                  <span className="font-medium">
+                    &quot;Cadastrar novo paciente&quot;
+                  </span>
+                  .
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="profissional">Profissional</Label>
-                  <Select id="profissional" required defaultValue="p01">
+                  <Select
+                    id="profissional"
+                    required
+                    value={profissionalId}
+                    onChange={(e) => setProfissionalId(e.target.value)}
+                  >
+                    {profissionais.length === 0 && (
+                      <option value="">Carregando…</option>
+                    )}
                     {profissionais.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nome} — {p.especialidade}
@@ -91,7 +207,15 @@ export default function NovoAgendamentoPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="consultorio">Consultório</Label>
-                  <Select id="consultorio" required defaultValue="c03">
+                  <Select
+                    id="consultorio"
+                    required
+                    value={consultorioId}
+                    onChange={(e) => setConsultorioId(e.target.value)}
+                  >
+                    {consultorios.length === 0 && (
+                      <option value="">Carregando…</option>
+                    )}
                     {consultorios.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.nome}
@@ -110,7 +234,16 @@ export default function NovoAgendamentoPage() {
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="data">Data</Label>
-                <Input id="data" type="date" defaultValue={dataPadrao} required />
+                <Input
+                  id="data"
+                  type="date"
+                  value={data}
+                  onChange={(e) => {
+                    setData(e.target.value);
+                    setHorario(null);
+                  }}
+                  required
+                />
               </div>
 
               <div>
@@ -168,6 +301,21 @@ export default function NovoAgendamentoPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>3. Observações (opcional)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder="Ex: Paciente prefere ser atendido pela manhã."
+                rows={3}
+                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <aside className="space-y-4 lg:col-span-1">
@@ -185,25 +333,32 @@ export default function NovoAgendamentoPage() {
               <div className="space-y-2 rounded-xl bg-muted/50 p-3">
                 <p>
                   <span className="text-muted-foreground">Data:</span>{" "}
-                  <span className="font-medium">14/04/2026</span>
+                  <span className="font-medium">{dataLabel}</span>
                 </p>
                 <p>
                   <span className="text-muted-foreground">Horário:</span>{" "}
                   <span className="font-medium">
-                    {horario ?? <span className="text-warning">— selecione —</span>}
+                    {horario ?? (
+                      <span className="text-warning">— selecione —</span>
+                    )}
                   </span>
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Após confirmar, o sistema bloqueia automaticamente o horário (AG05) e envia
-                lembretes via WhatsApp IA (AG07, configurável).
+                Após confirmar, o sistema bloqueia automaticamente o horário
+                (AG05).
               </p>
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full" size="lg" disabled={!horario}>
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={!horario || submitting}
+          >
             <CheckCircle2 size={16} />
-            Confirmar agendamento
+            {submitting ? "Salvando..." : "Confirmar agendamento"}
           </Button>
         </aside>
       </form>

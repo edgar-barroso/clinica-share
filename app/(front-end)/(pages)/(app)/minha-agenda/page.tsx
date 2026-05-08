@@ -1,68 +1,74 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, Clock, Settings, ShieldAlert } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CalendarDays, ShieldAlert } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  AgendamentoStatusBadge,
-  PaymentStatusBadge,
-} from "@/components/financial/status-badge";
 import { PageHeader } from "@/components/layouts/page-header";
-import { AppointmentActions } from "@/components/agenda/appointment-actions";
+import { AgendaList } from "../agenda/_components/agenda-list";
 import {
-  atendimentos as atendimentosSeed,
-  getConsultorio,
-  getPaciente,
-} from "@/lib/mock/data";
-import { formatBRL, formatDateLong } from "@/lib/format";
-import { toastMessage } from "@/lib/appointment-transitions";
+  apiListAgendamentos,
+  type AgendamentoListItem,
+} from "@/lib/api/agendamentos";
+import { apiErrorMessage } from "@/lib/api-client";
+import { formatDateLong } from "@/lib/format";
 import { useCurrentUser } from "@/lib/current-user";
-import type {
-  Atendimento,
-  StatusAgendamento,
-} from "@/lib/mock/types";
 
 export default function MinhaAgendaPage() {
-  const { role, profissionalId, userNome } = useCurrentUser();
-  const [atendimentos, setAtendimentos] = useState<Atendimento[]>(
-    atendimentosSeed,
-  );
+  const { profissionalId, userNome, loading: userLoading } = useCurrentUser();
+  const [agendamentos, setAgendamentos] = useState<AgendamentoListItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const meusAtendimentos = useMemo(() => {
-    if (!profissionalId) return [];
-    return atendimentos
-      .filter((a) => a.profissionalId === profissionalId)
-      .filter((a) => a.status !== "cancelado" && a.status !== "realizado")
-      .sort((a, b) => `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`));
-  }, [atendimentos, profissionalId]);
+  const fetchData = useCallback(async () => {
+    if (!profissionalId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { agendamentos } = await apiListAgendamentos();
+      setAgendamentos(
+        agendamentos
+          .filter((a) => a.status !== "cancelado" && a.status !== "realizado")
+          .sort((a, b) =>
+            `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`),
+          ),
+      );
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [profissionalId]);
 
-  function handleTransition(
-    id: string,
-    to: StatusAgendamento,
-    motivo?: string,
-  ) {
-    setAtendimentos((list) =>
-      list.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              status: to,
-              ...(to === "cancelado" && motivo
-                ? { motivoCancelamento: motivo }
-                : {}),
-            }
-          : a,
-      ),
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  const porDia = useMemo(() => {
+    return agendamentos.reduce<Record<string, AgendamentoListItem[]>>(
+      (acc, a) => {
+        (acc[a.data] ??= []).push(a);
+        return acc;
+      },
+      {},
     );
-    toast.success(toastMessage(to), {
-      description: motivo
-        ? `Registrado por ${userNome} · "${motivo}"`
-        : `Registrado por ${userNome}`,
-    });
+  }, [agendamentos]);
+  const dias = Object.keys(porDia).sort();
+
+  if (userLoading) {
+    return (
+      <>
+        <PageHeader
+          title="Minha agenda"
+          description="Visão do profissional — apenas seus atendimentos"
+        />
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          Carregando…
+        </p>
+      </>
+    );
   }
 
   if (!profissionalId) {
@@ -81,8 +87,8 @@ export default function MinhaAgendaPage() {
               Esta tela é exclusiva do profissional
             </p>
             <p className="max-w-md text-sm text-muted-foreground">
-              Troque o papel para &quot;Profissional&quot; no seletor do topo
-              para ver apenas os atendimentos da Dra. Nirmala Azalea.
+              Sua conta não está vinculada a um profissional. Peça ao admin
+              para associar seu usuário ao registro de profissional.
             </p>
           </CardContent>
         </Card>
@@ -90,40 +96,16 @@ export default function MinhaAgendaPage() {
     );
   }
 
-  const porDia = meusAtendimentos.reduce<Record<string, Atendimento[]>>(
-    (acc, a) => {
-      (acc[a.data] ??= []).push(a);
-      return acc;
-    },
-    {},
-  );
-  const dias = Object.keys(porDia).sort();
-
   return (
     <>
       <PageHeader
         title="Minha agenda"
         description={`${userNome} · próximos atendimentos`}
-        actions={
-          <Link
-            href={`/profissionais/${profissionalId}/editar`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            <Settings size={14} />
-            Meu perfil
-          </Link>
-        }
       />
 
-      <div className="mb-6 flex items-center gap-2 rounded-xl border border-dashed border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-        <ShieldAlert size={14} />
-        <span>
-          Protótipo · ações refletem nesta tela mas não persistem entre
-          navegações
-        </span>
-      </div>
-
-      {dias.length === 0 ? (
+      {loading ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
+      ) : dias.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
           title="Nenhum atendimento pendente"
@@ -136,61 +118,7 @@ export default function MinhaAgendaPage() {
               <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
                 {formatDateLong(data)}
               </h2>
-              <div className="space-y-3">
-                {porDia[data].map((a) => {
-                  const paciente = getPaciente(a.pacienteId);
-                  const cons = getConsultorio(a.consultorioId);
-                  const bruto =
-                    a.valorConsulta;
-                  return (
-                    <Card key={a.id}>
-                      <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">
-                        <div className="flex items-start gap-4">
-                          <div className="flex size-14 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
-                            <Clock size={14} />
-                            <span className="mt-0.5 text-sm font-bold tabular-nums">
-                              {a.hora}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <CardTitle className="truncate text-base">
-                              {paciente?.nome}
-                            </CardTitle>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {cons?.nome}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <AgendamentoStatusBadge status={a.status} />
-                          <PaymentStatusBadge status={a.statusPagamento} />
-                          <p className="text-sm font-semibold tabular-nums">
-                            {formatBRL(bruto)}
-                          </p>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex items-center justify-between gap-3 border-t border-border pt-4">
-                        <Link
-                          href={`/atendimentos/${a.id}`}
-                          className={buttonVariants({
-                            variant: "ghost",
-                            size: "sm",
-                          })}
-                        >
-                          Ver detalhes
-                        </Link>
-                        <AppointmentActions
-                          atendimento={a}
-                          role={role}
-                          onTransition={(to, motivo) =>
-                            handleTransition(a.id, to, motivo)
-                          }
-                        />
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+              <AgendaList agendamentos={porDia[data]} onChange={fetchData} />
             </section>
           ))}
         </div>
