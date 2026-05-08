@@ -1,28 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Mail, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiForgotPassword, authErrorMessage } from "@/lib/auth-client";
 
 export default function EsqueciSenhaPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [enviado, setEnviado] = useState(false);
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await apiForgotPassword({ email });
+      setEnviado(true);
       toast.success("Instruções enviadas", {
-        description: "Em produção, um e-mail com link seguro seria enviado.",
+        description: "Verifique sua caixa de entrada (e a pasta de spam).",
       });
-      router.push("/redefinir-senha");
-    }, 600);
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -42,27 +54,33 @@ export default function EsqueciSenhaPage() {
             </div>
             <CardTitle>Recuperar senha</CardTitle>
             <CardDescription>
-              Informe o e-mail cadastrado e vamos enviar um link para você criar uma
-              nova senha (RF-026).
+              {enviado
+                ? "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha em alguns minutos."
+                : "Informe o e-mail cadastrado e vamos enviar um link para você criar uma nova senha."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail cadastrado</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  required
-                  autoFocus
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                <Mail size={16} />
-                {loading ? "Enviando…" : "Enviar instruções"}
-              </Button>
-            </form>
+            {!enviado && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">E-mail cadastrado</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  <Mail size={16} />
+                  {loading ? "Enviando…" : "Enviar instruções"}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>

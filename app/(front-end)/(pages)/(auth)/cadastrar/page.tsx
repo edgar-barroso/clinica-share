@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { HeartPulse, ShieldAlert, UserPlus } from "lucide-react";
+import { HeartPulse, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,34 +17,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleButton } from "@/components/auth/google-button";
 import { useRole } from "@/lib/role";
+import { apiRegister, authErrorMessage } from "@/lib/auth-client";
 
 export default function PatientSignUpPage() {
   const router = useRouter();
   const { setRole } = useRole();
   const [loading, setLoading] = useState(false);
   const [accept, setAccept] = useState(false);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [senha, setSenha] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!accept) {
       toast.error("É preciso aceitar os termos para criar a conta.");
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setRole("paciente");
+    try {
+      const { user } = await apiRegister({ nome, email, telefone, senha });
+      setRole(user.role);
       toast.success("Conta criada · entrando no portal…");
       router.push("/p");
-    }, 500);
+      router.refresh();
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      setLoading(false);
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="flex items-center justify-center gap-2 bg-warning/15 px-4 py-1.5 text-xs font-medium text-warning">
-        <ShieldAlert size={14} />
-        <span>Protótipo · campos finais serão validados na R2</span>
-      </div>
-
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">
@@ -83,6 +88,9 @@ export default function PatientSignUpPage() {
                     id="nome"
                     type="text"
                     placeholder="João da Silva"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -92,6 +100,9 @@ export default function PatientSignUpPage() {
                     id="email"
                     type="email"
                     placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -101,6 +112,9 @@ export default function PatientSignUpPage() {
                     id="telefone"
                     type="tel"
                     placeholder="(11) 99999-9999"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    autoComplete="tel"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
@@ -113,7 +127,10 @@ export default function PatientSignUpPage() {
                     id="senha"
                     type="password"
                     placeholder="Mínimo 8 caracteres"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
                     minLength={8}
+                    autoComplete="new-password"
                     required
                   />
                 </div>

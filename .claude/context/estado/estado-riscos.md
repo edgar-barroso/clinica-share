@@ -60,6 +60,14 @@
 | R-023 | Schema do Prisma divergir dos modelos validados em R2; equipe precisa descartar/reescrever migrations <!-- ALTERADO 2026-05-08 — risco realizado parcialmente: schema do domínio foi antecipado (DEC-A15), exposição subiu --> | Média | Médio | Média | Schema espelha `lib/mock/types.ts` (já consolidado) + decisões R1; campos abertos por R2 ficam nullable/JSON (`prontuarioInterno`, `endereco`, `plano`); migrations renomeáveis se R2 trouxer mudanças; revisar após R2 com Dr. Edson | Equipe (modelagem + codificação) | Aberto |
 | R-024 | Conflito de porta entre Postgres do clinica-share e outros projetos locais que usam 5432 (ex: ar-lens-marketplace) <!-- NOVO --> | Alta | Baixo | Média | Postgres do clinica-share publicado na porta host **5433** (DEC-A11); `.env.example` documenta a porta; isolamento via Docker network nominalmente nomeado | Equipe (implementação) | Mitigado |
 
+### Riscos da implementação real de auth (2026-05-08) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-025 | Credenciais sensíveis (`EMAIL_SERVICE_USER_PASSWORD`, `JWT_SECRET`) em `.env` versionado por engano <!-- NOVO --> | Média | Alto | Alta | `.gitignore` cobre `.env*` (mantido `!.env.example`); `.env` apenas localmente em dev; rotacionar Gmail App Password e `JWT_SECRET` antes de produção; checagem manual no diff antes de cada commit | Equipe (codificação) | Aberto |
+| R-026 | Gmail App Password é deprecado pelo Google para algumas contas e tem rate limit de envio (~500/dia); reset de senha pode falhar silenciosamente <!-- NOVO --> | Média | Médio | Média | Aceitável no MVP/protótipo; em produção migrar para Resend/SES/Mailgun com domínio próprio; logar falhas de `sendMail` em `_lib/mailer.ts` para monitoramento | Equipe (implementação) | Aberto |
+| R-027 | Botão Google OAuth depende de `http://localhost:3000` estar registrado como Authorized JavaScript Origin no Google Cloud Console para o `client_id` informado; sem isso o botão renderiza mas falha silenciosamente <!-- NOVO --> | Alta | Baixo | Média | Documentar requisito no README da equipe; em produção, registrar domínio real | Equipe (configuração) | Aberto |
+| R-028 | ESLint quebrado após upgrade de deps (eslint-plugin-jsx-a11y v6.10+ incompat com next 16) — equipe perde feedback de qualidade no editor e CI <!-- NOVO --> | Alta | Baixo | Média | Pinar `eslint-plugin-jsx-a11y@^6.9.x` ou esperar correção do plugin; `tsc --noEmit` cobre maioria dos erros enquanto isso; tarefa separada para fix | Equipe (codificação) | Aberto |
+
 ### Legenda
 - **Probabilidade:** Baixa / Média / Alta
 - **Impacto:** Baixo / Médio / Alto / Crítico
@@ -70,4 +78,4 @@
 |---|---|---|---|
 | _(nenhum)_ | | | |
 
-## Última atualização: 2026-05-08 (+R-023 atualizado: domínio antecipado em DEC-A15 elevou exposição de Baixa para Média; +R-024 conflito de porta Postgres mitigado via 5433)
+## Última atualização: 2026-05-08 (+R-025 segredos em .env versionado; +R-026 Gmail App Password limites; +R-027 Google OAuth depende de origin autorizado; +R-028 ESLint quebrado por incompat plugin a11y vs Next 16)

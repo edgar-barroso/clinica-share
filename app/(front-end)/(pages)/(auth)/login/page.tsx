@@ -4,47 +4,44 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ArrowRight, LogIn, ShieldAlert, Stethoscope, UserRound } from "lucide-react";
+import { ArrowRight, LogIn, Stethoscope, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { useRole, type Role } from "@/lib/role";
-
-type EquipeRole = Extract<Role, "admin" | "auxiliar" | "profissional" | "atendente">;
-
-const ROLE_REDIRECT: Record<EquipeRole, string> = {
-  admin: "/dashboard",
-  auxiliar: "/dashboard",
-  profissional: "/dashboard",
-  atendente: "/agenda",
-};
+import { useRole } from "@/lib/role";
+import { apiLogin, authErrorMessage, ROLE_REDIRECT } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
   const { setRole } = useRole();
   const [loading, setLoading] = useState(false);
-  const [roleSelecionado, setRoleSelecionado] = useState<EquipeRole>("admin");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    // Protótipo: aceita qualquer credencial
-    setTimeout(() => {
-      setRole(roleSelecionado);
-      toast.success("Entrando no sistema…");
-      router.push(ROLE_REDIRECT[roleSelecionado]);
-    }, 400);
+    try {
+      const { user } = await apiLogin({ email, senha });
+      setRole(user.role);
+      toast.success("Bem-vindo de volta!");
+      router.push(ROLE_REDIRECT[user.role]);
+      router.refresh();
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      setLoading(false);
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="flex items-center justify-center gap-2 bg-warning/15 px-4 py-1.5 text-xs font-medium text-warning">
-        <ShieldAlert size={14} />
-        <span>Protótipo · qualquer e-mail e senha funcionam</span>
-      </div>
-
       <div className="grid flex-1 lg:grid-cols-2">
         <div className="hidden items-center justify-center bg-primary p-12 text-primary-foreground lg:flex">
           <div className="max-w-md space-y-6">
@@ -58,20 +55,6 @@ export default function LoginPage() {
               Registre atendimentos, calcule repasses automaticamente e feche a semana em minutos
               — sem planilha, sem retrabalho, com trilha de auditoria.
             </p>
-            <div className="flex gap-4 pt-4 text-sm">
-              <div>
-                <p className="text-3xl font-semibold tabular-nums">12</p>
-                <p className="text-primary-foreground/70">consultórios</p>
-              </div>
-              <div>
-                <p className="text-3xl font-semibold tabular-nums">5</p>
-                <p className="text-primary-foreground/70">perfis de usuário</p>
-              </div>
-              <div>
-                <p className="text-3xl font-semibold tabular-nums">7h-20h</p>
-                <p className="text-primary-foreground/70">funcionamento</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -94,7 +77,9 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="seu@email.com"
-                    defaultValue="edson.andrade@clinicashare.com.br"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -108,24 +93,14 @@ export default function LoginPage() {
                       Esqueci minha senha
                     </Link>
                   </div>
-                  <Input id="password" type="password" defaultValue="protótipo" required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="perfil">Perfil de acesso</Label>
-                  <Select
-                    id="perfil"
-                    value={roleSelecionado}
-                    onChange={(e) => setRoleSelecionado(e.target.value as EquipeRole)}
+                  <Input
+                    id="password"
+                    type="password"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    autoComplete="current-password"
                     required
-                  >
-                    <option value="admin">Administrador</option>
-                    <option value="auxiliar">Auxiliar Financeiro</option>
-                    <option value="profissional">Profissional</option>
-                    <option value="atendente">Atendente</option>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Protótipo: sem credenciais reais, o perfil define a visão que você verá ao entrar.
-                  </p>
+                  />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   <LogIn size={16} />

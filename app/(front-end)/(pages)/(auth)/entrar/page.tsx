@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ArrowRight, HeartPulse, LogIn, ShieldAlert } from "lucide-react";
+import { ArrowRight, HeartPulse, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,29 +17,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleButton } from "@/components/auth/google-button";
 import { useRole } from "@/lib/role";
+import { apiLogin, authErrorMessage } from "@/lib/auth-client";
 
 export default function PatientLoginPage() {
   const router = useRouter();
   const { setRole } = useRole();
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setRole("paciente");
-      toast.success("Entrando no portal…");
-      router.push("/p");
-    }, 400);
+    try {
+      const { user } = await apiLogin({ email, senha });
+      setRole(user.role);
+      toast.success("Bem-vindo de volta!");
+      router.push(user.role === "paciente" ? "/p" : "/dashboard");
+      router.refresh();
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      setLoading(false);
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="flex items-center justify-center gap-2 bg-warning/15 px-4 py-1.5 text-xs font-medium text-warning">
-        <ShieldAlert size={14} />
-        <span>Protótipo · qualquer e-mail e senha funcionam</span>
-      </div>
-
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">
@@ -78,7 +81,9 @@ export default function PatientLoginPage() {
                     id="email"
                     type="email"
                     placeholder="seu@email.com"
-                    defaultValue="joao.silva@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -95,7 +100,9 @@ export default function PatientLoginPage() {
                   <Input
                     id="password"
                     type="password"
-                    defaultValue="protótipo"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    autoComplete="current-password"
                     required
                   />
                 </div>

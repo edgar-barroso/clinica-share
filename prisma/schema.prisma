@@ -10,6 +10,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Gera diagrama ER (SVG) a partir do schema; rodado junto com `prisma generate`
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./erd.svg"
+  theme    = "default"
+}
+
 datasource db {
   provider = "postgresql"
 }
@@ -28,6 +35,8 @@ model User {
   id           String    @id @default(uuid())
   email        String    @unique
   passwordHash String?
+  // Google ID (sub) quando usuário entrou via OAuth — permite login só por Google
+  googleId     String?   @unique
   role         Role
   ativo        Boolean   @default(true)
   ultimoAcesso DateTime?

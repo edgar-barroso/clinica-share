@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { RoleProvider } from "@/lib/role";
+import { GoogleProvider } from "@/components/auth/google-provider";
 import "./globals.css";
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +40,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <RoleProvider>{children}</RoleProvider>
+        <GoogleProvider clientId={GOOGLE_CLIENT_ID}>
+          <RoleProvider>{children}</RoleProvider>
+        </GoogleProvider>
         <Toaster position="top-right" richColors />
       </body>
     </html>
