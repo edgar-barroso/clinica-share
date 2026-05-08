@@ -8,9 +8,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/layouts/page-header";
-import type { CargoStaff } from "@/lib/mock/types";
+import { apiCreateStaff, type CargoStaff } from "@/lib/api/staff";
+import { apiErrorMessage } from "@/lib/api-client";
 
 const CARGO_LABEL: Record<CargoStaff, string> = {
   atendente: "Atendente",
@@ -28,39 +28,45 @@ export default function NovoMembroPage() {
 function NovoMembroPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const cargoInicial =
-    (searchParams.get("cargo") as CargoStaff | null) ?? "atendente";
+  const cargoInicial = (searchParams.get("cargo") as CargoStaff | null) ?? "atendente";
   const [cargo, setCargo] = useState<CargoStaff>(
     cargoInicial === "auxiliar" ? "auxiliar" : "atendente",
   );
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    toast.success(`${CARGO_LABEL[cargo]} cadastrado`, {
-      description: "Acesso liberado (protótipo, não persistido).",
-    });
-    setTimeout(() => router.push("/equipe"), 600);
+    setSubmitting(true);
+    try {
+      await apiCreateStaff({ nome, cargo, email, telefone });
+      toast.success(`${CARGO_LABEL[cargo]} cadastrado`, {
+        description:
+          "Acesso ainda pendente — defina senha do usuário em uma fase futura.",
+      });
+      router.push("/equipe");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      setSubmitting(false);
+    }
   }
 
   return (
     <>
       <PageHeader
         title="Novo membro da equipe"
-        description="Cadastre um atendente ou auxiliar financeiro com acesso ao sistema"
+        description="Cadastre um atendente ou auxiliar financeiro"
         actions={
-          <Link
-            href="/equipe"
-            className={buttonVariants({ variant: "outline" })}
-          >
+          <Link href="/equipe" className={buttonVariants({ variant: "outline" })}>
             Cancelar
           </Link>
         }
       />
 
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 gap-6 lg:grid-cols-3"
-      >
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
@@ -105,7 +111,13 @@ function NovoMembroPageInner() {
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="nome">Nome completo</Label>
-                <Input id="nome" placeholder="Joana Ribeiro" required />
+                <Input
+                  id="nome"
+                  placeholder="Joana Ribeiro"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">E-mail</Label>
@@ -113,6 +125,8 @@ function NovoMembroPageInner() {
                   id="email"
                   type="email"
                   placeholder="nome@clinicashare.com.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -121,26 +135,10 @@ function NovoMembroPageInner() {
                 <Input
                   id="telefone"
                   placeholder="(11) 90000-0000"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
                   required
                 />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="senha">Senha</Label>
-                <Input
-                  id="senha"
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  minLength={6}
-                  autoComplete="new-password"
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="status">Status</Label>
-                <Select id="status" defaultValue="ativo">
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </Select>
               </div>
             </CardContent>
           </Card>
@@ -159,11 +157,12 @@ function NovoMembroPageInner() {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Após cadastro, o membro poderá entrar em <strong>/login</strong>{" "}
-                escolhendo o perfil correspondente.
+                Após cadastro, o membro fica com <strong>acesso pendente</strong>. A
+                criação do User com senha será feita em uma fase futura via convite por
+                e-mail.
               </p>
-              <Button type="submit" className="w-full" size="lg">
-                Cadastrar membro
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? "Cadastrando..." : "Cadastrar membro"}
               </Button>
             </CardContent>
           </Card>

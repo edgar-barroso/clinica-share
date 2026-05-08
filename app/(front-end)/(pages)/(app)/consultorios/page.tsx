@@ -1,42 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { DoorOpen, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layouts/page-header";
-import {
-  PeriodoSelector,
-  type PeriodoSelectorValue,
-} from "@/components/relatorios/periodo-selector";
-import {
-  consultorios,
-  formatPeriodoLabel,
-  receitaPorConsultorio,
-  semanaAtual,
-} from "@/lib/mock/data";
-import { formatBRL } from "@/lib/format";
+import { apiListConsultorios, type Consultorio } from "@/lib/api/consultorios";
+import { apiErrorMessage } from "@/lib/api-client";
 
 export default function ConsultoriosPage() {
-  const [seletor, setSeletor] = useState<PeriodoSelectorValue>(() => ({
-    tipo: "semana",
-    periodo: semanaAtual(),
-  }));
+  const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mapReceita = useMemo(() => {
-    const ranking = receitaPorConsultorio(seletor.periodo);
-    return new Map(ranking.map((r) => [r.consultorioId, r]));
-  }, [seletor.periodo]);
-
-  const label = formatPeriodoLabel(seletor.periodo, seletor.tipo);
+  useEffect(() => {
+    apiListConsultorios()
+      .then((res) => setConsultorios(res.consultorios))
+      .catch((err) => toast.error(apiErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <>
       <PageHeader
         title="Consultórios"
-        description={`12 salas cadastradas · desempenho de ${label}`}
+        description={
+          loading
+            ? "Carregando..."
+            : `${consultorios.length} sala${consultorios.length === 1 ? "" : "s"} cadastrada${consultorios.length === 1 ? "" : "s"}`
+        }
         actions={
           <Link href="/consultorios/novo" className={buttonVariants()}>
             <Plus size={16} />
@@ -45,64 +41,73 @@ export default function ConsultoriosPage() {
         }
       />
 
-      <div className="mb-4">
-        <PeriodoSelector value={seletor} onChange={setSeletor} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {consultorios.map((c) => {
-          const r = mapReceita.get(c.id);
-          const receita = r?.receita ?? 0;
-          const atends = r?.atendimentos ?? 0;
-          const ocioso = atends === 0;
-          return (
-            <Link key={c.id} href={`/consultorios/${c.id}`} className="block">
-            <Card className="h-full transition-colors hover:border-primary/30">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <DoorOpen size={16} />
-                      </div>
-                      {c.nome}
-                    </CardTitle>
-                    <CardDescription className="mt-1">{c.tipo}</CardDescription>
-                  </div>
-                  {ocioso ? (
-                    <Badge variant="secondary">Ocioso</Badge>
-                  ) : (
-                    <Badge variant="success">Ativo</Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Especialidades compatíveis</p>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {c.especialidadesCompativeis.slice(0, 3).map((esp) => (
-                      <Badge key={esp} variant="outline">
-                        {esp}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-end justify-between border-t border-border pt-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Receita do período</p>
-                    <p className="text-lg font-semibold tabular-nums">{formatBRL(receita)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Atendimentos</p>
-                    <p className="text-lg font-semibold tabular-nums">{atends}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 rounded-xl" />
+          ))}
+        </div>
+      ) : consultorios.length === 0 ? (
+        <EmptyState
+          icon={DoorOpen}
+          title="Nenhum consultório cadastrado"
+          description="Comece adicionando o primeiro consultório da clínica."
+          action={
+            <Link href="/consultorios/novo" className={buttonVariants()}>
+              <Plus size={16} />
+              Novo consultório
             </Link>
-          );
-        })}
-      </div>
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {consultorios.map((c) => (
+            <Link key={c.id} href={`/consultorios/${c.id}`} className="block">
+              <Card className="h-full transition-colors hover:border-primary/30">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <DoorOpen size={16} />
+                        </div>
+                        {c.nome}
+                      </CardTitle>
+                      <CardDescription className="mt-1">{c.tipo}</CardDescription>
+                    </div>
+                    {c.ativo ? (
+                      <Badge variant="success">Ativo</Badge>
+                    ) : (
+                      <Badge variant="secondary">Inativo</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Especialidades compatíveis</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {c.especialidadesCompativeis.slice(0, 3).map((esp) => (
+                        <Badge key={esp} variant="outline">
+                          {esp}
+                        </Badge>
+                      ))}
+                      {c.especialidadesCompativeis.length === 0 && (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Equipamentos</p>
+                    <p className="text-sm">
+                      {c.equipamentos.length > 0 ? c.equipamentos.join(", ") : "—"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </>
   );
 }

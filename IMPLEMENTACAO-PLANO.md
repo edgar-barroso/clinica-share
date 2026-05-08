@@ -207,7 +207,37 @@ Helper `cleanAuthData()` em `tests/helpers/db.ts` deve evoluir para `cleanDb()` 
 
 ---
 
-### Fase 2 — Catálogos CRUD (1 sprint, paralelizável em 3 trilhas)
+### Fase 2 — Catálogos CRUD (75% concluída ✅ 2026-05-08)
+
+**Status**: backend 100%, listagem/criação 100%, **detalhe e edição pendentes** (6 páginas — não bloqueia Fase 3).
+
+**Backend implementado**:
+- 8 rotas API (Consultórios + Profissionais/TurnoFixo + Staff)
+- 14 usecases (5 + 7 + 5) — todos funções puras
+- Audit log obrigatório em alteração de contrato (Profissional.modalidade/percentualRepasse/valorAluguelPorTurno) com motivo no body — RNF-102
+- Constraints AG05 e PEND-015 aplicadas via `@@unique`; expostas como 409 amigável
+- 37 testes Vitest novos (13 + 15 + 9) — total: 75 verde
+- 3 specs Playwright E2E (`e2e/catalogos-flow.spec.ts`) — admin cria recurso → aparece na lista
+
+**Frontend migrado** (6 páginas de mock → API real):
+- `/consultorios`, `/consultorios/novo`
+- `/profissionais`, `/profissionais/novo` (com seleção opcional de turnos durante criação)
+- `/equipe`, `/equipe/novo`
+- 3 clientes API tipados em `lib/api/{consultorios,profissionais,staff}.ts`
+- Loading skeletons + EmptyState + toasts
+- Bug fix: `<PatientRedirect>` aguarda `loading=false` antes de redirecionar (issue introduzido na Fase 1)
+
+**Pendente para Fase 2.5** (não bloqueia Fase 3):
+- [ ] `/consultorios/[id]` (detalhe) → `apiGetConsultorio`
+- [ ] `/consultorios/[id]/editar` → `apiUpdateConsultorio`
+- [ ] `/profissionais/[id]` → `apiGetProfissional` + lista turnos
+- [ ] `/profissionais/[id]/editar` → `apiUpdateProfissional` (motivo obrigatório se contrato mudar) + add/remove turnos
+- [ ] `/equipe/[id]` → `apiGetStaff`
+- [ ] `/equipe/[id]/editar` → `apiUpdateStaff`
+
+---
+
+### Fase 2 (especificação original — referência)
 
 **Objetivo**: substituir mock por persistência real nos catálogos sem dependência: Consultórios, Profissionais (+ TurnoFixo), Equipe/Staff.
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,14 +10,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/layouts/page-header";
-import { consultorios } from "@/lib/mock/data";
+import { apiListConsultorios, type Consultorio } from "@/lib/api/consultorios";
+import {
+  apiCreateProfissional,
+  apiAddTurnoFixo,
+  type ModalidadeContrato,
+  type Turno,
+} from "@/lib/api/profissionais";
+import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatPercent } from "@/lib/format";
 
-const TURNOS = [
+const TURNOS: { value: Turno; label: string }[] = [
   { value: "manha", label: "Manhã (07h-12h)" },
   { value: "tarde", label: "Tarde (13h-18h)" },
   { value: "noite", label: "Noite (18h-20h)" },
-] as const;
+];
 
 const DIAS_SEMANA = [
   { value: 1, label: "Seg" },
@@ -27,33 +34,51 @@ const DIAS_SEMANA = [
   { value: 5, label: "Sex" },
 ];
 
-interface TurnoFixo {
+interface TurnoLocal {
   id: string;
-  dia: number;
-  turno: "manha" | "tarde" | "noite";
+  diaSemana: number;
+  turno: Turno;
   consultorioId: string;
 }
 
 export default function NovoProfissionalPage() {
   const router = useRouter();
-  const [modalidade, setModalidade] = useState<"percentual" | "aluguel-fixo">("percentual");
+  const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
+  const [nome, setNome] = useState("");
+  const [especialidade, setEspecialidade] = useState("Clínica geral");
+  const [conselho, setConselho] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [duracao, setDuracao] = useState("30");
+  const [modalidade, setModalidade] = useState<ModalidadeContrato>("percentual");
   const [percentual, setPercentual] = useState("30");
   const [aluguel, setAluguel] = useState("180");
-  const [turnos, setTurnos] = useState<TurnoFixo[]>([]);
+  const [turnos, setTurnos] = useState<TurnoLocal[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiListConsultorios({ ativo: true })
+      .then((res) => setConsultorios(res.consultorios))
+      .catch((err) => toast.error(apiErrorMessage(err)));
+  }, []);
 
   function addTurno() {
+    if (consultorios.length === 0) {
+      toast.warning("Cadastre um consultório antes");
+      return;
+    }
     setTurnos((t) => [
       ...t,
       {
         id: crypto.randomUUID(),
-        dia: 1,
+        diaSemana: 1,
         turno: "manha",
         consultorioId: consultorios[0].id,
       },
     ]);
   }
 
-  function updateTurno(id: string, field: keyof TurnoFixo, value: string | number) {
+  function updateTurno<K extends keyof TurnoLocal>(id: string, field: K, value: TurnoLocal[K]) {
     setTurnos((t) => t.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
   }
 
@@ -61,12 +86,51 @@ export default function NovoProfissionalPage() {
     setTurnos((t) => t.filter((x) => x.id !== id));
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    toast.success("Profissional cadastrado", {
-      description: "Contrato e turnos salvos (protótipo, não persistido).",
-    });
-    setTimeout(() => router.push("/profissionais"), 600);
+    setSubmitting(true);
+    try {
+      const { profissional } = await apiCreateProfissional({
+        nome,
+        especialidade,
+        conselho,
+        email,
+        telefone,
+        modalidadeContrato: modalidade,
+        percentualRepasse:
+          modalidade === "percentual" ? Number(percentual) / 100 : null,
+        valorAluguelPorTurno:
+          modalidade === "aluguel_fixo" ? Number(aluguel) : null,
+        duracaoConsultaMinutos: Number(duracao),
+      });
+
+      // Cria turnos em paralelo; se algum falhar (conflito), avisa mas mantém o profissional
+      const turnoErrors: string[] = [];
+      await Promise.all(
+        turnos.map((t) =>
+          apiAddTurnoFixo(profissional.id, {
+            consultorioId: t.consultorioId,
+            diaSemana: t.diaSemana,
+            turno: t.turno,
+          }).catch((err) => {
+            turnoErrors.push(apiErrorMessage(err));
+          }),
+        ),
+      );
+
+      if (turnoErrors.length > 0) {
+        toast.warning("Profissional criado, mas turnos com conflito", {
+          description: turnoErrors.join(" · "),
+        });
+      } else {
+        toast.success("Profissional cadastrado");
+      }
+      router.push("/profissionais");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -90,11 +154,22 @@ export default function NovoProfissionalPage() {
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="nome">Nome completo</Label>
-                <Input id="nome" placeholder="Dra. Ana Oliveira" required />
+                <Input
+                  id="nome"
+                  placeholder="Dra. Ana Oliveira"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="especialidade">Especialidade</Label>
-                <Select id="especialidade" required defaultValue="Clínica geral">
+                <Select
+                  id="especialidade"
+                  value={especialidade}
+                  onChange={(e) => setEspecialidade(e.target.value)}
+                  required
+                >
                   <option>Clínica geral</option>
                   <option>Cardiologia</option>
                   <option>Dermatologia</option>
@@ -108,47 +183,49 @@ export default function NovoProfissionalPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="conselho">Conselho profissional</Label>
-                <Input id="conselho" placeholder="CRM/SP 123456" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" placeholder="nome@dominio.com" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input id="telefone" placeholder="(11) 90000-0000" required />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="senha">Senha</Label>
                 <Input
-                  id="senha"
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  minLength={6}
-                  autoComplete="new-password"
+                  id="conselho"
+                  placeholder="CRM/SP 123456"
+                  value={conselho}
+                  onChange={(e) => setConselho(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nome@dominio.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  placeholder="(11) 90000-0000"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="duracao">Duração padrão da consulta (min)</Label>
                 <Input
                   id="duracao"
                   type="number"
                   min="10"
                   step="5"
-                  defaultValue="30"
+                  value={duracao}
+                  onChange={(e) => setDuracao(e.target.value)}
                   required
                 />
                 <p className="text-xs text-muted-foreground">
                   Define o bloco de agenda (AG04).
                 </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="status">Status</Label>
-                <Select id="status" defaultValue="ativo">
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </Select>
               </div>
             </CardContent>
           </Card>
@@ -175,9 +252,9 @@ export default function NovoProfissionalPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setModalidade("aluguel-fixo")}
+                  onClick={() => setModalidade("aluguel_fixo")}
                   className={`rounded-xl border p-4 text-left transition-colors ${
-                    modalidade === "aluguel-fixo"
+                    modalidade === "aluguel_fixo"
                       ? "border-primary bg-primary/5"
                       : "border-border bg-card hover:bg-muted"
                   }`}
@@ -203,8 +280,8 @@ export default function NovoProfissionalPage() {
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Ex: 30 significa que 30% do bruto vai para a clínica.
-                    Equivale a {formatPercent(Number(percentual) / 100 || 0)}.
+                    Ex: 30 = 30% do bruto vai para a clínica
+                    ({formatPercent(Number(percentual) / 100 || 0)}).
                   </p>
                 </div>
               ) : (
@@ -237,8 +314,8 @@ export default function NovoProfissionalPage() {
             <CardContent>
               {turnos.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum turno configurado. O profissional só poderá atender após
-                  definir pelo menos um turno fixo vinculado a um consultório.
+                  Nenhum turno configurado. Você pode adicionar agora ou depois pela
+                  página de detalhe do profissional.
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -249,9 +326,9 @@ export default function NovoProfissionalPage() {
                     >
                       <Select
                         className="col-span-3"
-                        value={t.dia}
+                        value={t.diaSemana}
                         onChange={(e) =>
-                          updateTurno(t.id, "dia", Number(e.target.value))
+                          updateTurno(t.id, "diaSemana", Number(e.target.value))
                         }
                       >
                         {DIAS_SEMANA.map((d) => (
@@ -264,7 +341,7 @@ export default function NovoProfissionalPage() {
                         className="col-span-4"
                         value={t.turno}
                         onChange={(e) =>
-                          updateTurno(t.id, "turno", e.target.value as TurnoFixo["turno"])
+                          updateTurno(t.id, "turno", e.target.value as Turno)
                         }
                       >
                         {TURNOS.map((tr) => (
@@ -276,9 +353,7 @@ export default function NovoProfissionalPage() {
                       <Select
                         className="col-span-4"
                         value={t.consultorioId}
-                        onChange={(e) =>
-                          updateTurno(t.id, "consultorioId", e.target.value)
-                        }
+                        onChange={(e) => updateTurno(t.id, "consultorioId", e.target.value)}
                       >
                         {consultorios.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -328,8 +403,8 @@ export default function NovoProfissionalPage() {
                 Após cadastro, o sistema calcula repasses automaticamente a partir dos
                 atendimentos vinculados a este profissional.
               </p>
-              <Button type="submit" className="w-full" size="lg">
-                Cadastrar profissional
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? "Cadastrando..." : "Cadastrar profissional"}
               </Button>
             </CardContent>
           </Card>

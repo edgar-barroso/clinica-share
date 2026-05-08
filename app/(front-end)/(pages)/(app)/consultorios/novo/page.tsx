@@ -9,8 +9,22 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, Textarea } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/layouts/page-header";
+import { apiCreateConsultorio } from "@/lib/api/consultorios";
+import { apiErrorMessage } from "@/lib/api-client";
+
+const TIPOS = [
+  "Consultório Clínico",
+  "Consultório Especializado",
+  "Consultório Pediátrico",
+  "Consultório Psicológico",
+  "Consultório Ginecológico",
+  "Consultório Fisioterapia",
+  "Consultório Nutrição",
+  "Consultório Dermatológico",
+  "Sala de Procedimentos",
+];
 
 const ESPECIALIDADES = [
   "Clínica geral",
@@ -31,9 +45,12 @@ const ESPECIALIDADES = [
 
 export default function NovoConsultorioPage() {
   const router = useRouter();
-  const [equipamentos, setEquipamentos] = useState<string[]>(["Maca"]);
+  const [nome, setNome] = useState("");
+  const [tipo, setTipo] = useState(TIPOS[0]);
+  const [equipamentos, setEquipamentos] = useState<string[]>([]);
   const [novoEq, setNovoEq] = useState("");
   const [especialidades, setEspecialidades] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   function addEquipamento() {
     const v = novoEq.trim();
@@ -56,16 +73,27 @@ export default function NovoConsultorioPage() {
     );
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (especialidades.length === 0) {
       toast.warning("Selecione ao menos uma especialidade compatível");
       return;
     }
-    toast.success("Consultório cadastrado", {
-      description: "Protótipo — não persistido no banco.",
-    });
-    setTimeout(() => router.push("/consultorios"), 600);
+    setSubmitting(true);
+    try {
+      await apiCreateConsultorio({
+        nome,
+        tipo,
+        equipamentos,
+        especialidadesCompativeis: especialidades,
+      });
+      toast.success("Consultório cadastrado");
+      router.push("/consultorios");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -89,28 +117,26 @@ export default function NovoConsultorioPage() {
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="nome">Nome da sala</Label>
-                <Input id="nome" placeholder="Ex: Sala 13" required />
+                <Input
+                  id="nome"
+                  placeholder="Ex: Sala 13"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="tipo">Tipo</Label>
-                <Select id="tipo" required defaultValue="Consultório Clínico">
-                  <option>Consultório Clínico</option>
-                  <option>Consultório Especializado</option>
-                  <option>Consultório Pediátrico</option>
-                  <option>Consultório Psicológico</option>
-                  <option>Consultório Ginecológico</option>
-                  <option>Consultório Fisioterapia</option>
-                  <option>Consultório Nutrição</option>
-                  <option>Consultório Dermatológico</option>
-                  <option>Sala de Procedimentos</option>
+                <Select
+                  id="tipo"
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
+                  required
+                >
+                  {TIPOS.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
                 </Select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  placeholder="Iluminação, layout, acessibilidade, restrições…"
-                />
               </div>
             </CardContent>
           </Card>
@@ -212,8 +238,8 @@ export default function NovoConsultorioPage() {
                   <span className="font-medium">{especialidades.length}</span>
                 </p>
               </div>
-              <Button type="submit" className="w-full" size="lg">
-                Cadastrar consultório
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? "Cadastrando..." : "Cadastrar consultório"}
               </Button>
             </CardContent>
           </Card>
