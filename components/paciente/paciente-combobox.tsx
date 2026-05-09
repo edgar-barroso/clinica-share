@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search, UserPlus } from "lucide-react";
-import { pacientes as pacientesSeed } from "@/lib/mock/data";
+import { toast } from "sonner";
+import { apiListPacientes, type Paciente } from "@/lib/api/pacientes";
+import { apiErrorMessage } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import type { Paciente } from "@/lib/mock/types";
 import { NovoPacienteDialog } from "./novo-paciente-dialog";
 
 interface Props {
@@ -14,36 +15,41 @@ interface Props {
   required?: boolean;
 }
 
-function onlyDigits(s: string) {
-  return s.replace(/\D/g, "");
-}
-
-function matches(p: Paciente, query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  if (p.nome.toLowerCase().includes(q)) return true;
-  const qDigits = onlyDigits(q);
-  if (qDigits && onlyDigits(p.telefone).includes(qDigits)) return true;
-  return false;
-}
-
 export function PacienteCombobox({ id, value, onChange, required }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [extras, setExtras] = useState<Paciente[]>([]);
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const todos = useMemo(() => [...extras, ...pacientesSeed], [extras]);
   const selecionado = useMemo(
-    () => todos.find((p) => p.id === value) ?? null,
-    [todos, value],
+    () => pacientes.find((p) => p.id === value) ?? null,
+    [pacientes, value],
   );
-  const filtrados = useMemo(
-    () => todos.filter((p) => matches(p, query)).slice(0, 10),
-    [todos, query],
-  );
+
+  // Carga inicial
+  useEffect(() => {
+    setLoading(true);
+    apiListPacientes()
+      .then((res) => setPacientes(res.pacientes))
+      .catch((err) => toast.error(apiErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Debounce de busca server-side
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      apiListPacientes({ q: query })
+        .then((res) => setPacientes(res.pacientes))
+        .catch((err) => toast.error(apiErrorMessage(err)))
+        .finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,13 +74,13 @@ export function PacienteCombobox({ id, value, onChange, required }: Props) {
   }
 
   function handleCreate(novo: Paciente) {
-    setExtras((e) => [novo, ...e]);
+    setPacientes((arr) => [novo, ...arr]);
     onChange(novo.id);
     setDialogOpen(false);
     setOpen(false);
   }
 
-  const showCreate = query.trim().length > 0 && filtrados.length === 0;
+  const showCreate = query.trim().length > 0 && pacientes.length === 0 && !loading;
 
   return (
     <div ref={rootRef} className="relative">
@@ -92,7 +98,7 @@ export function PacienteCombobox({ id, value, onChange, required }: Props) {
         <span className={cn("truncate", !selecionado && "text-muted-foreground")}>
           {selecionado
             ? `${selecionado.nome} — ${selecionado.telefone}`
-            : "Buscar paciente por nome ou telefone…"}
+            : "Buscar paciente por nome, e-mail, CPF ou telefone…"}
         </span>
         <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
       </button>
@@ -109,20 +115,24 @@ export function PacienteCombobox({ id, value, onChange, required }: Props) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nome ou telefone"
+              placeholder="Nome, e-mail, CPF ou telefone"
               className="h-10 w-full bg-transparent pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none"
             />
           </div>
 
           <ul className="max-h-64 overflow-y-auto py-1" role="listbox">
-            {filtrados.length === 0 && !showCreate && (
+            {loading && (
+              <li className="px-3 py-2 text-sm text-muted-foreground">
+                Buscando...
+              </li>
+            )}
+            {!loading && pacientes.length === 0 && !showCreate && (
               <li className="px-3 py-2 text-sm text-muted-foreground">
                 Nenhum paciente encontrado.
               </li>
             )}
-            {filtrados.map((p) => {
+            {pacientes.map((p) => {
               const ativo = p.id === value;
-              const isExtra = extras.some((x) => x.id === p.id);
               return (
                 <li key={p.id}>
                   <button
@@ -139,14 +149,7 @@ export function PacienteCombobox({ id, value, onChange, required }: Props) {
                     aria-selected={ativo}
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {p.nome}
-                        {isExtra && (
-                          <span className="ml-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                            novo
-                          </span>
-                        )}
-                      </p>
+                      <p className="truncate text-sm font-medium">{p.nome}</p>
                       <p className="truncate text-xs text-muted-foreground tabular-nums">
                         {p.telefone}
                       </p>

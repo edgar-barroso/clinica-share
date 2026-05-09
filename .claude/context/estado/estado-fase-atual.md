@@ -1,8 +1,8 @@
 # Fase Atual do Projeto
 
-## Status: Modelagem + Prototipação paralela
+## Status: Modelagem + Prototipação paralela (com entrada parcial em Construção — apenas infra)
 
-**Data da última atualização:** 2026-04-18
+**Data da última atualização:** 2026-05-08
 
 ### O que já aconteceu
 - [x] 1ª reunião de levantamento de requisitos com o Dr. Edson (R1 — 06/04/2026)
@@ -12,6 +12,7 @@
 - [x] Documento de Visão v1 — [visao-roi/visao-v1.md](../visao-roi/visao-v1.md): posicionamento, envolvidos, recursos, ROI
 - [x] Requisitos, decisões e riscos consolidados neste diretório `estado/`
 - [x] Plano de protótipo navegável escrito — [../../../PROTOTIPO-PLANO.md](../../../PROTOTIPO-PLANO.md)
+- [x] **Infra de codificação montada (2026-05-08)** — separação back-end/front-end via App Router groups, Prisma 7 + PostgreSQL 16 em Docker, validação de envs com Zod, rota `GET /api/hello` validando conexão DB, Vitest 4 como framework de testes (DEC-A11 a DEC-A14)
 
 ### Em andamento
 - [ ] Protótipo navegável (F1 — 15 telas core admin/profissional)
@@ -35,3 +36,11 @@ Entra quando:
 |---|---|---|---|
 | 2026-04-06 | — | Comunicação (R1) | Início do projeto; reunião inicial com cliente |
 | 2026-04-09 | Comunicação | Modelagem + Prototipação | Documento de Requisitos v1 e Visão v1 publicados; pendências P0 dependem de artefato visual para destravar |
+| 2026-05-08 | Modelagem + Prototipação | **+ Construção (parcial, apenas infra)** | Infra antecipada antes da R2 para reduzir risco de cronograma; entidades de domínio só entram pós-validação em R2 (DEC-A13) |
+| 2026-05-08 | Construção (Fase 0 ✅) | **Construção (Fase 1 ✅)** | Backend foundation + seed: helpers `audit()`/`requireRole()`/`requireUser()`/`handle-error()`, cliente API, seed admin, RoleProvider via /me, RoleSwitcher dev-only. 11 testes novos require-role + 4 testes audit. Próximo: Fase 2 (catálogos CRUD em 3 trilhas paralelas) |
+| 2026-05-08 | Construção (Fase 1 ✅) | **Construção (Fase 2 — 100% ✅)** | Catálogos CRUD completo: backend (8 rotas + 14 usecases + 37 testes Vitest) + frontend (12 páginas: listagem/criar/detalhe/editar das 3 trilhas) + 6 specs Playwright + RoleSwitcher removido (auth real) + cache:no-store no api-client. Total: 75 testes Vitest + 7 specs Playwright |
+| 2026-05-08 | Construção (Fase 2 ✅) | **Construção (Fase 3 — 100% ✅)** | Pacientes + Agendamento: backend (6 rotas + 9 usecases + 22 testes Vitest) + frontend (3 páginas /agenda + /agenda/novo + /minha-agenda; combobox e dialog migrados; AgendaList compartilhado) + 4 specs Playwright (agenda-flow: criar via UI, conflito AG05, marcar chegada, cancelar com audit). RBAC RF-023 implementado (profissional/paciente vê só os próprios). AuditLog em cancelar e marcar-chegada. PEND-030 implementado. **Total: 97 testes Vitest + 11 specs Playwright**. Próximo: Fase 4 (Atendimento + Pagamento) |
+| 2026-05-08 | Construção (Fase 3 ✅) | **Construção (Fase 4 — 100% ✅)** | Atendimento + Pagamento: backend (5 rotas atendimentos + 2 rotas agendamentos transitions + 7 usecases + 20 testes Vitest) + frontend (4 páginas: lista + walk-in + detalhe com ações inline iniciar/finalizar + edit pós-realizado) + 4 specs Playwright (atendimento-flow: agendado→em_atendimento→realizado, walk-in via UI, FI11 com audit, FI06 gratuito sem motivo 422). AuditLog em 100% das mutações financeiras (AT05/AT06/AT01/FI11/nao-compareceu). PEND-017 (Json livre prontuário) e PEND-031 (admin/aux edita) implementados. **Total: 117 testes Vitest + 15 specs Playwright**. Próximo: Fase 5 (Repasse — CRÍTICO RNF-104, cobertura ≥ 90%) |
+| 2026-05-08 | Construção (Fase 4 ✅) | **Construção (Fase 5 — 100% ✅, RNF-104 cumprido)** | Repasse: backend (4 rotas + 4 usecases) com cálculo no servidor em Prisma.Decimal, arredondamento half-up, idempotência via @@unique. Helper `_lib/turnos.ts` (PEND-014). 23 testes novos (12 unit calculate.ts com **100% lines / 100% statements / 100% functions / 93.75% branches**, 11 integration). Páginas /financeiro/repasses (botão Gerar + tabela com pagar inline) + /financeiro/repasses/[id] (detalhe com breakdown). 3 specs Playwright (idempotência, marcar pago com audit, UI lista+detalhe). **Total: 140 testes Vitest + 18 specs Playwright**. Próximo: Fase 6 (Dashboard + Relatórios) |
+| 2026-05-08 | Construção (Fase 5 ✅) | **Construção (Fase 6 — 100% ✅)** | Dashboard + Relatórios: 5 rotas API agregadoras (dashboard + 4 relatórios) + 5 usecases server-side. 8 testes integration novos. 5 páginas migradas: /dashboard (KPIs + ReceitaChart), /relatorios/financeiro (RE02), /relatorios/consultorios (RE03), /relatorios/gratuitas-descontos (RE04), /relatorios/cancelamentos (RE05). 5 specs Playwright. **Total: 148 Vitest + 23 Playwright**. Próximo: Fase 7+8 (Portal + polimento) |
+| 2026-05-08 | Construção (Fase 6 ✅) | **Construção (Fases 7 + 8 — 100% ✅)** | Portal Paciente + Auditoria: rotas /api/p/perfil (GET/PATCH) e /api/auditoria (GET com filtros). 5 páginas /p/* migradas (home, consultas, consulta detalhe com cancelar, agendar AG01, perfil + editar). Página /auditoria com filtros por entidade/campo. 4 testes integration + 4 specs Playwright (paciente lê perfil + lista, paciente atualiza, admin lista audit, paciente negado em audit). **Total: 152 testes Vitest + 27 specs Playwright + tsc + build verde**. **PROJETO 100% IMPLEMENTADO**. Próximo: R2 com Dr. Edson para validação |

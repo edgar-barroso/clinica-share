@@ -1,5 +1,6 @@
 # Planilha de Custos — v2 (2026-04-16)
 
+> **Atualização 2026-05-07:** FI09 marcado como **REMOVIDO PROPOSTO** via DEC-E09 — pagamento online (PIX/cartão/boleto) sai do escopo, substituído por pagamento exclusivamente presencial. Pendente confirmação do cliente em R2 (PEND-045). Totais abaixo **não foram recalculados** — aguardam aprovação. Se aprovado: −19h totais (−R$ 2.053,125 custo, −R$ 2.566,41 com lucro), totalizando 299h e R$ 35.657,81 ao cliente.
 
 ## Aba: CUSTOS
 
@@ -35,7 +36,7 @@
 | [FI06] Registro de descontos com justificativa | B | 0.0 | 1.0 | 2.0 | 0.0 | 0.0 | 225 | Campo + validação no AT01 |
 | [FI07] Fechamento financeiro semanal com relatório de prestação de c. | M | 1.0 | 2.0 | 8.0 | 2.0 | 2.0 | 1340.625 | Agregação + relatório |
 | [FI08] Registro de aluguel fixo por turno utilizado por profissional | B | 0.0 | 1.0 | 1.0 | 0.0 | 1.0 | 236.25 | Variação do modelo de FI01 |
-| [FI09] Pagamento online pelo paciente: Pix, cartão, boleto | A | 2.0 | 3.0 | 10.0 | 2.0 | 2.0 | 2053.125 | Integração API gateway |
+| ~~[FI09] Pagamento online pelo paciente: Pix, cartão, boleto~~ | ~~A~~ | ~~2.0~~ | ~~3.0~~ | ~~10.0~~ | ~~2.0~~ | ~~2.0~~ | ~~2053.125~~ | **REMOVIDO PROPOSTO (DEC-E09) — pendente PEND-045** |
 | MÓDULO DE RELATÓRIOS E DASHBOARD |  |  |  |  |  |  |  |  |
 | [RE01] Dashboard admin: receita total, repasses em aberto e pagos | A | 2.0 | 3.0 | 8.0 | 4.0 | 1.0 | 1884.375 | Componentes visuais base |
 | [RE02] Relatório financeiro com filtros por profissional e período | M | 1.0 | 2.0 | 4.0 | 2.0 | 1.0 | 901.875 | Reusa componentes de RE01 |

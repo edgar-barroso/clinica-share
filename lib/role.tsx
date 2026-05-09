@@ -1,14 +1,24 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { apiMe, type AuthUser } from "./auth-client";
 
 export type Role = "admin" | "auxiliar" | "profissional" | "atendente" | "paciente";
 
 export interface RoleInfo {
   id: Role;
   label: string;
+  /** Subtítulo padrão (placeholder até user real ser carregado). */
   subtitle: string;
   initials: string;
+  /** Nome padrão (placeholder até user real ser carregado). */
   name: string;
 }
 
@@ -53,32 +63,82 @@ export const ROLES: Record<Role, RoleInfo> = {
 interface RoleContextValue {
   role: Role;
   info: RoleInfo;
+  /** Usuário real vindo de /api/auth/me, ou null enquanto não autenticado/carregando. */
+  user: AuthUser | null;
+  /** True enquanto o boot inicial de /api/auth/me ainda não respondeu. */
+  loading: boolean;
+  /**
+   * Define o role localmente. Após login bem-sucedido, o `apiLogin` retorna
+   * o usuário e o caller pode chamar `setRole(user.role)` para atualizar a UI
+   * imediatamente sem esperar o próximo /me.
+   */
   setRole: (r: Role) => void;
+  /**
+   * Popula o user (e role) imediatamente após login. Evita race entre o
+   * push de rota e o /api/auth/me próximo (que pode não disparar a tempo,
+   * deixando user=null e quebrando páginas que dependem de pacienteId).
+   */
+  setUser: (user: AuthUser | null) => void;
+  /** Re-busca o usuário em /api/auth/me. Útil após mutações no perfil. */
+  refresh: () => Promise<void>;
 }
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
-const STORAGE_KEY = "clinicashare:role";
+function deriveInfo(role: Role, user: AuthUser | null): RoleInfo {
+  const base = ROLES[role];
+  if (!user) return base;
+  const realName =
+    user.paciente?.nome ?? user.profissional?.nome ?? user.staff?.nome ?? user.email;
+  const initials = realName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || base.initials;
+  return { ...base, name: realName, subtitle: realName, initials };
+}
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>("admin");
+  const [role, setRoleState] = useState<Role>("paciente");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    if (saved && saved in ROLES) {
-      setRoleState(saved as Role);
+  const refresh = useCallback(async () => {
+    const me = await apiMe();
+    if (me) {
+      setUser(me);
+      setRoleState(me.role);
+    } else {
+      setUser(null);
     }
   }, []);
 
-  const setRole = (r: Role) => {
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+  }, [refresh]);
+
+  const setRole = useCallback((r: Role) => {
     setRoleState(r);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, r);
-    }
-  };
+  }, []);
+
+  const setUserOptimistic = useCallback((u: AuthUser | null) => {
+    setUser(u);
+    if (u) setRoleState(u.role);
+  }, []);
 
   return (
-    <RoleContext.Provider value={{ role, info: ROLES[role], setRole }}>
+    <RoleContext.Provider
+      value={{
+        role,
+        info: deriveInfo(role, user),
+        user,
+        loading,
+        setRole,
+        setUser: setUserOptimistic,
+        refresh,
+      }}
+    >
       {children}
     </RoleContext.Provider>
   );

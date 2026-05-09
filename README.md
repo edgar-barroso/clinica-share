@@ -6,13 +6,46 @@ Sistema em desenvolvimento para **Dr. Edson Andrade**, proprietário de clínica
 
 ## Status
 
-**Fase atual: Protótipo navegável (descoberta).** Dados mockados; ainda sem banco, sem autenticação real, sem cálculo de repasse definitivo.
+**MVP 100% implementado e testado** (2026-05-08). Todas as 8 fases do
+[IMPLEMENTACAO-PLANO.md](IMPLEMENTACAO-PLANO.md) concluídas:
 
-- **36 casos de uso** levantados em R1 (06/04/2026) — ver [requisitos-v1.docx](.claude/context/reunioes/R1/requisitos-v1.docx) e [planilha-custos-v2](.claude/context/visao-roi/planilha-custos-v2-2026-04-16.xlsx)
+| | Métrica | Valor |
+|---|---|---|
+| ✅ | Testes Vitest | **152 verde** |
+| ✅ | Specs Playwright E2E | **27 verde** |
+| ✅ | Cobertura `_usecases/repasse/calculate.ts` | 100% lines / 93.75% branches (RNF-104) |
+| ✅ | `tsc --noEmit` | verde |
+| ✅ | `npm run build` | verde |
+| ✅ | Mocks em código de produção | **0** |
+
+**Próximo passo**: R2 com Dr. Edson para validar PEND-002/014/015/017/030/031/032/045
+(todas implementadas com defaults documentados).
+
+- **35 casos de uso** confirmados em R1 (06/04/2026)
 - **5 perfis de usuário**: Administrador, Auxiliar Financeiro, Profissional, Atendente, Paciente
-- **Reunião R2** agendada para refinar: campos do prontuário, turnos, integrações externas
 
-Ver [PROTOTIPO-PLANO.md](PROTOTIPO-PLANO.md) para inventário completo de telas e faseamento.
+## Como rodar
+
+```bash
+# 1. Postgres em Docker (porta 5433)
+npm run db:up
+
+# 2. Migrations + admin inicial
+npm run db:migrate
+npm run db:seed   # cria admin a partir de ADMIN_EMAIL/ADMIN_PASSWORD em .env
+
+# 3. Dev server
+npm run dev      # http://localhost:3000
+
+# Validação
+npx tsc --noEmit
+npm test         # Vitest (integration + unit)
+npm run test:e2e # Playwright
+npm run build
+```
+
+Após rodar `npm test` (que limpa o banco), rode `npm run db:seed` novamente para
+recriar o admin.
 
 ## Problema
 

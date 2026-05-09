@@ -8,6 +8,7 @@ interface Props {
   value: string;
   delta?: number;
   deltaLabel?: string;
+  hint?: string;
   icon: LucideIcon;
   tone?: "primary" | "success" | "warning" | "danger" | "neutral";
 }
@@ -20,7 +21,7 @@ const toneClasses: Record<NonNullable<Props["tone"]>, string> = {
   neutral: "bg-muted text-muted-foreground",
 };
 
-export function MetricStat({ label, value, delta, deltaLabel, icon: Icon, tone = "neutral" }: Props) {
+export function MetricStat({ label, value, delta, deltaLabel, hint, icon: Icon, tone = "neutral" }: Props) {
   const hasDelta = typeof delta === "number";
   const positive = hasDelta && delta! >= 0;
 
@@ -47,6 +48,9 @@ export function MetricStat({ label, value, delta, deltaLabel, icon: Icon, tone =
           </span>
           {deltaLabel && <span className="text-muted-foreground">{deltaLabel}</span>}
         </div>
+      )}
+      {!hasDelta && hint && (
+        <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
       )}
     </Card>
   );

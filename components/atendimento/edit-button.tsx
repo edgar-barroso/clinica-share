@@ -7,13 +7,20 @@ import { useCurrentUser } from "@/lib/current-user";
 
 interface Props {
   atendimentoId: string;
+  atendimentoProfissionalId: string;
 }
 
-export function EditAtendimentoButton({ atendimentoId }: Props) {
-  const { role } = useCurrentUser();
-  const canEdit = role === "admin" || role === "auxiliar" || role === "profissional";
+export function EditAtendimentoButton({
+  atendimentoId,
+  atendimentoProfissionalId,
+}: Props) {
+  const { role, profissionalId } = useCurrentUser();
+  const canEditByRole =
+    role === "admin" || role === "auxiliar" || role === "profissional";
 
-  if (!canEdit) return null;
+  if (!canEditByRole) return null;
+  if (role === "profissional" && profissionalId !== atendimentoProfissionalId)
+    return null;
 
   return (
     <Link

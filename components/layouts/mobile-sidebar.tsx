@@ -22,6 +22,7 @@ import {
   DoorOpen,
   FileBarChart,
   FileSearch,
+  Heart,
   Home,
   Menu,
   Settings,
@@ -31,6 +32,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { useCurrentUser } from "@/lib/current-user";
+import { isNavItemActive } from "@/lib/nav-active";
 import { useRole } from "@/lib/role";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +43,10 @@ const navAll: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
+  { href: "/pacientes", label: "Pacientes", icon: Heart },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
   { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/auditoria", label: "Auditoria", icon: FileSearch },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
@@ -57,9 +61,9 @@ const navPaciente: NavItem[] = [
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
-  profissional: ["/dashboard", "/agenda", "/atendimentos"],
-  atendente: ["/agenda", "/atendimentos"],
+  auxiliar: ["/dashboard", "/atendimentos", "/pacientes", "/financeiro/repasses", "/relatorios", "/auditoria"],
+  profissional: ["/agenda", "/atendimentos"],
+  atendente: ["/agenda", "/atendimentos", "/pacientes"],
   paciente: navPaciente.map((n) => n.href),
 };
 
@@ -68,6 +72,7 @@ export function MobileSidebarTrigger() {
   const isClient = useIsClient();
   const pathname = usePathname();
   const { role } = useRole();
+  const { profissionalId } = useCurrentUser();
 
   useEffect(() => {
     if (!open) return;
@@ -82,7 +87,21 @@ export function MobileSidebarTrigger() {
     };
   }, [open]);
 
-  const items = role === "paciente" ? navPaciente : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
+  const baseItems =
+    role === "paciente"
+      ? navPaciente
+      : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
+  const items =
+    role === "profissional" && profissionalId
+      ? [
+          ...baseItems,
+          {
+            href: `/profissionais/${profissionalId}/editar`,
+            label: "Meu perfil",
+            icon: User,
+          },
+        ]
+      : baseItems;
 
   const overlay = open ? (
     <>
@@ -116,8 +135,11 @@ export function MobileSidebarTrigger() {
 
         <nav className="space-y-1 px-3 py-4">
           {items.map(({ href, label, icon: Icon }) => {
-            const active =
-              pathname === href || pathname.startsWith(`${href}/`);
+            const active = isNavItemActive(
+              href,
+              pathname,
+              items.map((i) => i.href),
+            );
             return (
               <Link
                 key={href}

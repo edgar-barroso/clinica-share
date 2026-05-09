@@ -48,6 +48,26 @@
 | R-019 | Protótipo sem persistência entre páginas pode confundir Dr. Edson na demo — marcar "Chegou" e navegar desfaz a transição <!-- NOVO --> | Alta | Baixo | Média | Toasts claros por transição ("Registrado por X"); banner "protótipo sem persistência" visível; roteiro de demo executa todas as ações sem mudar de tela; README orienta | Equipe (comunicação) | Aberto |
 | R-020 | Role simulado sem `profissionalId` real impede validação semântica — profissional é sempre `p01` (Dra. Nirmala) <!-- NOVO --> | Média | Baixo | Baixa | Nota no seletor de role; PEND-032 e implementação de auth real resolverão. Demo usa apenas o profissional mapeado | Equipe (implementação) | Aberto |
 
+### Riscos da remoção proposta de FI09 (2026-05-07) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-021 | Dr. Edson rejeita a proposta DEC-E09 em R2 e exige FI09 reativado; equipe precisa retomar arquitetura Asaas (conta-mãe + walletId, split, estorno, tributário PEND-040) com prazo apertado <!-- NOVO --> | Média | Alto | Alta | Apresentar DEC-E09 em R2 com argumentação clara: foco no problema central de R1 (controle de repasse), redução LGPD/PCI, IFQ "Excitante" ≠ "Normal", economia de ~19h e ~R$ 2.566 (planilha-custos-v2); manter FI09 marcado como "removido proposto" e não "removido" para reverter rápido se rejeitado; ter rascunho de arquitetura Asaas pronto como fallback (já documentado em conversa com equipe) | Equipe (comunicação + planejamento) | Aberto |
+| R-022 | Pagamento exclusivamente presencial pode aumentar taxa de no-show (paciente sem "skin in the game") e gerar inadimplência (paciente atendido sem pagar e sai sem cobrança) <!-- NOVO --> | Média | Médio | Média | Reforçar lembretes WhatsApp (AG07) como principal redutor de no-show; auxiliar marca status `pendente` no atendimento e cobra no fechamento semanal (FI07); PEND-027 endereça política de no-show; em última análise, se inadimplência for problema, FI09 pode voltar com sinal/caução parcial | Equipe (modelagem + comunicação) | Aberto |
+
+### Riscos da antecipação de infra (2026-05-08) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-023 | Schema do Prisma divergir dos modelos validados em R2; equipe precisa descartar/reescrever migrations <!-- ALTERADO 2026-05-08 — risco realizado parcialmente: schema do domínio foi antecipado (DEC-A15), exposição subiu --> | Média | Médio | Média | Schema espelha `lib/mock/types.ts` (já consolidado) + decisões R1; campos abertos por R2 ficam nullable/JSON (`prontuarioInterno`, `endereco`, `plano`); migrations renomeáveis se R2 trouxer mudanças; revisar após R2 com Dr. Edson | Equipe (modelagem + codificação) | Aberto |
+| R-024 | Conflito de porta entre Postgres do clinica-share e outros projetos locais que usam 5432 (ex: ar-lens-marketplace) <!-- NOVO --> | Alta | Baixo | Média | Postgres do clinica-share publicado na porta host **5433** (DEC-A11); `.env.example` documenta a porta; isolamento via Docker network nominalmente nomeado | Equipe (implementação) | Mitigado |
+
+### Riscos da implementação real de auth (2026-05-08) <!-- NOVO -->
+| ID | Risco | Probabilidade | Impacto | Exposição | Mitigação | Responsável | Status |
+|---|---|---|---|---|---|---|---|
+| R-025 | Credenciais sensíveis (`EMAIL_SERVICE_USER_PASSWORD`, `JWT_SECRET`) em `.env` versionado por engano <!-- NOVO --> | Média | Alto | Alta | `.gitignore` cobre `.env*` (mantido `!.env.example`); `.env` apenas localmente em dev; rotacionar Gmail App Password e `JWT_SECRET` antes de produção; checagem manual no diff antes de cada commit | Equipe (codificação) | Aberto |
+| R-026 | Gmail App Password é deprecado pelo Google para algumas contas e tem rate limit de envio (~500/dia); reset de senha pode falhar silenciosamente <!-- NOVO --> | Média | Médio | Média | Aceitável no MVP/protótipo; em produção migrar para Resend/SES/Mailgun com domínio próprio; logar falhas de `sendMail` em `_lib/mailer.ts` para monitoramento | Equipe (implementação) | Aberto |
+| R-027 | Botão Google OAuth depende de `http://localhost:3000` estar registrado como Authorized JavaScript Origin no Google Cloud Console para o `client_id` informado; sem isso o botão renderiza mas falha silenciosamente <!-- NOVO --> | Alta | Baixo | Média | Documentar requisito no README da equipe; em produção, registrar domínio real | Equipe (configuração) | Aberto |
+| R-028 | ESLint quebrado após upgrade de deps (eslint-plugin-jsx-a11y v6.10+ incompat com next 16) — equipe perde feedback de qualidade no editor e CI <!-- NOVO --> | Alta | Baixo | Média | Pinar `eslint-plugin-jsx-a11y@^6.9.x` ou esperar correção do plugin; `tsc --noEmit` cobre maioria dos erros enquanto isso; tarefa separada para fix | Equipe (codificação) | Aberto |
+
 ### Legenda
 - **Probabilidade:** Baixa / Média / Alta
 - **Impacto:** Baixo / Médio / Alto / Crítico
@@ -58,4 +78,4 @@
 |---|---|---|---|
 | _(nenhum)_ | | | |
 
-## Última atualização: 2026-04-19 (+R-019/020 protótipo sem persistência + role simulado sem profissionalId real)
+## Última atualização: 2026-05-08 (+R-025 segredos em .env versionado; +R-026 Gmail App Password limites; +R-027 Google OAuth depende de origin autorizado; +R-028 ESLint quebrado por incompat plugin a11y vs Next 16)

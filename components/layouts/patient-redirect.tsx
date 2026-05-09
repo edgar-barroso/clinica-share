@@ -5,18 +5,22 @@ import { useEffect } from "react";
 import { useRole } from "@/lib/role";
 
 /**
- * Se o perfil simulado for "paciente", redireciona para o portal do paciente.
- * Usado dentro do AppShell (/(app)) — evita que um "paciente" veja a área admin.
+ * Se o usuário logado for paciente, redireciona para o portal do paciente.
+ * Usado dentro do AppShell (/(app)) — evita que um paciente veja a área admin.
+ *
+ * Aguarda `loading=false` antes de decidir, pois `RoleProvider` inicia com
+ * role="paciente" como default antes da resposta de /api/auth/me chegar.
  */
 export function PatientRedirect() {
-  const { role } = useRole();
+  const { role, loading, user } = useRole();
   const router = useRouter();
 
   useEffect(() => {
-    if (role === "paciente") {
+    if (loading) return;
+    if (user && role === "paciente") {
       router.replace("/p");
     }
-  }, [role, router]);
+  }, [role, loading, user, router]);
 
   return null;
 }

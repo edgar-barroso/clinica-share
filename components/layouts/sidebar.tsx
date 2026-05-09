@@ -11,6 +11,8 @@ import {
   DoorOpen,
   FileBarChart,
   FileSearch,
+  Headset,
+  Heart,
   Home,
   Settings,
   Stethoscope,
@@ -19,7 +21,22 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/lib/current-user";
+import { isNavItemActive } from "@/lib/nav-active";
 import { useRole } from "@/lib/role";
+
+function semanaAtualLabel(): string {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dow = hoje.getDay();
+  const segunda = new Date(hoje);
+  segunda.setDate(hoje.getDate() + (dow === 0 ? -6 : 1 - dow));
+  const domingo = new Date(segunda);
+  domingo.setDate(segunda.getDate() + 6);
+  const fmt = (d: Date) =>
+    `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${fmt(segunda)}–${fmt(domingo)}`;
+}
 
 type NavItem = { href: string; label: string; icon: typeof BarChart3 };
 
@@ -27,9 +44,11 @@ const navAll: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
+  { href: "/pacientes", label: "Pacientes", icon: Heart },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/equipe", label: "Equipe", icon: Headset },
+  { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
   { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/auditoria", label: "Auditoria", icon: FileSearch },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
@@ -43,25 +62,36 @@ const navPaciente: NavItem[] = [
 ];
 
 const navProfissional: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/minha-agenda", label: "Minha agenda", icon: Calendar },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
 ];
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro", "/relatorios", "/auditoria"],
-  atendente: ["/agenda", "/atendimentos"],
+  auxiliar: ["/dashboard", "/atendimentos", "/pacientes", "/financeiro/repasses", "/relatorios", "/auditoria"],
+  atendente: ["/agenda", "/atendimentos", "/pacientes"],
 };
 
 export function Sidebar() {
   const pathname = usePathname();
   const { role } = useRole();
+  const { profissionalId } = useCurrentUser();
   const items =
     role === "paciente"
       ? navPaciente
       : role === "profissional"
-        ? navProfissional
+        ? [
+            ...navProfissional,
+            ...(profissionalId
+              ? [
+                  {
+                    href: `/profissionais/${profissionalId}/editar`,
+                    label: "Meu perfil",
+                    icon: User,
+                  },
+                ]
+              : []),
+          ]
         : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
 
   return (
@@ -76,9 +106,13 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+          const active = isNavItemActive(
+            href,
+            pathname,
+            items.map((i) => i.href),
+          );
           return (
             <Link
               key={href}
@@ -98,7 +132,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-border px-6 py-4 text-xs text-muted-foreground">
-        v0.1.0 · Semana 06-12/abr
+        v0.1.0 · Semana {semanaAtualLabel()}
       </div>
     </aside>
   );
