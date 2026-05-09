@@ -135,6 +135,9 @@ model Profissional {
   percentualRepasse      Decimal?           @db.Decimal(5, 4)
   // Aluguel pago pelo profissional ao Dr. Edson, por turno utilizado (DEC-R1-08)
   valorAluguelPorTurno   Decimal?           @db.Decimal(10, 2)
+  // Valor padrão da consulta — usado para preencher Atendimento.valorConsulta
+  // no momento do agendamento; ainda pode ser ajustado na finalização.
+  valorConsultaBase      Decimal            @db.Decimal(10, 2)
   duracaoConsultaMinutos Int                @default(30)
 
   turnosFixos  TurnoFixo[]

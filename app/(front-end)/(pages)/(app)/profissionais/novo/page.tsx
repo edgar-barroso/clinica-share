@@ -50,6 +50,7 @@ export default function NovoProfissionalPage() {
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [duracao, setDuracao] = useState("30");
+  const [valorConsultaBase, setValorConsultaBase] = useState("220");
   const [modalidade, setModalidade] = useState<ModalidadeContrato>("percentual");
   const [percentual, setPercentual] = useState("30");
   const [aluguel, setAluguel] = useState("180");
@@ -101,6 +102,7 @@ export default function NovoProfissionalPage() {
           modalidade === "percentual" ? Number(percentual) / 100 : null,
         valorAluguelPorTurno:
           modalidade === "aluguel_fixo" ? Number(aluguel) : null,
+        valorConsultaBase: Number(valorConsultaBase) || 0,
         duracaoConsultaMinutos: Number(duracao),
       });
 
@@ -212,7 +214,7 @@ export default function NovoProfissionalPage() {
                   required
                 />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="duracao">Duração padrão da consulta (min)</Label>
                 <Input
                   id="duracao"
@@ -225,6 +227,22 @@ export default function NovoProfissionalPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Define o bloco padrão na agenda.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="valorBase">Valor base da consulta (R$)</Label>
+                <Input
+                  id="valorBase"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={valorConsultaBase}
+                  onChange={(e) => setValorConsultaBase(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Valor que o paciente vê ao agendar; pode ser ajustado na
+                  finalização do atendimento.
                 </p>
               </div>
             </CardContent>

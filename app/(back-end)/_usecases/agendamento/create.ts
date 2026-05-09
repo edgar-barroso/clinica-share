@@ -13,7 +13,9 @@ import type { CreateAgendamentoInput } from "@/app/(back-end)/api/agendamentos/_
  * - sem conflito de horário no mesmo consultório (AG05) — constraint
  *   `@@unique([data, hora, consultorioId])` no schema → P2002 → 409
  *
- * `valorConsulta` inicia em 0 (será definido na finalização — Fase 4).
+ * `valorConsulta` é seedado a partir de `profissional.valorConsultaBase`
+ * — o paciente vê o valor que vai pagar desde o agendamento. A equipe
+ * pode ajustar (descontos, gratuidade) na finalização.
  */
 export async function createAgendamento(input: CreateAgendamentoInput) {
   const [paciente, profissional, consultorio] = await Promise.all([
@@ -37,7 +39,7 @@ export async function createAgendamento(input: CreateAgendamentoInput) {
         pacienteId: input.pacienteId,
         profissionalId: input.profissionalId,
         consultorioId: input.consultorioId,
-        valorConsulta: 0,
+        valorConsulta: profissional.valorConsultaBase,
         status: "agendado",
         statusPagamento: "pendente",
         usaProntuarioExterno: false,

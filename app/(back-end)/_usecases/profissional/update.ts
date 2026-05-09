@@ -10,6 +10,7 @@ const CONTRACT_FIELDS = [
   "modalidadeContrato",
   "percentualRepasse",
   "valorAluguelPorTurno",
+  "valorConsultaBase",
 ] as const satisfies readonly (keyof UpdateProfissionalInput)[];
 
 /**
@@ -48,6 +49,8 @@ export async function updateProfissional(
     if (input.percentualRepasse !== undefined) data.percentualRepasse = input.percentualRepasse;
     if (input.valorAluguelPorTurno !== undefined)
       data.valorAluguelPorTurno = input.valorAluguelPorTurno;
+    if (input.valorConsultaBase !== undefined)
+      data.valorConsultaBase = input.valorConsultaBase;
     if (input.duracaoConsultaMinutos !== undefined)
       data.duracaoConsultaMinutos = input.duracaoConsultaMinutos;
     if (input.ativo !== undefined) data.ativo = input.ativo;

@@ -67,6 +67,7 @@ async function seed(amanha: Date) {
       email: `lembrete-prof-${Date.now()}@e2e.com`,
       telefone: "11000000000",
       modalidadeContrato: "percentual",
+      valorConsultaBase: 200,
       percentualRepasse: new Prisma.Decimal(0.7),
     },
   });

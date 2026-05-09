@@ -228,6 +228,7 @@ async function seedProfissionais() {
       telefone: "11977770001",
       modalidadeContrato: "percentual" as const,
       percentualRepasse: new Prisma.Decimal(0.7),
+      valorConsultaBase: new Prisma.Decimal(220),
       duracaoConsultaMinutos: 30,
     },
     {
@@ -238,6 +239,7 @@ async function seedProfissionais() {
       telefone: "11977770002",
       modalidadeContrato: "percentual" as const,
       percentualRepasse: new Prisma.Decimal(0.65),
+      valorConsultaBase: new Prisma.Decimal(240),
       duracaoConsultaMinutos: 30,
     },
     {
@@ -248,6 +250,7 @@ async function seedProfissionais() {
       telefone: "11977770003",
       modalidadeContrato: "aluguel_fixo" as const,
       valorAluguelPorTurno: new Prisma.Decimal(250),
+      valorConsultaBase: new Prisma.Decimal(300),
       duracaoConsultaMinutos: 45,
     },
     {
@@ -258,6 +261,7 @@ async function seedProfissionais() {
       telefone: "11977770004",
       modalidadeContrato: "aluguel_fixo" as const,
       valorAluguelPorTurno: new Prisma.Decimal(180),
+      valorConsultaBase: new Prisma.Decimal(260),
       duracaoConsultaMinutos: 60,
     },
     {
@@ -268,6 +272,7 @@ async function seedProfissionais() {
       telefone: "11977770005",
       modalidadeContrato: "percentual" as const,
       percentualRepasse: new Prisma.Decimal(0.6),
+      valorConsultaBase: new Prisma.Decimal(280),
       duracaoConsultaMinutos: 30,
     },
   ];
@@ -477,9 +482,14 @@ async function seedAtendimentos(
       ocupados.add(key);
 
       const paciente = pacientes[Math.floor(rand() * pacientes.length)];
+      // Para finalizados/cobranças seed mantém a lógica antiga de
+      // gerar variedade de valores; agendados/cancelados copiam
+      // o `valorConsultaBase` do profissional (mesmo caminho da
+      // criação em produção pós-migration).
       const valorBase =
         prof.modalidadeContrato === "percentual" ? 200 + (profIdx * 50) : 200;
       const valor = new Prisma.Decimal(valorBase);
+      const valorAgendado = new Prisma.Decimal(prof.valorConsultaBase);
 
       // Status conforme posição temporal
       if (offset > 0) {
@@ -492,7 +502,7 @@ async function seedAtendimentos(
             pacienteId: paciente.id,
             profissionalId: prof.id,
             consultorioId: cons.id,
-            valorConsulta: new Prisma.Decimal(0),
+            valorConsulta: valorAgendado,
             status: "cancelado",
             statusPagamento: "pendente",
             motivoCancelamento: pick(motivosCancel, Math.floor(r * 100)),
@@ -504,7 +514,7 @@ async function seedAtendimentos(
             pacienteId: paciente.id,
             profissionalId: prof.id,
             consultorioId: cons.id,
-            valorConsulta: new Prisma.Decimal(0),
+            valorConsulta: valorAgendado,
             status: "agendado",
             statusPagamento: "pendente",
           });

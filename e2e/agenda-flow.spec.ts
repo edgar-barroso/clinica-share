@@ -62,6 +62,7 @@ test.beforeAll(async () => {
       email: `prof-ag-${Date.now()}@e2e.com`,
       telefone: "11988887777",
       modalidadeContrato: "percentual",
+      valorConsultaBase: 200,
       percentualRepasse: 0.3,
       duracaoConsultaMinutos: 30,
     },

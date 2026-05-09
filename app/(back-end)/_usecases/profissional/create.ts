@@ -47,6 +47,7 @@ export async function createProfissional(input: CreateProfissionalInput) {
         modalidadeContrato: input.modalidadeContrato,
         percentualRepasse: input.percentualRepasse ?? null,
         valorAluguelPorTurno: input.valorAluguelPorTurno ?? null,
+        valorConsultaBase: input.valorConsultaBase,
         duracaoConsultaMinutos: input.duracaoConsultaMinutos,
       },
     });

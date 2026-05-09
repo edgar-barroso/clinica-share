@@ -45,6 +45,7 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [duracao, setDuracao] = useState('30');
+  const [valorConsultaBase, setValorConsultaBase] = useState('0');
   const [ativo, setAtivo] = useState(true);
   const [modalidade, setModalidade] = useState<ModalidadeContrato>('percentual');
   const [percentual, setPercentual] = useState('30');
@@ -61,6 +62,7 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
     modalidade: ModalidadeContrato;
     percentualRepasse: number | null;
     valorAluguelPorTurno: number | null;
+    valorConsultaBase: number;
   } | null>(null);
 
   useEffect(() => {
@@ -78,11 +80,14 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
         const pct = p.percentualRepasse ? Number(p.percentualRepasse) : 0;
         setPercentual(String(Math.round(pct * 100)));
         setAluguel(String(p.valorAluguelPorTurno ?? 0));
+        const base = Number(p.valorConsultaBase);
+        setValorConsultaBase(String(base));
         setTurnos(p.turnosFixos ?? []);
         setOriginalContract({
           modalidade: p.modalidadeContrato,
           percentualRepasse: pct || null,
           valorAluguelPorTurno: p.valorAluguelPorTurno ? Number(p.valorAluguelPorTurno) : null,
+          valorConsultaBase: base,
         });
 
         setConsultorios(consRes.consultorios);
@@ -97,9 +102,13 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
 
   const novoPercentual = Number(percentual) / 100;
   const novoAluguel = Number(aluguel);
+  const novoValorBase = Number(valorConsultaBase);
   const contratoMudou =
     originalContract !== null &&
-    (modalidade !== originalContract.modalidade || (modalidade === 'percentual' && novoPercentual !== originalContract.percentualRepasse) || (modalidade === 'aluguel_fixo' && novoAluguel !== originalContract.valorAluguelPorTurno));
+    (modalidade !== originalContract.modalidade ||
+      (modalidade === 'percentual' && novoPercentual !== originalContract.percentualRepasse) ||
+      (modalidade === 'aluguel_fixo' && novoAluguel !== originalContract.valorAluguelPorTurno) ||
+      novoValorBase !== originalContract.valorConsultaBase);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -120,6 +129,7 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
         modalidadeContrato: modalidade,
         percentualRepasse: modalidade === 'percentual' ? novoPercentual : null,
         valorAluguelPorTurno: modalidade === 'aluguel_fixo' ? novoAluguel : null,
+        valorConsultaBase: novoValorBase,
         ...(contratoMudou ? { motivo } : {}),
       });
       toast.success('Alterações salvas');
@@ -250,6 +260,21 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
               <div className="space-y-1.5">
                 <Label htmlFor="duracao">Duração da consulta</Label>
                 <Input id="duracao" type="number" min="10" step="5" value={duracao} onChange={(e) => setDuracao(e.target.value)} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="valorBase">Valor base da consulta (R$)</Label>
+                <Input
+                  id="valorBase"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={valorConsultaBase}
+                  onChange={(e) => setValorConsultaBase(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mudar este valor exige motivo (auditoria).
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="status">Status</Label>

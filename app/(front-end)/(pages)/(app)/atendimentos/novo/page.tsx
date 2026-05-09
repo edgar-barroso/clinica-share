@@ -77,7 +77,10 @@ export default function NovoAtendimentoPage() {
       .then((res) => {
         setProfissionais(res.profissionais);
         if (res.profissionais.length > 0) {
-          setProfissionalId(res.profissionais[0].id);
+          const primeiro = res.profissionais[0];
+          setProfissionalId(primeiro.id);
+          // Pré-preenche o valor com a base do profissional selecionado.
+          setValorConsulta(String(Number(primeiro.valorConsultaBase)));
         }
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
@@ -202,7 +205,14 @@ export default function NovoAtendimentoPage() {
                   <Select
                     id="profissional"
                     value={profissionalId}
-                    onChange={(e) => setProfissionalId(e.target.value)}
+                    onChange={(e) => {
+                      const novoId = e.target.value;
+                      setProfissionalId(novoId);
+                      const prof = profissionais.find((p) => p.id === novoId);
+                      if (prof) {
+                        setValorConsulta(String(Number(prof.valorConsultaBase)));
+                      }
+                    }}
                     required
                   >
                     {profissionais.map((p) => (

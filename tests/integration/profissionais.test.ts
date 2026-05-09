@@ -42,6 +42,7 @@ const validProfPercentual = {
   email: "ana@example.com",
   telefone: "11999990000",
   modalidadeContrato: "percentual" as const,
+  valorConsultaBase: 200,
   percentualRepasse: 0.3,
   duracaoConsultaMinutos: 30,
 };
@@ -53,6 +54,7 @@ const validProfAluguel = {
   email: "bruno@example.com",
   telefone: "11988887777",
   modalidadeContrato: "aluguel_fixo" as const,
+  valorConsultaBase: 200,
   valorAluguelPorTurno: 200,
   duracaoConsultaMinutos: 30,
 };

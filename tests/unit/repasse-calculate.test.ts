@@ -25,6 +25,7 @@ async function fixturePercentual(percentual: number) {
       email: "perc@e.com",
       telefone: "11999990000",
       modalidadeContrato: "percentual",
+      valorConsultaBase: 200,
       percentualRepasse: new Prisma.Decimal(percentual),
       duracaoConsultaMinutos: 30,
     },
@@ -52,6 +53,7 @@ async function fixtureAluguel(valorAluguel: number) {
       email: "alu@e.com",
       telefone: "11988887777",
       modalidadeContrato: "aluguel_fixo",
+      valorConsultaBase: 200,
       valorAluguelPorTurno: new Prisma.Decimal(valorAluguel),
       duracaoConsultaMinutos: 30,
     },
@@ -286,6 +288,7 @@ describe("calculateRepasse — modalidade percentual", () => {
         email: "sem@e.com",
         telefone: "11900000010",
         modalidadeContrato: "percentual",
+        valorConsultaBase: 200,
         // sem percentualRepasse
         duracaoConsultaMinutos: 30,
       },
@@ -414,6 +417,7 @@ describe("calculateRepasse — modalidade aluguel_fixo", () => {
         email: "saluguel@e.com",
         telefone: "11900000099",
         modalidadeContrato: "aluguel_fixo",
+        valorConsultaBase: 200,
         // sem valorAluguelPorTurno
         duracaoConsultaMinutos: 30,
       },
