@@ -1,27 +1,22 @@
 /**
  * WhatsApp — fachada genérica para envio de mensagens.
  *
- * Hoje é um STUB que apenas registra a intenção via console e retorna
- * sucesso. A integração real depende da escolha de provedor; quando
- * estiver pronta, basta substituir o corpo de `sendWhatsApp` (e
- * eventualmente importar o SDK) — toda a aplicação já chama esta função.
+ * Provider implementado: Twilio (via SDK oficial). Outros providers
+ * (Meta, Z-API) podem ser adicionados no `switch` abaixo.
  *
- * Provedores possíveis (qualquer um funciona):
- * - Twilio (`twilio` no npm) — bom para internacional, custa por mensagem
- * - Meta Cloud API (oficial) — barato em escala, exige conta WhatsApp Business
- * - Z-API (BR) — atendimento simples, não-oficial mas amplamente usado
+ * Sem `WHATSAPP_PROVIDER` configurado, opera em modo dev: loga a
+ * intenção e retorna sucesso. Útil em ambiente local sem credenciais.
  *
- * Variáveis de ambiente esperadas (criar em .env quando integrar):
- * - WHATSAPP_PROVIDER: "twilio" | "meta" | "zapi"
- * - WHATSAPP_API_URL: endpoint do provedor
- * - WHATSAPP_API_TOKEN: bearer/token
- * - WHATSAPP_FROM: número (E.164) ou identificador do remetente
+ * Variáveis de ambiente:
+ * - WHATSAPP_PROVIDER: "twilio"
+ * - WHATSAPP_FROM: número remetente em E.164 (ex: "+14155238886")
+ *   — sandbox Twilio: "+14155238886"
+ *   — produção: número WhatsApp Business aprovado pela Meta
+ * - TWILIO_ACCOUNT_SID: começa com "AC..."
+ * - TWILIO_AUTH_TOKEN: nunca commitar
  */
-
-const provider = process.env.WHATSAPP_PROVIDER ?? null;
-const apiUrl = process.env.WHATSAPP_API_URL ?? null;
-const apiToken = process.env.WHATSAPP_API_TOKEN ?? null;
-const fromNumber = process.env.WHATSAPP_FROM ?? null;
+import twilio from "twilio";
+import { env } from "@/lib/env";
 
 export interface SendWhatsAppInput {
   /** Número de destino em E.164 (ex: "+5511999990000"). */
@@ -32,7 +27,7 @@ export interface SendWhatsAppInput {
 
 export interface SendWhatsAppResult {
   ok: boolean;
-  /** ID retornado pelo provedor, quando integrado. */
+  /** SID retornado pelo provider. */
   messageId?: string;
   /** Razão de falha (se aplicável). */
   error?: string;
@@ -51,45 +46,67 @@ export function normalizarTelefone(raw: string): string {
   return digits.startsWith("+") ? raw : `+${digits}`;
 }
 
+// Cliente Twilio inicializado lazy — só instancia quando há credenciais.
+// Aceita 2 formatos:
+//   A) TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN separados
+//   B) WHATSAPP_API_TOKEN no formato "ACxxxx:authtoken" (legacy)
+let twilioClient: ReturnType<typeof twilio> | null = null;
+function getTwilioClient() {
+  if (twilioClient) return twilioClient;
+
+  let sid = env.TWILIO_ACCOUNT_SID;
+  let token = env.TWILIO_AUTH_TOKEN;
+
+  if ((!sid || !token) && env.WHATSAPP_API_TOKEN?.includes(":")) {
+    const parts = env.WHATSAPP_API_TOKEN.split(":");
+    sid = sid ?? parts[0];
+    token = token ?? parts.slice(1).join(":");
+  }
+
+  if (!sid || !token) return null;
+  twilioClient = twilio(sid, token);
+  return twilioClient;
+}
+
 /**
- * Envia mensagem WhatsApp. Quando não há provider configurado, loga
- * a intenção e retorna `ok: true` (modo desenvolvimento — facilita
- * testar fluxos sem credenciais reais).
+ * Envia mensagem WhatsApp. Sem provider configurado, opera em modo dev
+ * (apenas loga a mensagem e retorna sucesso).
  */
 export async function sendWhatsApp(
   input: SendWhatsAppInput,
 ): Promise<SendWhatsAppResult> {
   const to = normalizarTelefone(input.to);
 
-  if (!provider || !apiUrl || !apiToken) {
+  if (!env.WHATSAPP_PROVIDER) {
     console.info(
-      `[whatsapp:stub] WOULD SEND to=${to} message=${JSON.stringify(input.message)}`,
+      `[whatsapp:dev] WOULD SEND to=${to} message=${JSON.stringify(input.message)}`,
     );
-    return { ok: true, messageId: `stub-${Date.now()}` };
+    return { ok: true, messageId: `dev-${Date.now()}` };
   }
 
-  // Quando o user configurar o provider, substituir esse bloco pela
-  // chamada real ao SDK/HTTP. Exemplo conceitual:
-  //
-  //   const resp = await fetch(apiUrl, {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //       Authorization: `Bearer ${apiToken}`,
-  //     },
-  //     body: JSON.stringify({
-  //       from: fromNumber,
-  //       to,
-  //       type: "text",
-  //       text: { body: input.message },
-  //     }),
-  //   });
-  //   if (!resp.ok) return { ok: false, error: await resp.text() };
-  //   const data = await resp.json();
-  //   return { ok: true, messageId: data.id };
+  if (env.WHATSAPP_PROVIDER === "twilio") {
+    const client = getTwilioClient();
+    if (!client || !env.WHATSAPP_FROM) {
+      const reason =
+        "Twilio configurado mas faltam TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN ou WHATSAPP_FROM";
+      console.error(`[whatsapp:twilio] ${reason}`);
+      return { ok: false, error: reason };
+    }
+    try {
+      const msg = await client.messages.create({
+        from: `whatsapp:${env.WHATSAPP_FROM.replace(/^whatsapp:/, "")}`,
+        to: `whatsapp:${to}`,
+        body: input.message,
+      });
+      return { ok: true, messageId: msg.sid };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      console.error(`[whatsapp:twilio] erro ao enviar para ${to}: ${error}`);
+      return { ok: false, error };
+    }
+  }
 
-  console.warn(
-    `[whatsapp] provider=${provider} configurado mas envio real ainda não implementado. from=${fromNumber} to=${to}`,
-  );
-  return { ok: true, messageId: `pending-${Date.now()}` };
+  const reason = `Provider "${env.WHATSAPP_PROVIDER}" ainda não implementado`;
+  console.warn(`[whatsapp] ${reason}`);
+  return { ok: false, error: reason };
 }

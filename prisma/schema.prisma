@@ -316,14 +316,6 @@ model AuditLog {
 
 // ============ INFRA ===================================================
 
-model HealthCheck {
-  id        String   @id @default(uuid())
-  message   String
-  createdAt DateTime @default(now())
-
-  @@map("health_checks")
-}
-
 // Configuração chave-valor JSON. Substitui constantes hardcoded
 // quando a UI pode editar (turnos, horários de funcionamento, etc).
 // Caveat: usecases puramente síncronos (`_lib/turnos.ts`) seguem

@@ -41,7 +41,7 @@ export function Topbar() {
       <div className="flex-1" />
 
       <div ref={menuRef} className="relative">
-        <button type="button" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu do usuário" aria-expanded={menuOpen} className="flex items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-muted">
+        <button type="button" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu do usuário" aria-expanded={menuOpen} className="flex items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-muted ">
           <div className="hidden text-right sm:block">
             <p className="text-xs font-semibold leading-tight">{info.name}</p>
             <p className="text-xs text-muted-foreground leading-tight">{info.label}</p>
@@ -57,7 +57,7 @@ export function Topbar() {
               <p className="truncate text-sm font-semibold">{info.name}</p>
               <p className="truncate text-xs text-muted-foreground">{info.label}</p>
             </div>
-            <button type="button" onClick={handleLogout} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10')}>
+            <button type="button" onClick={handleLogout} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10 rounded-b-xl')}>
               <LogOut size={14} />
               Sair
             </button>
