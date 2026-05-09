@@ -1,55 +1,37 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use, useEffect, useState, type FormEvent } from "react";
-import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader } from "@/components/layouts/page-header";
-import { apiListConsultorios, type Consultorio } from "@/lib/api/consultorios";
-import {
-  apiGetProfissional,
-  apiUpdateProfissional,
-  apiAddTurnoFixo,
-  apiRemoveTurnoFixo,
-  type ModalidadeContrato,
-  type Turno,
-  type TurnoFixo,
-} from "@/lib/api/profissionais";
-import { apiErrorMessage } from "@/lib/api-client";
-import { formatBRL, formatPercent } from "@/lib/format";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use, useEffect, useState, type FormEvent } from 'react';
+import { toast } from 'sonner';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/layouts/page-header';
+import { apiListConsultorios, type Consultorio } from '@/lib/api/consultorios';
+import { apiGetProfissional, apiUpdateProfissional, apiAddTurnoFixo, apiRemoveTurnoFixo, type ModalidadeContrato, type Turno, type TurnoFixo } from '@/lib/api/profissionais';
+import { apiErrorMessage } from '@/lib/api-client';
+import { formatBRL, formatPercent } from '@/lib/format';
 
 const TURNOS: { value: Turno; label: string }[] = [
-  { value: "manha", label: "Manhã (07h-12h)" },
-  { value: "tarde", label: "Tarde (13h-18h)" },
-  { value: "noite", label: "Noite (18h-20h)" },
+  { value: 'manha', label: 'Manhã (07h-12h)' },
+  { value: 'tarde', label: 'Tarde (13h-18h)' },
+  { value: 'noite', label: 'Noite (18h-20h)' },
 ];
 
 const DIAS_SEMANA = [
-  { value: 1, label: "Seg" },
-  { value: 2, label: "Ter" },
-  { value: 3, label: "Qua" },
-  { value: 4, label: "Qui" },
-  { value: 5, label: "Sex" },
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
 ];
 
-export default function EditarProfissionalPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function EditarProfissionalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -57,22 +39,22 @@ export default function EditarProfissionalPage({
   const [notFound, setNotFound] = useState(false);
   const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
 
-  const [nome, setNome] = useState("");
-  const [especialidade, setEspecialidade] = useState("");
-  const [conselho, setConselho] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [duracao, setDuracao] = useState("30");
+  const [nome, setNome] = useState('');
+  const [especialidade, setEspecialidade] = useState('');
+  const [conselho, setConselho] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [duracao, setDuracao] = useState('30');
   const [ativo, setAtivo] = useState(true);
-  const [modalidade, setModalidade] = useState<ModalidadeContrato>("percentual");
-  const [percentual, setPercentual] = useState("30");
-  const [aluguel, setAluguel] = useState("0");
-  const [motivo, setMotivo] = useState("");
+  const [modalidade, setModalidade] = useState<ModalidadeContrato>('percentual');
+  const [percentual, setPercentual] = useState('30');
+  const [aluguel, setAluguel] = useState('0');
+  const [motivo, setMotivo] = useState('');
 
   const [turnos, setTurnos] = useState<TurnoFixo[]>([]);
   const [novoTurnoDia, setNovoTurnoDia] = useState(1);
-  const [novoTurnoTurno, setNovoTurnoTurno] = useState<Turno>("manha");
-  const [novoTurnoConsultorioId, setNovoTurnoConsultorioId] = useState("");
+  const [novoTurnoTurno, setNovoTurnoTurno] = useState<Turno>('manha');
+  const [novoTurnoConsultorioId, setNovoTurnoConsultorioId] = useState('');
 
   // snapshot original para detectar diff em contrato
   const [originalContract, setOriginalContract] = useState<{
@@ -117,16 +99,12 @@ export default function EditarProfissionalPage({
   const novoAluguel = Number(aluguel);
   const contratoMudou =
     originalContract !== null &&
-    (modalidade !== originalContract.modalidade ||
-      (modalidade === "percentual" &&
-        novoPercentual !== originalContract.percentualRepasse) ||
-      (modalidade === "aluguel_fixo" &&
-        novoAluguel !== originalContract.valorAluguelPorTurno));
+    (modalidade !== originalContract.modalidade || (modalidade === 'percentual' && novoPercentual !== originalContract.percentualRepasse) || (modalidade === 'aluguel_fixo' && novoAluguel !== originalContract.valorAluguelPorTurno));
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (contratoMudou && motivo.trim().length < 3) {
-      toast.warning("Alteração de contrato exige motivo (mínimo 3 caracteres)");
+      toast.warning('Alteração de contrato exige motivo (mínimo 3 caracteres)');
       return;
     }
     setSubmitting(true);
@@ -140,11 +118,11 @@ export default function EditarProfissionalPage({
         duracaoConsultaMinutos: Number(duracao),
         ativo,
         modalidadeContrato: modalidade,
-        percentualRepasse: modalidade === "percentual" ? novoPercentual : null,
-        valorAluguelPorTurno: modalidade === "aluguel_fixo" ? novoAluguel : null,
+        percentualRepasse: modalidade === 'percentual' ? novoPercentual : null,
+        valorAluguelPorTurno: modalidade === 'aluguel_fixo' ? novoAluguel : null,
         ...(contratoMudou ? { motivo } : {}),
       });
-      toast.success("Alterações salvas");
+      toast.success('Alterações salvas');
       router.push(`/profissionais/${id}`);
       router.refresh();
     } catch (err) {
@@ -155,7 +133,7 @@ export default function EditarProfissionalPage({
 
   async function adicionarTurno() {
     if (!novoTurnoConsultorioId) {
-      toast.warning("Selecione um consultório");
+      toast.warning('Selecione um consultório');
       return;
     }
     try {
@@ -165,7 +143,7 @@ export default function EditarProfissionalPage({
         turno: novoTurnoTurno,
       });
       setTurnos((arr) => [...arr, turno]);
-      toast.success("Turno adicionado");
+      toast.success('Turno adicionado');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     }
@@ -175,7 +153,7 @@ export default function EditarProfissionalPage({
     try {
       await apiRemoveTurnoFixo(id, turnoId);
       setTurnos((arr) => arr.filter((t) => t.id !== turnoId));
-      toast.success("Turno removido");
+      toast.success('Turno removido');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     }
@@ -207,10 +185,7 @@ export default function EditarProfissionalPage({
     return (
       <Card className="p-10 text-center">
         <p className="text-sm text-muted-foreground">Profissional não encontrado.</p>
-        <Link
-          href="/profissionais"
-          className={`${buttonVariants({ variant: "outline" })} mt-4 inline-flex`}
-        >
+        <Link href="/profissionais" className={`${buttonVariants({ variant: 'outline' })} mt-4 inline-flex`}>
           <ArrowLeft size={14} />
           Voltar
         </Link>
@@ -220,10 +195,7 @@ export default function EditarProfissionalPage({
 
   return (
     <>
-      <Link
-        href={`/profissionais/${id}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
+      <Link href={`/profissionais/${id}`} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft size={14} />
         Voltar
       </Link>
@@ -232,10 +204,7 @@ export default function EditarProfissionalPage({
         title={`Editar ${nome}`}
         description="Atualize dados, contrato e turnos do profissional"
         actions={
-          <Link
-            href={`/profissionais/${id}`}
-            className={buttonVariants({ variant: "outline" })}
-          >
+          <Link href={`/profissionais/${id}`} className={buttonVariants({ variant: 'outline' })}>
             Cancelar
           </Link>
         }
@@ -254,11 +223,7 @@ export default function EditarProfissionalPage({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="especialidade">Especialidade</Label>
-                <Select
-                  id="especialidade"
-                  value={especialidade}
-                  onChange={(e) => setEspecialidade(e.target.value)}
-                >
+                <Select id="especialidade" value={especialidade} onChange={(e) => setEspecialidade(e.target.value)}>
                   <option>Clínica geral</option>
                   <option>Cardiologia</option>
                   <option>Dermatologia</option>
@@ -272,51 +237,23 @@ export default function EditarProfissionalPage({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="conselho">Conselho profissional</Label>
-                <Input
-                  id="conselho"
-                  value={conselho}
-                  onChange={(e) => setConselho(e.target.value)}
-                  required
-                />
+                <Input id="conselho" value={conselho} onChange={(e) => setConselho(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  required
-                />
+                <Input id="telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="duracao">Duração da consulta (min)</Label>
-                <Input
-                  id="duracao"
-                  type="number"
-                  min="10"
-                  step="5"
-                  value={duracao}
-                  onChange={(e) => setDuracao(e.target.value)}
-                  required
-                />
+                <Label htmlFor="duracao">Duração da consulta</Label>
+                <Input id="duracao" type="number" min="10" step="5" value={duracao} onChange={(e) => setDuracao(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="status">Status</Label>
-                <Select
-                  id="status"
-                  value={ativo ? "ativo" : "inativo"}
-                  onChange={(e) => setAtivo(e.target.value === "ativo")}
-                >
+                <Select id="status" value={ativo ? 'ativo' : 'inativo'} onChange={(e) => setAtivo(e.target.value === 'ativo')}>
                   <option value="ativo">Ativo</option>
                   <option value="inativo">Inativo</option>
                 </Select>
@@ -327,88 +264,43 @@ export default function EditarProfissionalPage({
           <Card>
             <CardHeader>
               <CardTitle>Contrato e repasse</CardTitle>
-              <CardDescription>
-                Alteração em contrato exige motivo e gera registro de auditoria.
-              </CardDescription>
+              <CardDescription>Alteração em contrato exige motivo e gera registro de auditoria.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModalidade("percentual")}
-                  className={`rounded-xl border p-4 text-left transition-colors ${
-                    modalidade === "percentual"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:bg-muted"
-                  }`}
-                >
+                <button type="button" onClick={() => setModalidade('percentual')} className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'percentual' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
                   <p className="text-sm font-semibold">Percentual</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Clínica recebe % sobre atendimentos
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Clínica recebe % sobre atendimentos</p>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setModalidade("aluguel_fixo")}
-                  className={`rounded-xl border p-4 text-left transition-colors ${
-                    modalidade === "aluguel_fixo"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:bg-muted"
-                  }`}
+                  onClick={() => setModalidade('aluguel_fixo')}
+                  className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'aluguel_fixo' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}
                 >
                   <p className="text-sm font-semibold">Aluguel fixo</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Valor fixo por turno utilizado
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Valor fixo por turno utilizado</p>
                 </button>
               </div>
 
-              {modalidade === "percentual" ? (
+              {modalidade === 'percentual' ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="perc">Percentual (%)</Label>
-                  <Input
-                    id="perc"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    value={percentual}
-                    onChange={(e) => setPercentual(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Equivale a {formatPercent(novoPercentual || 0)} sobre receita bruta.
-                  </p>
+                  <Input id="perc" type="number" min="0" max="100" step="0.5" value={percentual} onChange={(e) => setPercentual(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Equivale a {formatPercent(novoPercentual || 0)} sobre receita bruta.</p>
                 </div>
               ) : (
                 <div className="space-y-1.5">
                   <Label htmlFor="aluguel">Aluguel por turno (R$)</Label>
-                  <Input
-                    id="aluguel"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={aluguel}
-                    onChange={(e) => setAluguel(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {formatBRL(novoAluguel || 0)} a cada turno ocupado.
-                  </p>
+                  <Input id="aluguel" type="number" min="0" step="0.01" value={aluguel} onChange={(e) => setAluguel(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">{formatBRL(novoAluguel || 0)} a cada turno ocupado.</p>
                 </div>
               )}
 
               {contratoMudou && (
                 <div className="space-y-1.5 border-t border-border pt-4">
                   <Label htmlFor="motivo">Motivo da alteração *</Label>
-                  <Input
-                    id="motivo"
-                    placeholder="Ex: Renegociação anual"
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Obrigatório quando modalidade ou valor de contrato mudam.
-                  </p>
+                  <Input id="motivo" placeholder="Ex: Renegociação anual" value={motivo} onChange={(e) => setMotivo(e.target.value)} required />
+                  <p className="text-xs text-muted-foreground">Obrigatório quando modalidade ou valor de contrato mudam.</p>
                 </div>
               )}
             </CardContent>
@@ -417,10 +309,7 @@ export default function EditarProfissionalPage({
           <Card>
             <CardHeader>
               <CardTitle>Turnos fixos</CardTitle>
-              <CardDescription>
-                Adicionar/remover é imediato (cada ação toca a API). Conflito de
-                consultório/dia/turno é rejeitado com 409.
-              </CardDescription>
+              <CardDescription>Adicionar/remover é imediato (cada ação toca a API). Conflito de consultório/dia/turno é rejeitado com 409.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {turnos.length === 0 ? (
@@ -428,26 +317,14 @@ export default function EditarProfissionalPage({
               ) : (
                 <ul className="space-y-2">
                   {turnos.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-center justify-between rounded-xl bg-muted/50 p-3 text-sm"
-                    >
+                    <li key={t.id} className="flex items-center justify-between rounded-xl bg-muted/50 p-3 text-sm">
                       <div>
                         <p className="font-medium">
-                          {DIAS_SEMANA[t.diaSemana - 1]?.label} ·{" "}
-                          {TURNOS.find((x) => x.value === t.turno)?.label}
+                          {DIAS_SEMANA[t.diaSemana - 1]?.label} · {TURNOS.find((x) => x.value === t.turno)?.label}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t.consultorio.nome}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{t.consultorio.nome}</p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removerTurno(t.id)}
-                        aria-label="Remover turno"
-                      >
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removerTurno(t.id)} aria-label="Remover turno">
                         <Trash2 size={14} />
                       </Button>
                     </li>
@@ -456,45 +333,28 @@ export default function EditarProfissionalPage({
               )}
 
               <div className="grid grid-cols-12 gap-2 rounded-xl border border-dashed border-border p-3">
-                <Select
-                  className="col-span-3"
-                  value={novoTurnoDia}
-                  onChange={(e) => setNovoTurnoDia(Number(e.target.value))}
-                >
+                <Select className="col-span-3" value={novoTurnoDia} onChange={(e) => setNovoTurnoDia(Number(e.target.value))}>
                   {DIAS_SEMANA.map((d) => (
                     <option key={d.value} value={d.value}>
                       {d.label}
                     </option>
                   ))}
                 </Select>
-                <Select
-                  className="col-span-3"
-                  value={novoTurnoTurno}
-                  onChange={(e) => setNovoTurnoTurno(e.target.value as Turno)}
-                >
+                <Select className="col-span-3" value={novoTurnoTurno} onChange={(e) => setNovoTurnoTurno(e.target.value as Turno)}>
                   {TURNOS.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
                 </Select>
-                <Select
-                  className="col-span-4"
-                  value={novoTurnoConsultorioId}
-                  onChange={(e) => setNovoTurnoConsultorioId(e.target.value)}
-                >
+                <Select className="col-span-4" value={novoTurnoConsultorioId} onChange={(e) => setNovoTurnoConsultorioId(e.target.value)}>
                   {consultorios.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.nome}
                     </option>
                   ))}
                 </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="col-span-2"
-                  onClick={adicionarTurno}
-                >
+                <Button type="button" variant="outline" className="col-span-2" onClick={adicionarTurno}>
                   <Plus size={14} />
                   Add
                 </Button>
@@ -511,27 +371,18 @@ export default function EditarProfissionalPage({
             <CardContent className="space-y-3 text-sm">
               <div className="space-y-1.5 rounded-xl bg-muted/50 p-3 text-xs">
                 <p>
-                  <span className="text-muted-foreground">Contrato:</span>{" "}
-                  <span className="font-medium">
-                    {modalidade === "percentual"
-                      ? `% ${percentual}`
-                      : `Aluguel ${formatBRL(novoAluguel || 0)}`}
-                  </span>
+                  <span className="text-muted-foreground">Contrato:</span> <span className="font-medium">{modalidade === 'percentual' ? `% ${percentual}` : `Aluguel ${formatBRL(novoAluguel || 0)}`}</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Turnos:</span>{" "}
-                  <span className="font-medium">{turnos.length}</span>
+                  <span className="text-muted-foreground">Turnos:</span> <span className="font-medium">{turnos.length}</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Status:</span>{" "}
-                  <span className="font-medium">{ativo ? "Ativo" : "Inativo"}</span>
+                  <span className="text-muted-foreground">Status:</span> <span className="font-medium">{ativo ? 'Ativo' : 'Inativo'}</span>
                 </p>
-                {contratoMudou && (
-                  <p className="text-warning">⚠ Contrato mudou — motivo obrigatório</p>
-                )}
+                {contratoMudou && <p className="text-warning">⚠ Contrato mudou — motivo obrigatório</p>}
               </div>
               <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-                {submitting ? "Salvando..." : "Salvar alterações"}
+                {submitting ? 'Salvando...' : 'Salvar alterações'}
               </Button>
             </CardContent>
           </Card>

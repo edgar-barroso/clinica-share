@@ -9,12 +9,14 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
 import {
@@ -53,6 +55,18 @@ export default function NovoAtendimentoPage() {
     useState<FinalizarAtendimentoInput["statusPagamento"]>("pago");
   const [motivo, setMotivo] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [tipoProntuario, setTipoProntuario] = useState<"interno" | "externo">(
+    "interno",
+  );
+  const [prontuario, setProntuario] = useState({
+    anamnese: "",
+    evolucao: "",
+    conduta: "",
+    retorno: "",
+  });
+  // Onde o prontuário é mantido quando 'externo' (ex: sistema próprio
+  // do profissional, papel arquivado na sala). Texto livre, opcional.
+  const [prontuarioExternoRef, setProntuarioExternoRef] = useState("");
 
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
@@ -91,6 +105,30 @@ export default function NovoAtendimentoPage() {
 
     setSubmitting(true);
     try {
+      // Monta o payload do prontuário conforme o tipo escolhido.
+      // - interno: salva os 4 campos preenchidos (omite se todos vazios)
+      // - externo: salva uma flag + referência opcional (onde o prontuário fica)
+      let prontuarioPayload: Record<string, unknown> | undefined;
+      if (tipoProntuario === "externo") {
+        prontuarioPayload = {
+          tipo: "externo",
+          referencia: prontuarioExternoRef.trim() || undefined,
+        };
+      } else {
+        const algum = Object.values(prontuario).some(
+          (v) => v.trim().length > 0,
+        );
+        if (algum) {
+          prontuarioPayload = {
+            tipo: "interno",
+            anamnese: prontuario.anamnese.trim(),
+            evolucao: prontuario.evolucao.trim(),
+            conduta: prontuario.conduta.trim(),
+            retorno: prontuario.retorno.trim(),
+          };
+        }
+      }
+
       await apiCreateWalkIn({
         pacienteId,
         profissionalId,
@@ -102,6 +140,7 @@ export default function NovoAtendimentoPage() {
         motivoDescontoOuGratuidade:
           statusPagamento === "gratuito" ? motivo.trim() : undefined,
         observacoes: observacoes.trim() || undefined,
+        prontuarioInterno: prontuarioPayload,
       });
       toast.success("Atendimento registrado");
       router.push("/atendimentos");
@@ -157,39 +196,41 @@ export default function NovoAtendimentoPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="profissional">Profissional</Label>
-                <Select
-                  id="profissional"
-                  value={profissionalId}
-                  onChange={(e) => setProfissionalId(e.target.value)}
-                  required
-                >
-                  {profissionais.length === 0 && (
-                    <option value="">Carregando…</option>
-                  )}
-                  {profissionais.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome} — {p.especialidade}
-                    </option>
-                  ))}
-                </Select>
+                {profissionais.length === 0 ? (
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                ) : (
+                  <Select
+                    id="profissional"
+                    value={profissionalId}
+                    onChange={(e) => setProfissionalId(e.target.value)}
+                    required
+                  >
+                    {profissionais.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome} — {p.especialidade}
+                      </option>
+                    ))}
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="consultorio">Consultório</Label>
-                <Select
-                  id="consultorio"
-                  value={consultorioId}
-                  onChange={(e) => setConsultorioId(e.target.value)}
-                  required
-                >
-                  {consultorios.length === 0 && (
-                    <option value="">Carregando…</option>
-                  )}
-                  {consultorios.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </Select>
+                {consultorios.length === 0 ? (
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                ) : (
+                  <Select
+                    id="consultorio"
+                    value={consultorioId}
+                    onChange={(e) => setConsultorioId(e.target.value)}
+                    required
+                  >
+                    {consultorios.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="data">Data</Label>
@@ -265,6 +306,107 @@ export default function NovoAtendimentoPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Prontuário</CardTitle>
+              <CardDescription>
+                Registro clínico do atendimento. Visível apenas para o
+                profissional dono e admin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTipoProntuario("interno")}
+                  aria-pressed={tipoProntuario === "interno"}
+                  className={`rounded-xl border p-4 text-left transition-colors ${
+                    tipoProntuario === "interno"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card hover:bg-muted"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">Prontuário interno</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Anamnese, evolução, conduta e retorno gravados aqui.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipoProntuario("externo")}
+                  aria-pressed={tipoProntuario === "externo"}
+                  className={`rounded-xl border p-4 text-left transition-colors ${
+                    tipoProntuario === "externo"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card hover:bg-muted"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">Prontuário externo</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Mantido fora do sistema (papel ou outro software).
+                  </p>
+                </button>
+              </div>
+
+              {tipoProntuario === "interno" ? (
+                <div className="space-y-4 border-t border-border pt-4">
+                  <ProntuarioField
+                    id="anamnese"
+                    label="Anamnese"
+                    placeholder="Queixa principal, histórico, sintomas relatados…"
+                    value={prontuario.anamnese}
+                    onChange={(v) =>
+                      setProntuario((p) => ({ ...p, anamnese: v }))
+                    }
+                  />
+                  <ProntuarioField
+                    id="evolucao"
+                    label="Evolução"
+                    placeholder="O que foi observado e a evolução do quadro."
+                    value={prontuario.evolucao}
+                    onChange={(v) =>
+                      setProntuario((p) => ({ ...p, evolucao: v }))
+                    }
+                  />
+                  <ProntuarioField
+                    id="conduta"
+                    label="Conduta"
+                    placeholder="Diagnóstico, prescrições, exames solicitados, orientações."
+                    value={prontuario.conduta}
+                    onChange={(v) =>
+                      setProntuario((p) => ({ ...p, conduta: v }))
+                    }
+                  />
+                  <ProntuarioField
+                    id="retorno"
+                    label="Retorno"
+                    placeholder="Necessidade e prazo do retorno (ex: 30 dias)."
+                    value={prontuario.retorno}
+                    onChange={(v) =>
+                      setProntuario((p) => ({ ...p, retorno: v }))
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1.5 border-t border-border pt-4">
+                  <Label htmlFor="prontuarioRef">
+                    Referência do prontuário externo (opcional)
+                  </Label>
+                  <Input
+                    id="prontuarioRef"
+                    value={prontuarioExternoRef}
+                    onChange={(e) => setProntuarioExternoRef(e.target.value)}
+                    placeholder="Ex: Pasta nº 42 · Doctoralia · sistema próprio"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Apenas para localização. O conteúdo clínico não é gravado
+                    no ClinicaShare.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Observações (opcional)</CardTitle>
             </CardHeader>
             <CardContent>
@@ -292,5 +434,33 @@ export default function NovoAtendimentoPage() {
         </aside>
       </form>
     </>
+  );
+}
+
+function ProntuarioField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <textarea
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={2}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+    </div>
   );
 }
