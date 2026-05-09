@@ -48,13 +48,16 @@ export async function dashboardStats(
     receitaDoDia,
     realizadosBrutos,
   ] = await Promise.all([
-    // Captura repasses cuja janela seg→dom SOBREPÕE o período do filtro.
-    // Necessário pra "Mês atual" / "Personalizado" — a query antiga
-    // (`gte: inicio, lte: fim`) só pegava semanas 100% dentro, e ignorava
-    // semanas que cruzam a borda do mês, deixando o card de Repasses
-    // sub-contado em relação à Receita bruta.
+    // Repasses 100% dentro do período do filtro. `Repasse` é atômico
+    // (1 semana seg→dom) — em filtros que não alinham com semana inteira
+    // (Mês atual, Personalizado de poucos dias), semanas parciais ficam
+    // de fora. Aceitamos a sub-contagem porque a alternativa (incluir
+    // repasses parcialmente sobrepostos) infla o valor — mostra a semana
+    // inteira mesmo quando só 1-2 dias dela tocam o filtro.
+    // A página /financeiro/repasses é a fonte canônica de listagem
+    // semana a semana.
     prisma.repasse.findMany({
-      where: { periodoInicio: { lte: fim }, periodoFim: { gte: inicio } },
+      where: { periodoInicio: { gte: inicio }, periodoFim: { lte: fim } },
       select: { valorRepasse: true, status: true },
     }),
     prisma.profissional.count(),
