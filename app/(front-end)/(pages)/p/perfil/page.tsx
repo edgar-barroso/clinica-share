@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { apiGetMeuPerfil } from "@/lib/api/portal-paciente";
 import { apiLogout } from "@/lib/auth-client";
@@ -94,9 +95,41 @@ export default function PerfilPage() {
 
   if (userLoading || loading || !paciente) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">
-        Carregando…
-      </p>
+      <div aria-hidden="true">
+        <div className="mb-8 space-y-2">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-5 w-28" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="size-16 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-44" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Skeleton className="h-32 rounded-2xl" />
+            <Skeleton className="h-40 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+          </div>
+          <aside className="space-y-4">
+            <Skeleton className="h-40 rounded-2xl" />
+          </aside>
+        </div>
+      </div>
     );
   }
 

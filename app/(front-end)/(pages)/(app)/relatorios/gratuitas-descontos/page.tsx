@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -107,9 +108,40 @@ export default function RelatorioGratuitasPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Carregando…
-            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Profissional</TableHead>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead className="text-right">Valor original</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody aria-hidden="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="mt-1 h-3 w-10" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="mt-1 h-3 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-3 w-48" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-20" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : linhas.length === 0 ? (
             <EmptyState
               icon={Gift}

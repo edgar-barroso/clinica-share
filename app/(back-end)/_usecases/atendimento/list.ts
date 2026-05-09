@@ -32,6 +32,7 @@ export async function listAtendimentos(
   }
   if (filter.profissionalId) where.profissionalId = filter.profissionalId;
   if (filter.pacienteId) where.pacienteId = filter.pacienteId;
+  if (filter.consultorioId) where.consultorioId = filter.consultorioId;
   if (filter.status) where.status = filter.status;
   if (filter.statusPagamento) where.statusPagamento = filter.statusPagamento;
 

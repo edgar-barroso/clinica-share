@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Stethoscope } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
 import { apiCancelarAgendamento, apiCreateAgendamento, apiGetAgendamento, apiListAgendamentos, type AgendamentoListItem } from '@/lib/api/agendamentos';
 import { apiListProfissionais, type Profissional } from '@/lib/api/profissionais';
@@ -280,7 +281,43 @@ function AgendarPageInner() {
   }
 
   if (userLoading || bootstrapping) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>;
+    return (
+      <div aria-hidden="true">
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-10 w-28" />
+        </div>
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <Skeleton className="h-1.5 w-full rounded-full" />
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-5 w-72" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-24 rounded-xl" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <aside className="lg:col-span-1">
+            <Skeleton className="h-72 rounded-2xl" />
+          </aside>
+        </div>
+      </div>
+    );
   }
 
   return (

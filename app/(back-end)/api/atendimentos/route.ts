@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
       dataFim: searchParams.get("dataFim") ?? undefined,
       profissionalId: searchParams.get("profissionalId") ?? undefined,
       pacienteId: searchParams.get("pacienteId") ?? undefined,
+      consultorioId: searchParams.get("consultorioId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
       statusPagamento: searchParams.get("statusPagamento") ?? undefined,
     });

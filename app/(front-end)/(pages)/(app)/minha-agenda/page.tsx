@@ -5,8 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CalendarDays, Settings, ShieldAlert } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { AgendaList } from "../agenda/_components/agenda-list";
 import {
@@ -66,9 +67,7 @@ export default function MinhaAgendaPage() {
           title="Minha agenda"
           description="Visão do profissional — apenas seus atendimentos"
         />
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Carregando…
-        </p>
+        <MinhaAgendaSkeleton />
       </>
     );
   }
@@ -115,7 +114,7 @@ export default function MinhaAgendaPage() {
       />
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
+        <MinhaAgendaSkeleton />
       ) : dias.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
@@ -135,5 +134,41 @@ export default function MinhaAgendaPage() {
         </div>
       )}
     </>
+  );
+}
+
+function MinhaAgendaSkeleton() {
+  return (
+    <div className="space-y-8" aria-hidden="true">
+      {Array.from({ length: 2 }).map((_, day) => (
+        <section key={day}>
+          <Skeleton className="mb-3 h-4 w-48" />
+          <div className="space-y-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">
+                  <div className="flex items-start gap-4">
+                    <Skeleton className="size-14 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-44" />
+                      <Skeleton className="h-3 w-56" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-5 w-24 rounded-full" />
+                  </div>
+                </CardHeader>
+                <CardContent className="flex justify-end gap-2 border-t border-border pt-4">
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-8 w-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
