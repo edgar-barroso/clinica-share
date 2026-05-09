@@ -4,17 +4,18 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Stethoscope } from 'lucide-react';
+import { CalendarClock, Check, Stethoscope } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
+import { MonthlyCalendar } from '@/components/agenda/monthly-calendar';
 import { apiCancelarAgendamento, apiCreateAgendamento, apiGetAgendamento, apiListAgendamentos, type AgendamentoListItem } from '@/lib/api/agendamentos';
 import { apiListProfissionais, type Profissional, type Turno, type TurnoFixo } from '@/lib/api/profissionais';
 import { apiListConsultorios, type Consultorio } from '@/lib/api/consultorios';
 import { apiGetTurnos } from '@/lib/api/configuracoes';
 import { apiErrorMessage } from '@/lib/api-client';
-import { formatBRL, formatDate, formatDateLong } from '@/lib/format';
+import { formatBRL, formatDateLong } from '@/lib/format';
 import { BLOCOS_PADRAO, gerarSlots, slotConflita, turnosConfigParaBlocos, type Bloco } from '@/lib/horarios';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/lib/current-user';
@@ -160,37 +161,20 @@ function AgendarPageInner() {
   const stepIndex = STEPS.findIndex((s) => s.key === step);
   const isUltimoStep = step === 'horario';
 
-  // Calendário navegável: do mês atual até +3 meses (limite de antecedência).
-  const hojeRef = useMemo(() => {
+  // DOWs em que o profissional atende — alimenta o filtro do calendário.
+  const dowsAtende = useMemo(
+    () => new Set<number>(turnosPorDow.keys()),
+    [turnosPorDow],
+  );
+
+  // Mês visível do calendário. O componente <MonthlyCalendar> mantém
+  // o estado interno, mas notifica via onVisibleMonthChange — usamos
+  // pra disparar o pré-fetch de dias lotados.
+  const [mesVisivel, setMesVisivel] = useState<Date>(() => {
     const h = new Date();
     h.setHours(0, 0, 0, 0);
-    return h;
-  }, []);
-  const mesMinimo = useMemo(
-    () => new Date(hojeRef.getFullYear(), hojeRef.getMonth(), 1),
-    [hojeRef],
-  );
-  const mesMaximo = useMemo(
-    () => new Date(hojeRef.getFullYear(), hojeRef.getMonth() + 3, 1),
-    [hojeRef],
-  );
-  const [mesVisivel, setMesVisivel] = useState<Date>(mesMinimo);
-  const podeVoltarMes = mesVisivel.getTime() > mesMinimo.getTime();
-  const podeAvancarMes = mesVisivel.getTime() < mesMaximo.getTime();
-
-  // Grade do mês: array com Date|null. Preenche posições antes do dia 1
-  // (para alinhar com a coluna de domingo) e depois do último dia.
-  const diasDoMes = useMemo(() => {
-    const ano = mesVisivel.getFullYear();
-    const mes = mesVisivel.getMonth();
-    const primeiro = new Date(ano, mes, 1);
-    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
-    const cells: Array<Date | null> = [];
-    for (let i = 0; i < primeiro.getDay(); i++) cells.push(null);
-    for (let dia = 1; dia <= ultimoDia; dia++) cells.push(new Date(ano, mes, dia));
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-  }, [mesVisivel]);
+    return new Date(h.getFullYear(), h.getMonth(), 1);
+  });
 
   // Reset horário se duração mudar (profissional diferente).
   useEffect(() => {
@@ -491,80 +475,16 @@ function AgendarPageInner() {
 
               {step === 'data' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => podeVoltarMes && setMesVisivel(new Date(mesVisivel.getFullYear(), mesVisivel.getMonth() - 1, 1))}
-                      disabled={!podeVoltarMes}
-                      aria-label="Mês anterior"
-                      className="flex size-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <p className="text-sm font-semibold capitalize">{formatDate(mesVisivel, "MMMM 'de' yyyy")}</p>
-                    <button
-                      type="button"
-                      onClick={() => podeAvancarMes && setMesVisivel(new Date(mesVisivel.getFullYear(), mesVisivel.getMonth() + 1, 1))}
-                      disabled={!podeAvancarMes}
-                      aria-label="Próximo mês"
-                      className="flex size-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
-                      <div key={d} className="py-1 font-medium">
-                        {d}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1">
-                    {diasDoMes.map((d, idx) => {
-                      if (!d) return <div key={`empty-${idx}`} />;
-                      const iso = isoDate(d);
-                      const active = data === iso;
-                      const dow = d.getDay();
-                      const isPast = d.getTime() < hojeRef.getTime();
-                      const isFds = dow === 0 || dow === 6;
-                      const isLotado = diasLotados.has(iso);
-                      const profNaoAtende =
-                        !!profSelecionado && !turnosPorDow.has(dow);
-                      const disabled = isPast || isFds || isLotado || profNaoAtende;
-                      const aria = profNaoAtende
-                        ? `${formatDateLong(d)} — profissional não atende neste dia`
-                        : isLotado
-                          ? `${formatDateLong(d)} — sem horários disponíveis`
-                          : formatDateLong(d);
-                      return (
-                        <button
-                          key={iso}
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => {
-                            setData(iso);
-                            setHorario(null);
-                          }}
-                          className={cn(
-                            'flex aspect-square items-center justify-center rounded-xl border text-sm font-medium tabular-nums transition-colors',
-                            isPast || isFds
-                              ? 'cursor-not-allowed border-transparent text-muted-foreground/40'
-                              : isLotado
-                                ? 'cursor-not-allowed border-border bg-muted/60 text-muted-foreground line-through'
-                                : active
-                                  ? 'border-primary bg-primary text-primary-foreground'
-                                  : 'border-border bg-card hover:bg-muted',
-                          )}
-                          aria-label={aria}
-                          title={isLotado ? 'Sem horários disponíveis' : undefined}
-                        >
-                          {d.getDate()}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <MonthlyCalendar
+                    value={data}
+                    onChange={(iso) => {
+                      setData(iso);
+                      setHorario(null);
+                    }}
+                    diasUteisAtende={dowsAtende}
+                    diasLotados={diasLotados}
+                    onVisibleMonthChange={setMesVisivel}
+                  />
 
                   {diasLotados.size > 0 && (
                     <p className="text-xs text-muted-foreground">

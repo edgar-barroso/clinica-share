@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
+import { MonthlyCalendar } from "@/components/agenda/monthly-calendar";
 import {
   apiListProfissionais,
   type Profissional,
@@ -164,6 +165,12 @@ export default function NovoAtendimentoPage() {
     if (dowDaData === null) return false;
     return turnosPorDow.has(dowDaData);
   }, [dowDaData, turnosPorDow]);
+
+  // Para o calendário: conjunto de DOWs em que o prof atende.
+  const dowsAtende = useMemo(
+    () => new Set<number>(turnosPorDow.keys()),
+    [turnosPorDow],
+  );
 
   const blocosPermitidos = useMemo(() => {
     if (dowDaData === null) return [];
@@ -348,24 +355,27 @@ export default function NovoAtendimentoPage() {
                   )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="data">Data do atendimento</Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={data}
-                  onChange={(e) => {
-                    setData(e.target.value);
-                    setHorario(null);
-                  }}
-                  required
-                />
-                {data && profSelecionado && !profAtendeNaData && (
+                <Label>Data do atendimento</Label>
+                {!profSelecionado ? (
+                  <p className="text-xs text-muted-foreground">
+                    Escolha um profissional para ver as datas disponíveis.
+                  </p>
+                ) : dowsAtende.size === 0 ? (
                   <p className="flex items-start gap-1.5 text-xs text-warning">
                     <AlertCircle size={12} className="mt-0.5 shrink-0" />
-                    {profSelecionado.nome} não atende em{" "}
-                    {dowDaData !== null ? NOME_DOW[dowDaData] : "—"}. Escolha
-                    outro dia.
+                    Profissional sem turnos fixos. Cadastre antes de
+                    registrar.
                   </p>
+                ) : (
+                  <MonthlyCalendar
+                    value={data}
+                    onChange={(iso) => {
+                      setData(iso);
+                      setHorario(null);
+                    }}
+                    diasUteisAtende={dowsAtende}
+                    allowPast
+                  />
                 )}
               </div>
             </CardContent>
