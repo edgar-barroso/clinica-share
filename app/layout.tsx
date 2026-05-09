@@ -43,7 +43,7 @@ export default function RootLayout({
         <GoogleProvider clientId={GOOGLE_CLIENT_ID}>
           <RoleProvider>{children}</RoleProvider>
         </GoogleProvider>
-        <Toaster position="top-right" richColors />
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );
