@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useEffect, useState, type FormEvent } from 'react';
+import { use, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -14,14 +14,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
 import { apiListConsultorios, type Consultorio } from '@/lib/api/consultorios';
 import { apiGetProfissional, apiUpdateProfissional, apiAddTurnoFixo, apiRemoveTurnoFixo, type ModalidadeContrato, type Turno, type TurnoFixo } from '@/lib/api/profissionais';
+import { apiGetTurnos, type TurnosConfig } from '@/lib/api/configuracoes';
 import { apiErrorMessage } from '@/lib/api-client';
 import { formatBRL, formatPercent } from '@/lib/format';
 
-const TURNOS: { value: Turno; label: string }[] = [
-  { value: 'manha', label: 'Manhã (07h-12h)' },
-  { value: 'tarde', label: 'Tarde (13h-18h)' },
-  { value: 'noite', label: 'Noite (18h-20h)' },
-];
+const TURNOS_FALLBACK: TurnosConfig = {
+  manha: { inicio: '07:00', fim: '12:00' },
+  tarde: { inicio: '13:00', fim: '18:00' },
+  noite: { inicio: '18:00', fim: '20:00' },
+};
+
+function turnosOptions(cfg: TurnosConfig): { value: Turno; label: string }[] {
+  return [
+    { value: 'manha', label: `Manhã (${cfg.manha.inicio}-${cfg.manha.fim})` },
+    { value: 'tarde', label: `Tarde (${cfg.tarde.inicio}-${cfg.tarde.fim})` },
+    { value: 'noite', label: `Noite (${cfg.noite.inicio}-${cfg.noite.fim})` },
+  ];
+}
 
 const DIAS_SEMANA = [
   { value: 1, label: 'Seg' },
@@ -56,6 +65,10 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
   const [novoTurnoDia, setNovoTurnoDia] = useState(1);
   const [novoTurnoTurno, setNovoTurnoTurno] = useState<Turno>('manha');
   const [novoTurnoConsultorioId, setNovoTurnoConsultorioId] = useState('');
+  // Config de turnos (manhã/tarde/noite) — labels do select refletem
+  // o que o admin definiu em /configuracoes/turnos.
+  const [turnosConfig, setTurnosConfig] = useState<TurnosConfig>(TURNOS_FALLBACK);
+  const TURNOS = useMemo(() => turnosOptions(turnosConfig), [turnosConfig]);
 
   // snapshot original para detectar diff em contrato
   const [originalContract, setOriginalContract] = useState<{
@@ -66,6 +79,11 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
   } | null>(null);
 
   useEffect(() => {
+    apiGetTurnos()
+      .then((res) => setTurnosConfig(res.turnos))
+      .catch(() => {
+        // mantém TURNOS_FALLBACK
+      });
     Promise.all([apiGetProfissional(id), apiListConsultorios({ ativo: true })])
       .then(([profRes, consRes]) => {
         const p = profRes.profissional;
@@ -263,18 +281,8 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="valorBase">Valor base da consulta (R$)</Label>
-                <Input
-                  id="valorBase"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={valorConsultaBase}
-                  onChange={(e) => setValorConsultaBase(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Mudar este valor exige motivo (auditoria).
-                </p>
+                <Input id="valorBase" type="number" min="0" step="0.01" value={valorConsultaBase} onChange={(e) => setValorConsultaBase(e.target.value)} required />
+                <p className="text-xs text-muted-foreground">Mudar este valor exige motivo (auditoria).</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="status">Status</Label>
@@ -334,7 +342,6 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
           <Card>
             <CardHeader>
               <CardTitle>Turnos fixos</CardTitle>
-              <CardDescription>Adicionar/remover é imediato (cada ação toca a API). Conflito de consultório/dia/turno é rejeitado com 409.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {turnos.length === 0 ? (

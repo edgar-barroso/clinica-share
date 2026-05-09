@@ -19,10 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AgendamentoStatusBadge,
-  PaymentStatusBadge,
-} from "@/components/financial/status-badge";
+import { PaymentStatusBadge } from "@/components/financial/status-badge";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
   apiGetConsultorio,
@@ -94,17 +91,19 @@ export default function ConsultorioDetailPage({
       .finally(() => setLoading(false));
   }, [id]);
 
-  const atendimentosOrdenados = useMemo(
+  // Só atendimentos `realizado` na lista de recentes — agendamentos
+  // futuros, cancelamentos e faltas não fazem sentido nesse painel.
+  const realizados = useMemo(
     () =>
-      [...atendimentos].sort((a, b) =>
-        `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`),
-      ),
+      atendimentos
+        .filter((a) => a.status === "realizado")
+        .sort((a, b) =>
+          `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`),
+        ),
     [atendimentos],
   );
-  const atendimentosRecentes = atendimentosOrdenados.slice(0, 10);
-  const totalRealizados = atendimentos.filter(
-    (a) => a.status === "realizado",
-  ).length;
+  const atendimentosRecentes = realizados.slice(0, 10);
+  const totalRealizados = realizados.length;
 
   async function desativar() {
     if (!c) return;
@@ -205,9 +204,9 @@ export default function ConsultorioDetailPage({
                   <ClipboardList size={16} className="text-primary" />
                   Atendimentos recentes
                 </span>
-                {atendimentos.length > 0 && (
+                {totalRealizados > 0 && (
                   <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                    {totalRealizados} realizados · {atendimentos.length} no total
+                    {totalRealizados} realizado{totalRealizados === 1 ? "" : "s"}
                   </span>
                 )}
               </CardTitle>
@@ -227,7 +226,6 @@ export default function ConsultorioDetailPage({
                       <TableHead>Paciente</TableHead>
                       <TableHead>Profissional</TableHead>
                       <TableHead className="text-right">Bruto</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Pagamento</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -267,9 +265,6 @@ export default function ConsultorioDetailPage({
                         </TableCell>
                         <TableCell className="text-right font-semibold tabular-nums">
                           {formatBRL(Number(a.valorConsulta))}
-                        </TableCell>
-                        <TableCell>
-                          <AgendamentoStatusBadge status={a.status} />
                         </TableCell>
                         <TableCell>
                           <PaymentStatusBadge status={a.statusPagamento} />

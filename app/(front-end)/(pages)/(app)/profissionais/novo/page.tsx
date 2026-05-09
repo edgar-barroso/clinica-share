@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,14 +17,23 @@ import {
   type ModalidadeContrato,
   type Turno,
 } from "@/lib/api/profissionais";
+import { apiGetTurnos, type TurnosConfig } from "@/lib/api/configuracoes";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatPercent } from "@/lib/format";
 
-const TURNOS: { value: Turno; label: string }[] = [
-  { value: "manha", label: "Manhã (07h-12h)" },
-  { value: "tarde", label: "Tarde (13h-18h)" },
-  { value: "noite", label: "Noite (18h-20h)" },
-];
+const TURNOS_FALLBACK: TurnosConfig = {
+  manha: { inicio: "07:00", fim: "12:00" },
+  tarde: { inicio: "13:00", fim: "18:00" },
+  noite: { inicio: "18:00", fim: "20:00" },
+};
+
+function turnosOptions(cfg: TurnosConfig): { value: Turno; label: string }[] {
+  return [
+    { value: "manha", label: `Manhã (${cfg.manha.inicio}-${cfg.manha.fim})` },
+    { value: "tarde", label: `Tarde (${cfg.tarde.inicio}-${cfg.tarde.fim})` },
+    { value: "noite", label: `Noite (${cfg.noite.inicio}-${cfg.noite.fim})` },
+  ];
+}
 
 const DIAS_SEMANA = [
   { value: 1, label: "Seg" },
@@ -56,11 +65,20 @@ export default function NovoProfissionalPage() {
   const [aluguel, setAluguel] = useState("180");
   const [turnos, setTurnos] = useState<TurnoLocal[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  // Config de turnos vem de /configuracoes/turnos — labels dos selects
+  // refletem o que o admin definiu (ou fallback caso a API falhe).
+  const [turnosConfig, setTurnosConfig] = useState<TurnosConfig>(TURNOS_FALLBACK);
+  const TURNOS = useMemo(() => turnosOptions(turnosConfig), [turnosConfig]);
 
   useEffect(() => {
     apiListConsultorios({ ativo: true })
       .then((res) => setConsultorios(res.consultorios))
       .catch((err) => toast.error(apiErrorMessage(err)));
+    apiGetTurnos()
+      .then((res) => setTurnosConfig(res.turnos))
+      .catch(() => {
+        // mantém fallback
+      });
   }, []);
 
   function addTurno() {

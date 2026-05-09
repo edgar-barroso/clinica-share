@@ -12,6 +12,42 @@ export async function addTurnoFixo(profissionalId: string, input: CreateTurnoFix
   });
   if (!consultorio) throw new NaoEncontrado("Consultório");
 
+  // Verifica explicitamente os dois conflitos possíveis pra dar
+  // mensagem específica antes do P2002 genérico.
+  const [conflitoProfMesmoSlot, salaJaOcupada] = await Promise.all([
+    prisma.turnoFixo.findUnique({
+      where: {
+        profissionalId_diaSemana_turno: {
+          profissionalId,
+          diaSemana: input.diaSemana,
+          turno: input.turno,
+        },
+      },
+      include: { consultorio: { select: { nome: true } } },
+    }),
+    prisma.turnoFixo.findUnique({
+      where: {
+        consultorioId_diaSemana_turno: {
+          consultorioId: input.consultorioId,
+          diaSemana: input.diaSemana,
+          turno: input.turno,
+        },
+      },
+      include: { profissional: { select: { nome: true } } },
+    }),
+  ]);
+
+  if (conflitoProfMesmoSlot) {
+    throw new ConflitoRecurso(
+      `${prof.nome} já tem turno fixo nesse dia/horário (sala ${conflitoProfMesmoSlot.consultorio.nome})`,
+    );
+  }
+  if (salaJaOcupada) {
+    throw new ConflitoRecurso(
+      `Sala ${consultorio.nome} já está alocada para ${salaJaOcupada.profissional.nome} nesse dia/horário`,
+    );
+  }
+
   try {
     return await prisma.turnoFixo.create({
       data: {
