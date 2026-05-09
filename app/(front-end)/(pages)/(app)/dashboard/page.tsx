@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { MetricStat } from "@/components/dashboard/metric-stat";
 import { ReceitaChart } from "@/components/dashboard/receita-chart";
@@ -188,9 +189,17 @@ export default function DashboardPage() {
       </Card>
 
       {loading || !stats ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          Carregando…
-        </p>
+        <div aria-hidden="true">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-2xl" />
+            ))}
+          </section>
+          <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <Skeleton className="h-80 rounded-2xl lg:col-span-2" />
+            <Skeleton className="h-80 rounded-2xl" />
+          </section>
+        </div>
       ) : (
         <>
           {semRepasses && intervaloEmCurso && (

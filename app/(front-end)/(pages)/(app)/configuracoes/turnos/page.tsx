@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
 import { apiGetTurnos, apiUpdateTurnos, type TurnosConfig } from '@/lib/api/configuracoes';
 import { apiErrorMessage } from '@/lib/api-client';
@@ -61,7 +62,29 @@ export default function TurnosPage() {
   }
 
   if (loading || !turnos) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>;
+    return (
+      <div aria-hidden="true">
+        <Skeleton className="mb-4 h-4 w-44" />
+        <div className="mb-8 space-y-2">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="size-8 rounded-md" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="mt-3 h-5 w-16 rounded-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const editingTurno = editingId ? turnos[editingId] : null;

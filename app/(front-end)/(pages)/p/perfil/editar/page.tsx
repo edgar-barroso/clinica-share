@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
   apiGetMeuPerfil,
@@ -133,9 +134,23 @@ export default function EditarPerfilPage() {
 
   if (userLoading || loading || !pacienteId) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">
-        Carregando…
-      </p>
+      <div aria-hidden="true">
+        <Skeleton className="mb-4 h-4 w-44" />
+        <div className="mb-8 space-y-2">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-72 rounded-2xl" />
+          <Skeleton className="h-44 rounded-2xl" />
+          <Skeleton className="h-72 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+          <div className="flex justify-end gap-2">
+            <Skeleton className="h-12 w-28" />
+            <Skeleton className="h-12 w-44" />
+          </div>
+        </div>
+      </div>
     );
   }
 

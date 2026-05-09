@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -89,9 +90,25 @@ export default function RepasseDetailPage({
 
   if (loading || !data) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">
-        Carregando…
-      </p>
+      <div aria-hidden="true">
+        <Skeleton className="mb-4 h-4 w-44" />
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-72" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-10 w-44" />
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Skeleton className="h-44 rounded-2xl" />
+            <Skeleton className="h-80 rounded-2xl" />
+          </div>
+          <aside className="space-y-4">
+            <Skeleton className="h-64 rounded-2xl" />
+          </aside>
+        </div>
+      </div>
     );
   }
 

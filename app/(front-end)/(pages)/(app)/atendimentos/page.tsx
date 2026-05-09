@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -307,9 +308,51 @@ export default function AtendimentosPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Carregando…
-            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Paciente</TableHead>
+                  {!isProfissional && <TableHead>Profissional</TableHead>}
+                  <TableHead>Consultório</TableHead>
+                  <TableHead className="text-right">Bruto</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="mt-1 h-3 w-10" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="mt-1 h-3 w-28" />
+                    </TableCell>
+                    {!isProfissional && (
+                      <TableCell>
+                        <Skeleton className="h-4 w-36" />
+                        <Skeleton className="mt-1 h-3 w-24" />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : atendimentos.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               Nenhum atendimento registrado ainda.

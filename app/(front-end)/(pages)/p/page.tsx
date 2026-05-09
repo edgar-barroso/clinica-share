@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MetricStat } from "@/components/dashboard/metric-stat";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
   AgendamentoStatusBadge,
@@ -107,9 +108,27 @@ export default function PatientHomePage() {
 
   if (userLoading || loading || !pacienteId) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">
-        Carregando…
-      </p>
+      <div aria-hidden="true">
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-10 w-44" />
+        </div>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
+        </section>
+        <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Skeleton className="h-64 rounded-2xl lg:col-span-2" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </section>
+        <section className="mt-8">
+          <Skeleton className="h-72 rounded-2xl" />
+        </section>
+      </div>
     );
   }
 

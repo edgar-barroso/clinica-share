@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -113,9 +114,42 @@ export default function RelatorioFinanceiroPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading || !data ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Carregando…
-            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Profissional</TableHead>
+                  <TableHead>Modalidade</TableHead>
+                  <TableHead className="text-right">Atendimentos</TableHead>
+                  <TableHead className="text-right">Receita bruta</TableHead>
+                  <TableHead className="text-right">Repasse estimado</TableHead>
+                  <TableHead className="text-right">Margem clínica</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody aria-hidden="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-36" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-8" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-20" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-20" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-20" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : data.linhas.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               Sem atendimentos pagos no período.

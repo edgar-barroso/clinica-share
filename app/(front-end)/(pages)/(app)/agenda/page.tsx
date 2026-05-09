@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AgendamentoStatusBadge,
   PaymentStatusBadge,
@@ -186,9 +187,34 @@ export default function AgendaPage() {
       </div>
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Carregando…
-        </p>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} aria-hidden="true">
+              <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="size-14 rounded-xl" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-44" />
+                    <Skeleton className="h-3 w-56" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                <Skeleton className="h-8 w-24" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : agendamentos.length === 0 ? (
         <EmptyState
           icon={CalendarDays}

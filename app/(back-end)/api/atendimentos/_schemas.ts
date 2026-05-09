@@ -93,6 +93,7 @@ export const listAtendimentosQuerySchema = z.object({
   dataFim: z.string().date().optional(),
   profissionalId: z.string().optional(),
   pacienteId: z.string().optional(),
+  consultorioId: z.string().optional(),
   status: z
     .enum(["agendado", "em_atendimento", "realizado", "cancelado", "nao_compareceu"])
     .optional(),

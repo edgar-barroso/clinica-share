@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -113,9 +114,44 @@ export default function AuditoriaPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Carregando…
-            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quando</TableHead>
+                  <TableHead>Quem</TableHead>
+                  <TableHead>Entidade</TableHead>
+                  <TableHead>Campo</TableHead>
+                  <TableHead>Antes → Depois</TableHead>
+                  <TableHead>Motivo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="mt-1 h-3 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                      <Skeleton className="mt-1 h-3 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-20" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-3 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-3 w-48" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : logs.length === 0 ? (
             <EmptyState
               icon={ShieldCheck}

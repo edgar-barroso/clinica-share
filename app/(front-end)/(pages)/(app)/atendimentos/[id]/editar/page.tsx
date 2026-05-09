@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
   apiGetAtendimento,
@@ -64,9 +65,26 @@ export default function EditarAtendimentoPage({
 
   if (userLoading || loading) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">
-        Carregando…
-      </p>
+      <div aria-hidden="true">
+        <Skeleton className="mb-4 h-4 w-44" />
+        <div className="mb-8 space-y-2">
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Skeleton className="h-56 rounded-2xl" />
+            <Skeleton className="h-40 rounded-2xl" />
+            <Skeleton className="h-40 rounded-2xl" />
+          </div>
+          <aside className="lg:col-span-1">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </aside>
+        </div>
+      </div>
     );
   }
 
