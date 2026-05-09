@@ -1,7 +1,7 @@
 # Plano de Implementação — ClinicaShare
 
 > **Audiência**: equipe de 4 alunos (DevsTech) trabalhando no MVP do Dr. Edson Andrade.
-> **Status**: 2026-05-08 — **TODAS as 8 fases concluídas ✅**. 152 testes Vitest + 27 specs Playwright verde. tsc + build production verde. Pronto para R2 com Dr. Edson.
+> **Status**: 2026-05-08 — **TODAS as 8 fases concluídas ✅**. 152 testes Vitest + **53 specs Playwright** (todas as 43 telas validadas via smoke + fluxos críticos). tsc + build production verde. Seed populada (~250 atendimentos cobrindo todos os status). Pronto para R2.
 > **Meta**: ATINGIDA — sistema 100% implementado e testado.
 
 ---
