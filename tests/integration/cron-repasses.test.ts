@@ -33,6 +33,7 @@ async function seedProfissional() {
       telefone: "11999990000",
       conselho: "CRM-12345",
       modalidadeContrato: "percentual",
+      valorConsultaBase: 200,
       percentualRepasse: new Prisma.Decimal(0.7),
       ativo: true,
     },

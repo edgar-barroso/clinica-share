@@ -30,6 +30,7 @@ async function fixtureCenario() {
       email: "drR@e.com",
       telefone: "11999990000",
       modalidadeContrato: "percentual",
+      valorConsultaBase: 200,
       percentualRepasse: new Prisma.Decimal(0.3),
       duracaoConsultaMinutos: 30,
     },

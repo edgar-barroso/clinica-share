@@ -347,6 +347,20 @@ export default function ProfissionalDetailPage({
 
           <Card>
             <CardHeader>
+              <CardTitle>Valor da consulta</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold tabular-nums">
+                {formatBRL(Number(prof.valorConsultaBase))}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aparece pro paciente ao agendar; ajustável na finalização.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Duração padrão</CardTitle>
             </CardHeader>
             <CardContent>

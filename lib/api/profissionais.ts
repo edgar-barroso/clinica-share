@@ -22,6 +22,7 @@ export interface Profissional {
   modalidadeContrato: ModalidadeContrato;
   percentualRepasse: string | null;
   valorAluguelPorTurno: string | null;
+  valorConsultaBase: string;
   duracaoConsultaMinutos: number;
   turnosFixos?: TurnoFixo[];
   createdAt: string;
@@ -37,6 +38,7 @@ export interface CreateProfissionalInput {
   modalidadeContrato: ModalidadeContrato;
   percentualRepasse?: number | null;
   valorAluguelPorTurno?: number | null;
+  valorConsultaBase: number;
   duracaoConsultaMinutos: number;
 }
 

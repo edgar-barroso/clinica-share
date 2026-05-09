@@ -28,15 +28,6 @@ const STEPS = [
 
 type StepKey = (typeof STEPS)[number]['key'];
 
-const VALOR_POR_ESPECIALIDADE: Record<string, number> = {
-  Cardiologia: 350,
-  Oftalmologia: 280,
-  Ginecologia: 300,
-  Psicologia: 260,
-  Fisioterapia: 180,
-};
-const VALOR_DEFAULT = 220;
-
 function initials(name: string) {
   const parts = name.split(' ').filter((x) => !['Dr.', 'Dra.'].includes(x));
   return (parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '');
@@ -224,7 +215,11 @@ function AgendarPageInner() {
       .catch(() => setDiasLotados(new Set()));
   }, [profId, mesVisivel, duracaoMin, horariosBlocos]);
 
-  const valorBase = profSelecionado ? (VALOR_POR_ESPECIALIDADE[profSelecionado.especialidade] ?? VALOR_DEFAULT) : 0;
+  // Mostra o valor real cadastrado no profissional. O servidor copia esse
+  // valor para Atendimento.valorConsulta no momento do agendamento, então
+  // o que o paciente vê aqui é o que vai pagar (modulo descontos/cortesias
+  // que a equipe possa aplicar na finalização).
+  const valorBase = profSelecionado ? Number(profSelecionado.valorConsultaBase) : 0;
 
   function canAdvance() {
     switch (step) {
@@ -569,10 +564,13 @@ function AgendarPageInner() {
               {valorBase > 0 && (
                 <div className="space-y-1 border-t border-border pt-3">
                   <div className="flex items-center justify-between text-base font-semibold">
-                    <span>Valor estimado</span>
+                    <span>Valor da consulta</span>
                     <span className="tabular-nums">{formatBRL(valorBase)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Pode variar conforme o atendimento.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pagamento presencial. Descontos ou cortesias podem ser
+                    aplicados pela clínica.
+                  </p>
                 </div>
               )}
 

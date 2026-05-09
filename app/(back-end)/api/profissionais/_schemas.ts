@@ -10,6 +10,9 @@ const baseProfissionalSchema = z.object({
   percentualRepasse: z.number().min(0).max(1).nullable().optional(),
   // Decimal armazenado como number aqui; Prisma converte
   valorAluguelPorTurno: z.number().min(0).nullable().optional(),
+  // Valor base da consulta — preenchido em Atendimento.valorConsulta
+  // no momento do agendamento (pode ser ajustado na finalização).
+  valorConsultaBase: z.number().positive().max(99999999.99),
   duracaoConsultaMinutos: z.number().int().min(10).max(240).default(30),
   modalidadeContrato: z.enum(["aluguel_fixo", "percentual"]),
 });

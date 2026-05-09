@@ -45,6 +45,7 @@ test.beforeAll(async () => {
       email: `prof-rel-${Date.now()}@e2e.com`,
       telefone: "11988887777",
       modalidadeContrato: "percentual",
+      valorConsultaBase: 200,
       percentualRepasse: new Prisma.Decimal(0.3),
       duracaoConsultaMinutos: 30,
     },
