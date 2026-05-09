@@ -48,14 +48,23 @@ export async function dashboardStats(
     receitaDoDia,
     realizadosBrutos,
   ] = await Promise.all([
+    // Captura repasses cuja janela seg→dom SOBREPÕE o período do filtro.
+    // Necessário pra "Mês atual" / "Personalizado" — a query antiga
+    // (`gte: inicio, lte: fim`) só pegava semanas 100% dentro, e ignorava
+    // semanas que cruzam a borda do mês, deixando o card de Repasses
+    // sub-contado em relação à Receita bruta.
     prisma.repasse.findMany({
-      where: { periodoInicio: { gte: inicio }, periodoFim: { lte: fim } },
+      where: { periodoInicio: { lte: fim }, periodoFim: { gte: inicio } },
       select: { valorRepasse: true, status: true },
     }),
     prisma.profissional.count(),
     prisma.profissional.count({ where: { ativo: true } }),
+    // "Pagamento pendente" é uma fila de cobrança — só conta atendimentos
+    // já realizados. Sem o filtro de status, agendamentos futuros (criados
+    // com statusPagamento='pendente' por padrão) entrariam aqui também.
     prisma.atendimento.count({
       where: {
+        status: "realizado",
         statusPagamento: "pendente",
         data: { gte: inicio, lte: fim },
       },
