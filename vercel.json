@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/lembretes-amanha",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/gerar-repasses",
+      "schedule": "0 9 * * 1"
+    }
+  ]
+}
