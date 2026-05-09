@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { calculateRepasse } from "@/app/(back-end)/_usecases/repasse/calculate";
 
 export interface DashboardStatsInput {
   dataInicio: string;
@@ -13,6 +12,14 @@ export interface DashboardChartPoint {
 }
 
 export interface DashboardStats {
+  repassesAbertos: string;
+  repassesPagos: string;
+  repassesTotal: string;
+  qtdRepassesAbertos: number;
+  qtdRepassesPagos: number;
+  profissionaisAtivos: number;
+  profissionaisTotal: number;
+  atendimentosPendentes: number;
   /**
    * Receita bruta: soma de `valorConsulta` de TODOS os atendimentos com
    * status `realizado` no período, independentemente do pagamento. Mede
@@ -20,29 +27,12 @@ export interface DashboardStats {
    */
   receitaBruta: string;
   qtdAtendimentosRealizados: number;
-  /**
-   * Repasse projetado: soma do que cada profissional ativo receberia se
-   * o período fechasse hoje. Calculado live via `calculateRepasse` —
-   * ignora se o cron de segunda já rodou ou não. Permite ver receita
-   * "em curso" sem esperar o fechamento semanal formal.
-   */
-  repasseProjetado: string;
-  /** Margem da clínica = receita bruta − repasse projetado. */
-  margemClinica: string;
-  profissionaisAtivos: number;
-  profissionaisTotal: number;
-  atendimentosPendentes: number;
   receitaPorDia: DashboardChartPoint[];
 }
 
 /**
  * RE01: KPIs agregados para o dashboard. Rota agrega tudo
  * server-side; cliente só renderiza.
- *
- * Diferente da página `/financeiro/repasses` (que mostra o livro
- * formal de Repasses fechados pelo cron), o dashboard projeta o
- * repasse live para o período do filtro. Isso evita que o admin
- * tenha que esperar a próxima segunda para ver dados da semana atual.
  */
 export async function dashboardStats(
   input: DashboardStatsInput,
@@ -51,19 +41,24 @@ export async function dashboardStats(
   const fim = new Date(input.dataFim);
 
   const [
+    repasses,
     profCount,
     profAtivos,
-    profsAtivos,
     pendentes,
     receitaDoDia,
     realizadosBrutos,
   ] = await Promise.all([
+    // Captura repasses cuja janela seg→dom SOBREPÕE o período do filtro.
+    // Necessário pra "Mês atual" / "Personalizado" — a query antiga
+    // (`gte: inicio, lte: fim`) só pegava semanas 100% dentro, e ignorava
+    // semanas que cruzam a borda do mês, deixando o card de Repasses
+    // sub-contado em relação à Receita bruta.
+    prisma.repasse.findMany({
+      where: { periodoInicio: { lte: fim }, periodoFim: { gte: inicio } },
+      select: { valorRepasse: true, status: true },
+    }),
     prisma.profissional.count(),
     prisma.profissional.count({ where: { ativo: true } }),
-    prisma.profissional.findMany({
-      where: { ativo: true },
-      select: { id: true },
-    }),
     // "Pagamento pendente" é uma fila de cobrança — só conta atendimentos
     // já realizados. Sem o filtro de status, agendamentos futuros (criados
     // com statusPagamento='pendente' por padrão) entrariam aqui também.
@@ -90,27 +85,13 @@ export async function dashboardStats(
     }),
   ]);
 
-  // Projeta repasse pra cada profissional ativo, somando. Profs sem
-  // contrato configurado (ex: percentual sem percentualRepasse) são
-  // tolerados — caem no catch e não quebram o dashboard inteiro.
-  const projecoes = await Promise.all(
-    profsAtivos.map(async (p) => {
-      try {
-        const r = await calculateRepasse({
-          profissionalId: p.id,
-          periodoInicio: input.dataInicio,
-          periodoFim: input.dataFim,
-        });
-        return r.valorRepasse;
-      } catch {
-        return new Prisma.Decimal(0);
-      }
-    }),
-  );
-  const repasseProjetado = projecoes.reduce(
-    (s, v) => s.plus(v),
-    new Prisma.Decimal(0),
-  );
+  const repassesAbertos = repasses
+    .filter((r) => r.status === "aberto")
+    .reduce((s, r) => s.plus(r.valorRepasse), new Prisma.Decimal(0));
+  const repassesPagos = repasses
+    .filter((r) => r.status === "pago")
+    .reduce((s, r) => s.plus(r.valorRepasse), new Prisma.Decimal(0));
+  const repassesTotal = repassesAbertos.plus(repassesPagos);
 
   // Agrupa receita por data
   const porData = new Map<string, Prisma.Decimal>();
@@ -127,16 +108,18 @@ export async function dashboardStats(
     (s, a) => s.plus(a.valorConsulta),
     new Prisma.Decimal(0),
   );
-  const margemClinica = receitaBruta.minus(repasseProjetado);
 
   return {
-    receitaBruta: receitaBruta.toFixed(2),
-    qtdAtendimentosRealizados: realizadosBrutos.length,
-    repasseProjetado: repasseProjetado.toFixed(2),
-    margemClinica: margemClinica.toFixed(2),
+    repassesAbertos: repassesAbertos.toFixed(2),
+    repassesPagos: repassesPagos.toFixed(2),
+    repassesTotal: repassesTotal.toFixed(2),
+    qtdRepassesAbertos: repasses.filter((r) => r.status === "aberto").length,
+    qtdRepassesPagos: repasses.filter((r) => r.status === "pago").length,
     profissionaisAtivos: profAtivos,
     profissionaisTotal: profCount,
     atendimentosPendentes: pendentes,
+    receitaBruta: receitaBruta.toFixed(2),
+    qtdAtendimentosRealizados: realizadosBrutos.length,
     receitaPorDia,
   };
 }
