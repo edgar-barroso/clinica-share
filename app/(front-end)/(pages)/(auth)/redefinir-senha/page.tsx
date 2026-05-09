@@ -35,6 +35,7 @@ function RedefinirSenhaForm() {
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const email = params.get("email") ?? "";
+  const primeiroAcesso = params.get("primeiroAcesso") === "1";
 
   const [senha, setSenha] = useState("");
   const [confirma, setConfirma] = useState("");
@@ -62,7 +63,11 @@ function RedefinirSenhaForm() {
     setLoading(true);
     try {
       await apiResetPassword({ email, token, novaSenha: senha });
-      toast.success("Senha redefinida com sucesso");
+      toast.success(
+        primeiroAcesso
+          ? "Senha definida — entre com seu e-mail e senha"
+          : "Senha redefinida com sucesso",
+      );
       router.push("/login");
     } catch (err) {
       toast.error(authErrorMessage(err));
@@ -76,11 +81,15 @@ function RedefinirSenhaForm() {
         <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <Stethoscope size={20} />
         </div>
-        <CardTitle>Criar nova senha</CardTitle>
+        <CardTitle>
+          {primeiroAcesso ? "Bem-vindo(a) ao ClinicaShare" : "Criar nova senha"}
+        </CardTitle>
         <CardDescription>
           {linkInvalido
-            ? "Link inválido ou expirado. Solicite um novo em \"Esqueci minha senha\"."
-            : "Defina uma senha forte para voltar a acessar sua conta. O link é válido por 30 minutos."}
+            ? 'Link inválido ou expirado. Solicite um novo em "Esqueci minha senha".'
+            : primeiroAcesso
+              ? "Defina sua senha para acessar a plataforma pela primeira vez. O convite é válido por 7 dias."
+              : "Defina uma senha forte para voltar a acessar sua conta. O link é válido por 30 minutos."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -128,7 +137,13 @@ function RedefinirSenhaForm() {
 
             <Button type="submit" className="w-full" disabled={!valida || loading}>
               <KeyRound size={16} />
-              {loading ? "Redefinindo…" : "Redefinir senha"}
+              {loading
+                ? primeiroAcesso
+                  ? "Definindo…"
+                  : "Redefinindo…"
+                : primeiroAcesso
+                  ? "Definir senha e continuar"
+                  : "Redefinir senha"}
             </Button>
 
             <Link

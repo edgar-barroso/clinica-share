@@ -1,4 +1,15 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock do mailer ANTES de importar usecases que dependem dele
+const mocks = vi.hoisted(() => ({
+  sendInvite: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/app/(back-end)/_lib/mailer", () => ({
+  mailer: { sendMail: vi.fn().mockResolvedValue(undefined) },
+  sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
+  sendInviteEmail: mocks.sendInvite,
+}));
+
 import {
   GET as listGet,
   POST as createPost,
@@ -54,7 +65,11 @@ function ctxIdTurno(id: string, turnoId: string) {
 }
 
 describe("POST /api/profissionais", () => {
-  it("admin cria profissional percentual (201)", async () => {
+  beforeEach(() => {
+    mocks.sendInvite.mockClear();
+  });
+
+  it("admin cria profissional percentual (201) + User com convite + email enviado", async () => {
     const { token } = await createUserWithRole("admin");
     const res = await createPost(
       withAuthCookie(jsonRequest("/api/profissionais", validProfPercentual), token),
@@ -63,6 +78,28 @@ describe("POST /api/profissionais", () => {
     const body = await res.json();
     expect(body.profissional.modalidadeContrato).toBe("percentual");
     expect(Number(body.profissional.percentualRepasse)).toBe(0.3);
+
+    // User vinculado existe com token de convite (passwordHash null)
+    const user = await prisma.user.findUnique({
+      where: { email: validProfPercentual.email },
+    });
+    expect(user).not.toBeNull();
+    expect(user?.role).toBe("profissional");
+    expect(user?.profissionalId).toBe(body.profissional.id);
+    expect(user?.passwordHash).toBeNull();
+    expect(user?.passwordResetToken).toMatch(/^[a-f0-9]{64}$/);
+    expect(user?.passwordResetTokenExpiresAt).not.toBeNull();
+
+    // Email de convite foi disparado
+    expect(mocks.sendInvite).toHaveBeenCalledTimes(1);
+    expect(mocks.sendInvite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: validProfPercentual.email,
+        userName: validProfPercentual.nome,
+        invitedAs: "profissional",
+        token: user?.passwordResetToken,
+      }),
+    );
   });
 
   it("admin cria profissional aluguel-fixo (201)", async () => {

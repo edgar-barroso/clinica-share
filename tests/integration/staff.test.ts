@@ -1,4 +1,15 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock do mailer ANTES de importar usecases que dependem dele
+const mocks = vi.hoisted(() => ({
+  sendInvite: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/app/(back-end)/_lib/mailer", () => ({
+  mailer: { sendMail: vi.fn().mockResolvedValue(undefined) },
+  sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
+  sendInviteEmail: mocks.sendInvite,
+}));
+
 import { GET as listGet, POST as createPost } from "@/app/(back-end)/api/staff/route";
 import {
   GET as itemGet,
@@ -29,7 +40,11 @@ const validInput = {
 const ctxId = (id: string) => ({ params: Promise.resolve({ id }) });
 
 describe("POST /api/staff", () => {
-  it("admin cria membro (201) com senhaDefinida=false", async () => {
+  beforeEach(() => {
+    mocks.sendInvite.mockClear();
+  });
+
+  it("admin cria atendente (201) + User com convite + email enviado", async () => {
     const { token } = await createUserWithRole("admin");
     const res = await createPost(
       withAuthCookie(jsonRequest("/api/staff", validInput), token),
@@ -38,6 +53,46 @@ describe("POST /api/staff", () => {
     const body = await res.json();
     expect(body.staff.cargo).toBe("atendente");
     expect(body.staff.senhaDefinida).toBe(false);
+
+    // User vinculado existe com role atendente + token de convite
+    const user = await prisma.user.findUnique({
+      where: { email: validInput.email },
+    });
+    expect(user).not.toBeNull();
+    expect(user?.role).toBe("atendente");
+    expect(user?.staffId).toBe(body.staff.id);
+    expect(user?.passwordHash).toBeNull();
+    expect(user?.passwordResetToken).toMatch(/^[a-f0-9]{64}$/);
+
+    expect(mocks.sendInvite).toHaveBeenCalledTimes(1);
+    expect(mocks.sendInvite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: validInput.email,
+        userName: validInput.nome,
+        invitedAs: "atendente",
+      }),
+    );
+  });
+
+  it("admin cria auxiliar (201) com role correto no User", async () => {
+    const { token } = await createUserWithRole("admin");
+    const res = await createPost(
+      withAuthCookie(
+        jsonRequest("/api/staff", {
+          ...validInput,
+          nome: "Joana Auxiliar",
+          cargo: "auxiliar",
+          email: "joana@example.com",
+        }),
+        token,
+      ),
+    );
+    expect(res.status).toBe(201);
+
+    const user = await prisma.user.findUnique({
+      where: { email: "joana@example.com" },
+    });
+    expect(user?.role).toBe("auxiliar");
   });
 
   it("e-mail duplicado → 409", async () => {
