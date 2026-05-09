@@ -18,6 +18,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:heal-roles": "tsx prisma/heal-roles.ts",
+    "db:erd": "tsx scripts/gen-erd.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

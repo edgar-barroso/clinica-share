@@ -10,12 +10,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Gera diagrama ER (SVG) a partir do schema; rodado junto com `prisma generate`
-generator erd {
-  provider = "prisma-erd-generator"
-  output   = "./erd.svg"
-  theme    = "default"
-}
+// Diagrama ER (SVG) é gerado por um schema separado (./schema.erd.prisma)
+// rodado manualmente via `npm run db:erd`. Mantido fora do schema
+// principal porque o generator usa Puppeteer/Chrome, que falha em
+// builds serverless (Vercel) por falta de libs do sistema.
 
 datasource db {
   provider = "postgresql"
