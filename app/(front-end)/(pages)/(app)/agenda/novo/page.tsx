@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
 import {
@@ -203,39 +204,41 @@ export default function NovoAgendamentoPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="profissional">Profissional</Label>
-                  <Select
-                    id="profissional"
-                    required
-                    value={profissionalId}
-                    onChange={(e) => setProfissionalId(e.target.value)}
-                  >
-                    {profissionais.length === 0 && (
-                      <option value="">Carregando…</option>
-                    )}
-                    {profissionais.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nome} — {p.especialidade}
-                      </option>
-                    ))}
-                  </Select>
+                  {profissionais.length === 0 ? (
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                  ) : (
+                    <Select
+                      id="profissional"
+                      required
+                      value={profissionalId}
+                      onChange={(e) => setProfissionalId(e.target.value)}
+                    >
+                      {profissionais.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nome} — {p.especialidade}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="consultorio">Consultório</Label>
-                  <Select
-                    id="consultorio"
-                    required
-                    value={consultorioId}
-                    onChange={(e) => setConsultorioId(e.target.value)}
-                  >
-                    {consultorios.length === 0 && (
-                      <option value="">Carregando…</option>
-                    )}
-                    {consultorios.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome}
-                      </option>
-                    ))}
-                  </Select>
+                  {consultorios.length === 0 ? (
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                  ) : (
+                    <Select
+                      id="consultorio"
+                      required
+                      value={consultorioId}
+                      onChange={(e) => setConsultorioId(e.target.value)}
+                    >
+                      {consultorios.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 </div>
               </div>
             </CardContent>

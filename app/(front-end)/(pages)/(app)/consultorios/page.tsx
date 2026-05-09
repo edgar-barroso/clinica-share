@@ -35,7 +35,7 @@ export default function ConsultoriosPage() {
         title="Consultórios"
         description={
           loading
-            ? "Carregando..."
+            ? "Salas da clínica disponíveis para agendamento"
             : `${consultorios.length} sala${consultorios.length === 1 ? "" : "s"} cadastrada${consultorios.length === 1 ? "" : "s"}`
         }
         actions={
