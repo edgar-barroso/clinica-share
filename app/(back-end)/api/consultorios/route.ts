@@ -7,7 +7,14 @@ import { handleError } from "@/app/(back-end)/_lib/handle-error";
 
 export async function GET(req: NextRequest) {
   try {
-    requireRole(req, ["admin", "auxiliar", "profissional", "atendente"]);
+    // Paciente lista consultórios para AG01 (agendar consulta no portal)
+    requireRole(req, [
+      "admin",
+      "auxiliar",
+      "profissional",
+      "atendente",
+      "paciente",
+    ]);
     const { searchParams } = new URL(req.url);
     const filter = listConsultoriosQuerySchema.parse({
       ativo: searchParams.get("ativo") ?? undefined,

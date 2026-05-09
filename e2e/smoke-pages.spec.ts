@@ -112,9 +112,18 @@ test.beforeAll(async () => {
   });
   staffId = staff.id;
 
-  // Agendamento futuro
-  const futuro = new Date();
-  futuro.setDate(futuro.getDate() + 5);
+  // Helper: data local sem hora (evita drift de timezone com @db.Date)
+  const dataAt = (offset: number) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return d;
+  };
+
+  // Agendamento futuro (+5 dias, pulando FDS pra bater com a logica do teste)
+  const futuro = dataAt(5);
+  if (futuro.getDay() === 0) futuro.setDate(futuro.getDate() + 1);
+  if (futuro.getDay() === 6) futuro.setDate(futuro.getDate() + 2);
   const ag = await prisma.atendimento.create({
     data: {
       pacienteId: paciente.id,
@@ -128,8 +137,7 @@ test.beforeAll(async () => {
   agendamentoId = ag.id;
 
   // Atendimento realizado
-  const passado = new Date();
-  passado.setDate(passado.getDate() - 5);
+  const passado = dataAt(-5);
   const realizado = await prisma.atendimento.create({
     data: {
       pacienteId: paciente.id,
@@ -328,46 +336,247 @@ test.describe("Smoke — telas profissional", () => {
   });
 });
 
-test.describe("Smoke — portal paciente", () => {
-  test("/p (home) renderiza próximas + histórico", async ({ page }) => {
+test.describe("Portal paciente — fluxos reais", () => {
+  test("/p home — paciente vê próxima consulta com profissional certo", async ({
+    page,
+  }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
+    // Próximas: conteúdo do agendamento criado no fixture
     await expect(page.getByText(/Próximas consultas/i)).toBeVisible();
+    await expect(page.getByText("Dr. Smoke").first()).toBeVisible();
+    // Histórico: o atendimento realizado
+    await expect(page.getByText(/Histórico recente/i)).toBeVisible();
   });
 
-  test("/p/consultas renderiza lista", async ({ page }) => {
+  test("/p/consultas — lista exibe agendamento ativo + histórico", async ({
+    page,
+  }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
     await page.goto("/p/consultas");
     await expect(
       page.getByRole("heading", { name: /Minhas consultas/i }),
     ).toBeVisible();
+    // Espera a tabela carregar (>= 1 linha)
+    await page.getByText("Dr. Smoke").first().waitFor({ timeout: 5000 });
+    // Pelo menos 2 linhas (agendado + realizado do fixture)
+    const linhas = page.getByRole("row");
+    const total = await linhas.count();
+    // header row + 2 data rows
+    expect(total).toBeGreaterThanOrEqual(3);
+    // Confirma via DB que de fato o paciente tem >= 2 atendimentos
+    const dbCount = await prisma.atendimento.count({
+      where: {
+        paciente: { email: PACIENTE_EMAIL },
+        status: { in: ["agendado", "realizado", "em_atendimento"] },
+      },
+    });
+    expect(dbCount).toBeGreaterThanOrEqual(2);
   });
 
-  test("/p/consultas/[id] renderiza detalhe", async ({ page }) => {
+  test("/p/consultas/[id] — paciente cancela próprio agendamento com motivo", async ({
+    page,
+  }) => {
+    // Cria agendamento dedicado pra esse teste (não toca no do fixture)
+    const dataParaCancelar = new Date();
+    dataParaCancelar.setHours(0, 0, 0, 0);
+    dataParaCancelar.setDate(dataParaCancelar.getDate() + 12);
+    if (dataParaCancelar.getDay() === 0)
+      dataParaCancelar.setDate(dataParaCancelar.getDate() + 1);
+    if (dataParaCancelar.getDay() === 6)
+      dataParaCancelar.setDate(dataParaCancelar.getDate() + 2);
+
+    const paciente = await prisma.paciente.findFirstOrThrow({
+      where: { email: PACIENTE_EMAIL },
+    });
+    const agCancelavel = await prisma.atendimento.create({
+      data: {
+        pacienteId: paciente.id,
+        profissionalId,
+        consultorioId,
+        data: dataParaCancelar,
+        hora: "15:00",
+        valorConsulta: new Prisma.Decimal(0),
+      },
+    });
+
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
-    await page.goto(`/p/consultas/${agendamentoId}`);
+    await page.goto(`/p/consultas/${agCancelavel.id}`);
     await expect(page.getByText(/Detalhes da consulta/i)).toBeVisible();
+
+    // Botão Cancelar disponível pra status agendado
+    await page.getByRole("button", { name: /Cancelar consulta/i }).click();
+
+    // Form de motivo aparece — preenche e confirma
+    await page
+      .getByLabel("Motivo")
+      .fill("Conflito com viagem de trabalho confirmada hoje");
+    await page
+      .getByRole("button", { name: /Confirmar cancelamento/i })
+      .click();
+
+    // Aguarda o status atualizar na UI (re-fetch após cancel)
+    await expect(page.getByText("Cancelado", { exact: false })).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Persistência: status no DB + audit log com motivo
+    const ag = await prisma.atendimento.findUnique({
+      where: { id: agCancelavel.id },
+    });
+    expect(ag?.status).toBe("cancelado");
+    expect(ag?.motivoCancelamento).toContain("Conflito com viagem");
+
+    const log = await prisma.auditLog.findFirst({
+      where: { entidadeId: agCancelavel.id, campo: "status" },
+    });
+    expect(log?.valorDepois).toBe("cancelado");
+    expect(log?.motivo).toContain("Conflito com viagem");
   });
 
-  test("/p/agendar renderiza wizard", async ({ page }) => {
+  test("/p/agendar — wizard 4 etapas: especialidade → profissional → data → horário", async ({
+    page,
+  }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
     await page.goto("/p/agendar");
+
+    // Wizard carregou (fim do bootstrapping)
+    await expect(page.getByText(/Etapa 1 de 4/i)).toBeVisible();
+
+    // Etapa 1: Especialidade
+    await expect(page.getByText(/Qual especialidade/i)).toBeVisible();
+    await page
+      .getByRole("button", { name: "Clínica geral", exact: true })
+      .click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+
+    // Etapa 2: Profissional
+    await expect(page.getByText(/Escolha o profissional/i)).toBeVisible();
+    await page.getByRole("button", { name: /Dr\. Smoke/i }).click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+
+    // Etapa 3: Data — clica o 8º dia útil disponível
+    await expect(page.getByText(/Qual data prefere/i)).toBeVisible();
+    // O wizard renderiza 14 dias úteis. Cada botão tem o nome do dia +
+    // a data por extenso ("Quarta-feira" + "13 de mai..."). Pegamos o 8º
+    // botão dentro do grid de datas.
+    const botoesGrid = page.locator(
+      'button:has-text("de "):has(p:has-text("de "))',
+    );
+    // Fallback simples: pega botões cuja primeira <p> tem dia da semana
+    // (todos os 14 cards). Usa o índice 7 (= 8º botão).
+    const dataBtns = page
+      .locator("button")
+      .filter({ hasText: /-feira|sábado|domingo|segunda|terça|quarta|quinta|sexta/i });
+    await dataBtns.nth(7).click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+
+    // Etapa 4: Horário
+    await expect(page.getByText(/Escolha o horário/i)).toBeVisible();
+    await page.getByRole("button", { name: "09:30", exact: true }).click();
+
+    // Resumo na sidebar
     await expect(
-      page.getByRole("heading", { name: /Agendar consulta/i }),
+      page.getByText("Clínica geral", { exact: true }).first(),
     ).toBeVisible();
+    await expect(page.getByText("Dr. Smoke").first()).toBeVisible();
+
+    // Confirma
+    await Promise.all([
+      page.waitForURL("**/p/consultas", { timeout: 15_000 }),
+      page.getByRole("button", { name: /Confirmar agendamento/i }).click(),
+    ]);
+
+    // Persistência no DB
+    const ag = await prisma.atendimento.findFirst({
+      where: {
+        profissionalId,
+        hora: "09:30",
+        paciente: { email: PACIENTE_EMAIL },
+      },
+    });
+    expect(ag).not.toBeNull();
+    expect(ag?.status).toBe("agendado");
   });
 
-  test("/p/perfil renderiza dados do paciente", async ({ page }) => {
+  test("/p/agendar — bloqueia horário ocupado pelo mesmo profissional", async ({
+    page,
+  }) => {
+    await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
+    await page.goto("/p/agendar");
+
+    await expect(page.getByText(/Etapa 1 de 4/i)).toBeVisible();
+
+    // Avança até a etapa Data
+    await page
+      .getByRole("button", { name: "Clínica geral", exact: true })
+      .click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+    await page.getByRole("button", { name: /Dr\. Smoke/i }).click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+
+    // Calcula índice do dia que tem agendamento (+5 dias úteis do fixture)
+    // — mesma lógica usada no fixture pra criar o agendamento ocupado
+    const dataBtns = page
+      .locator("button")
+      .filter({ hasText: /-feira|sábado|domingo|segunda|terça|quarta|quinta|sexta/i });
+    // 5 dias úteis a frente = índice 4 (0=hoje, 1=+1 útil, ..., 4=+5)
+    // Mas o wizard pula FDS, então o 5º dia útil é index 4.
+    // Para ser consistente com o fixture (dataAt(5) + skip FDS), usamos o
+    // mesmo cálculo que o fixture
+    const ocupada = new Date();
+    ocupada.setHours(0, 0, 0, 0);
+    ocupada.setDate(ocupada.getDate() + 5);
+    if (ocupada.getDay() === 0) ocupada.setDate(ocupada.getDate() + 1);
+    if (ocupada.getDay() === 6) ocupada.setDate(ocupada.getDate() + 2);
+    // O wizard renderiza só dias úteis a partir de hoje. Calcula posição:
+    let posicao = 0;
+    const cur = new Date();
+    cur.setHours(0, 0, 0, 0);
+    while (cur.getTime() < ocupada.getTime()) {
+      const dow = cur.getDay();
+      if (dow !== 0 && dow !== 6) posicao++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    await dataBtns.nth(posicao).click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+
+    // Aguarda fetch de ocupados
+    await page.waitForTimeout(800);
+    const horario10 = page.getByRole("button", { name: "10:00", exact: true });
+    await expect(horario10).toBeDisabled();
+  });
+
+  test("/p/perfil — paciente vê próprios dados", async ({ page }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
     await page.goto("/p/perfil");
     await expect(
       page.getByRole("main").getByText("Paciente Smoke"),
     ).toBeVisible();
     await expect(page.getByText(PACIENTE_EMAIL)).toBeVisible();
+    await expect(page.getByText("11999990000")).toBeVisible();
   });
 
-  test("/p/perfil/editar renderiza form", async ({ page }) => {
+  test("/p/perfil/editar — paciente atualiza telefone e persiste", async ({
+    page,
+  }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
     await page.goto("/p/perfil/editar");
-    await expect(page.getByLabel(/Nome completo/i)).toBeVisible();
+    await expect(page.getByLabel(/Nome completo/i)).toHaveValue(
+      "Paciente Smoke",
+    );
+
+    const novoTel = "11955554444";
+    await page.getByLabel(/Celular/i).fill(novoTel);
+    await Promise.all([
+      page.waitForURL("**/p/perfil", { timeout: 15_000 }),
+      page.getByRole("button", { name: /Salvar alterações/i }).click(),
+    ]);
+
+    await expect(page.getByText(novoTel)).toBeVisible();
+
+    const persisted = await prisma.paciente.findFirst({
+      where: { email: PACIENTE_EMAIL },
+    });
+    expect(persisted?.telefone).toBe(novoTel);
   });
 });
