@@ -21,7 +21,7 @@ import { apiRegister, authErrorMessage } from "@/lib/auth-client";
 
 export default function PatientSignUpPage() {
   const router = useRouter();
-  const { setRole } = useRole();
+  const { setUser } = useRole();
   const [loading, setLoading] = useState(false);
   const [accept, setAccept] = useState(false);
   const [nome, setNome] = useState("");
@@ -38,7 +38,7 @@ export default function PatientSignUpPage() {
     setLoading(true);
     try {
       const { user } = await apiRegister({ nome, email, telefone, senha });
-      setRole(user.role);
+      setUser(user);
       toast.success("Conta criada · entrando no portal…");
       router.push("/p");
       router.refresh();
@@ -164,7 +164,7 @@ export default function PatientSignUpPage() {
               <p className="text-center text-sm text-muted-foreground">
                 Já tem conta?{" "}
                 <Link
-                  href="/entrar"
+                  href="/login"
                   className="font-medium text-primary hover:underline"
                 >
                   Entrar

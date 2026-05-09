@@ -17,6 +17,7 @@ export async function cleanAuthData() {
   await prisma.profissional.deleteMany();
   await prisma.staff.deleteMany();
   await prisma.consultorio.deleteMany();
+  await prisma.configuracao.deleteMany();
 }
 
 export async function getResetToken(email: string): Promise<string | null> {

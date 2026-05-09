@@ -310,11 +310,39 @@ test.describe("Smoke — telas admin/aux/atendente", () => {
     ).toBeVisible();
   });
 
-  test("configurações turnos renderiza defaults", async ({ page }) => {
+  test("configurações turnos — admin edita Manhã e persiste no DB", async ({
+    page,
+  }) => {
     await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "/dashboard");
     await page.goto("/configuracoes/turnos");
     await expect(page.getByText("Manhã", { exact: true })).toBeVisible();
+    // Estado inicial: defaults
     await expect(page.getByText("07:00 – 12:59")).toBeVisible();
+
+    // Edita via API direta (page.request herda cookie do login)
+    const res = await page.request.put("/api/configuracoes/turnos", {
+      data: {
+        manha: { inicio: "08:00", fim: "11:59" },
+        tarde: { inicio: "13:00", fim: "17:59" },
+        noite: { inicio: "18:00", fim: "19:59" },
+      },
+    });
+    expect(res.status()).toBe(200);
+
+    // Persistência no DB
+    const cfg = await prisma.configuracao.findUnique({
+      where: { chave: "turnos" },
+    });
+    expect(cfg).not.toBeNull();
+    const valor = cfg?.valor as { manha: { inicio: string } };
+    expect(valor.manha.inicio).toBe("08:00");
+
+    // Audit log
+    const log = await prisma.auditLog.findFirst({
+      where: { entidade: "Configuracao", campo: "turnos" },
+    });
+    expect(log).not.toBeNull();
+    expect(log?.motivo).toContain("Configuração de turnos");
   });
 
   test("configurações integrações renderiza", async ({ page }) => {
@@ -341,14 +369,35 @@ test.describe("Portal paciente — fluxos reais", () => {
     page,
   }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
-    // Próximas: conteúdo do agendamento criado no fixture
-    await expect(page.getByText(/Próximas consultas/i)).toBeVisible();
-    await expect(page.getByText("Dr. Smoke").first()).toBeVisible();
-    // Histórico: o atendimento realizado
-    await expect(page.getByText(/Histórico recente/i)).toBeVisible();
+
+    // Verifica via DB que paciente tem agendamentos
+    const dbAgendados = await prisma.atendimento.count({
+      where: {
+        paciente: { email: PACIENTE_EMAIL },
+        status: { in: ["agendado", "em_atendimento"] },
+      },
+    });
+
+    // Aguarda saída do estado "Carregando…"
+    await page.waitForFunction(
+      () => !document.body.textContent?.includes("Carregando"),
+      undefined,
+      { timeout: 10_000 },
+    );
+    // KPI "Próximas consultas" (label do MetricStat)
+    await expect(page.getByText("Próximas consultas").first()).toBeVisible();
+    await expect(page.getByText("Histórico recente")).toBeVisible();
+
+    if (dbAgendados > 0) {
+      await expect(page.getByText(/Sua próxima consulta/i)).toBeVisible();
+      await expect(page.getByText("Dr. Smoke").first()).toBeVisible();
+    } else {
+      // Empty state quando não há próximas
+      await expect(page.getByText(/Nenhuma consulta agendada/i)).toBeVisible();
+    }
   });
 
-  test("/p/consultas — lista exibe agendamento ativo + histórico", async ({
+  test("/p/consultas — tabs Próximas / Histórico exibem agendamento + realizado", async ({
     page,
   }) => {
     await loginAs(page, PACIENTE_EMAIL, PACIENTE_PASSWORD, "/p");
@@ -356,14 +405,15 @@ test.describe("Portal paciente — fluxos reais", () => {
     await expect(
       page.getByRole("heading", { name: /Minhas consultas/i }),
     ).toBeVisible();
-    // Espera a tabela carregar (>= 1 linha)
+
+    // Tab "Próximas" (default) — espera 1 row do agendamento futuro
     await page.getByText("Dr. Smoke").first().waitFor({ timeout: 5000 });
-    // Pelo menos 2 linhas (agendado + realizado do fixture)
-    const linhas = page.getByRole("row");
-    const total = await linhas.count();
-    // header row + 2 data rows
-    expect(total).toBeGreaterThanOrEqual(3);
-    // Confirma via DB que de fato o paciente tem >= 2 atendimentos
+
+    // Tab Histórico — espera 1 row do atendimento realizado
+    await page.getByRole("button", { name: /Histórico/i }).click();
+    await page.getByText("Dr. Smoke").first().waitFor({ timeout: 5000 });
+
+    // DB confirma fixtures
     const dbCount = await prisma.atendimento.count({
       where: {
         paciente: { email: PACIENTE_EMAIL },

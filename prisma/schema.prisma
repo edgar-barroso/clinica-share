@@ -319,3 +319,16 @@ model HealthCheck {
 
   @@map("health_checks")
 }
+
+// Configuração chave-valor JSON. Substitui constantes hardcoded
+// quando a UI pode editar (turnos, horários de funcionamento, etc).
+// Caveat: usecases puramente síncronos (`_lib/turnos.ts`) seguem
+// usando defaults hardcoded até R2 confirmar PEND-014 — esta tabela
+// armazena overrides exibidos/editáveis pelo admin.
+model Configuracao {
+  chave     String   @id
+  valor     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("configuracoes")
+}

@@ -10,7 +10,7 @@ import { useRole } from '@/lib/role';
 import { cn } from '@/lib/utils';
 
 export function Topbar() {
-  const { role, info } = useRole();
+  const { info } = useRole();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -32,7 +32,7 @@ export function Topbar() {
     }
     setMenuOpen(false);
     toast.success('Sessão encerrada');
-    router.push(role === 'paciente' ? '/entrar' : '/login');
+    router.push('/login');
   }
 
   return (

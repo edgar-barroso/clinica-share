@@ -44,7 +44,7 @@ test.describe("Auth flow E2E", () => {
     expect(me.status()).toBe(401);
 
     // 4) Login pela UI
-    await page.goto("/entrar");
+    await page.goto("/login");
     await page.getByLabel("E-mail").fill(EMAIL);
     await page.getByLabel("Senha").fill(SENHA_INICIAL);
     await page.getByRole("button", { name: /^Entrar$/ }).click();
@@ -69,7 +69,7 @@ test.describe("Auth flow E2E", () => {
     await page.waitForURL("**/login", { timeout: 15_000 });
 
     // 7) Login com nova senha
-    await page.goto("/entrar");
+    await page.goto("/login");
     await page.getByLabel("E-mail").fill(EMAIL);
     await page.getByLabel("Senha").fill(NOVA_SENHA);
     await page.getByRole("button", { name: /^Entrar$/ }).click();

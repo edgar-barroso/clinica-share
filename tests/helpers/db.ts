@@ -22,6 +22,7 @@ export async function cleanDb() {
   await prisma.profissional.deleteMany();
   await prisma.staff.deleteMany();
   await prisma.consultorio.deleteMany();
+  await prisma.configuracao.deleteMany();
 }
 
 /** @deprecated use `cleanDb()` */

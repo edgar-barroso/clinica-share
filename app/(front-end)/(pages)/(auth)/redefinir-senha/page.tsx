@@ -98,6 +98,7 @@ function RedefinirSenhaForm() {
               <Input
                 id="senha"
                 type="password"
+                placeholder="Mínimo 8 caracteres"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 autoComplete="new-password"
@@ -110,6 +111,7 @@ function RedefinirSenhaForm() {
               <Input
                 id="confirma"
                 type="password"
+                placeholder="Repita a nova senha"
                 value={confirma}
                 onChange={(e) => setConfirma(e.target.value)}
                 autoComplete="new-password"

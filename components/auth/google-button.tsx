@@ -14,7 +14,7 @@ interface Props {
 
 export function GoogleButton({ mode, redirectTo }: Props) {
   const router = useRouter();
-  const { setRole } = useRole();
+  const { setUser } = useRole();
   const [loading, setLoading] = useState(false);
 
   async function handleCredential(credential: string | undefined) {
@@ -25,7 +25,7 @@ export function GoogleButton({ mode, redirectTo }: Props) {
     setLoading(true);
     try {
       const { user } = await apiGoogle({ idToken: credential });
-      setRole(user.role);
+      setUser(user);
       toast.success(
         mode === "entrar" ? "Bem-vindo de volta!" : "Conta criada com sucesso!",
       );

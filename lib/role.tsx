@@ -73,6 +73,12 @@ interface RoleContextValue {
    * imediatamente sem esperar o próximo /me.
    */
   setRole: (r: Role) => void;
+  /**
+   * Popula o user (e role) imediatamente após login. Evita race entre o
+   * push de rota e o /api/auth/me próximo (que pode não disparar a tempo,
+   * deixando user=null e quebrando páginas que dependem de pacienteId).
+   */
+  setUser: (user: AuthUser | null) => void;
   /** Re-busca o usuário em /api/auth/me. Útil após mutações no perfil. */
   refresh: () => Promise<void>;
 }
@@ -116,6 +122,11 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     setRoleState(r);
   }, []);
 
+  const setUserOptimistic = useCallback((u: AuthUser | null) => {
+    setUser(u);
+    if (u) setRoleState(u.role);
+  }, []);
+
   return (
     <RoleContext.Provider
       value={{
@@ -124,6 +135,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         setRole,
+        setUser: setUserOptimistic,
         refresh,
       }}
     >

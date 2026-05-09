@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, ShieldAlert } from "lucide-react";
+import { CalendarDays, Settings, ShieldAlert } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layouts/page-header";
@@ -101,6 +103,15 @@ export default function MinhaAgendaPage() {
       <PageHeader
         title="Minha agenda"
         description={`${userNome} · próximos atendimentos`}
+        actions={
+          <Link
+            href={`/profissionais/${profissionalId}/editar`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Settings size={14} />
+            Meu perfil
+          </Link>
+        }
       />
 
       {loading ? (
