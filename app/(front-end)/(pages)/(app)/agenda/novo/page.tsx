@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Calendar, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle2, DoorOpen } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,9 @@ import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
 import {
   apiListProfissionais,
   type Profissional,
+  type Turno,
+  type TurnoFixo,
 } from "@/lib/api/profissionais";
-import {
-  apiListConsultorios,
-  type Consultorio,
-} from "@/lib/api/consultorios";
 import {
   apiCreateAgendamento,
   apiListAgendamentos,
@@ -46,17 +44,29 @@ function amanhaISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+const PERIODO_TO_TURNO: Record<string, Turno> = {
+  Manhã: "manha",
+  Tarde: "tarde",
+  Noite: "noite",
+};
+
+const TURNO_LABEL: Record<Turno, string> = {
+  manha: "manhã",
+  tarde: "tarde",
+  noite: "noite",
+};
+
+const NOME_DOW = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
 export default function NovoAgendamentoPage() {
   const router = useRouter();
   const [pacienteId, setPacienteId] = useState("");
   const [profissionalId, setProfissionalId] = useState("");
-  const [consultorioId, setConsultorioId] = useState("");
   const [data, setData] = useState(amanhaISO);
   const [horario, setHorario] = useState<string | null>(null);
   const [observacoes, setObservacoes] = useState("");
 
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
-  const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
   const [ocupados, setOcupados] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   // Blocos da clínica vindos de /configuracoes/turnos.
@@ -68,15 +78,6 @@ export default function NovoAgendamentoPage() {
         setProfissionais(res.profissionais);
         if (res.profissionais.length > 0 && !profissionalId) {
           setProfissionalId(res.profissionais[0].id);
-        }
-      })
-      .catch((err) => toast.error(apiErrorMessage(err)));
-
-    apiListConsultorios({ ativo: true })
-      .then((res) => {
-        setConsultorios(res.consultorios);
-        if (res.consultorios.length > 0 && !consultorioId) {
-          setConsultorioId(res.consultorios[0].id);
         }
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
@@ -113,12 +114,46 @@ export default function NovoAgendamentoPage() {
 
   const duracaoMin = profSelecionado?.duracaoConsultaMinutos ?? 30;
 
+  // Indexa turnos fixos por (DOW, turno) — fonte de verdade das salas
+  // e horários disponíveis. Sem turnoFixo no slot escolhido, o backend
+  // rejeita o agendamento, então a UI já filtra pra evitar erro.
+  const turnosPorDow = useMemo(() => {
+    const map = new Map<number, Map<Turno, TurnoFixo>>();
+    if (!profSelecionado?.turnosFixos) return map;
+    for (const tf of profSelecionado.turnosFixos) {
+      if (!map.has(tf.diaSemana)) map.set(tf.diaSemana, new Map());
+      map.get(tf.diaSemana)!.set(tf.turno, tf);
+    }
+    return map;
+  }, [profSelecionado]);
+
+  const dowDaData = useMemo(() => {
+    if (!data) return null;
+    return new Date(`${data}T12:00:00`).getDay();
+  }, [data]);
+
+  const profAtendeNaData = useMemo(() => {
+    if (dowDaData === null) return false;
+    return turnosPorDow.has(dowDaData);
+  }, [dowDaData, turnosPorDow]);
+
+  // Blocos restritos aos turnos fixos do prof no DOW da data
+  const blocosPermitidos = useMemo(() => {
+    if (dowDaData === null) return [];
+    const turnos = turnosPorDow.get(dowDaData);
+    if (!turnos || turnos.size === 0) return [];
+    return blocos.filter((b) => {
+      const t = PERIODO_TO_TURNO[b.periodo];
+      return t !== undefined && turnos.has(t);
+    });
+  }, [blocos, dowDaData, turnosPorDow]);
+
   const horariosBlocos = useMemo(
-    () => gerarSlots(blocos, duracaoMin),
-    [blocos, duracaoMin],
+    () => gerarSlots(blocosPermitidos, duracaoMin),
+    [blocosPermitidos, duracaoMin],
   );
 
-  // Reseta horário quando duração muda (profissional diferente).
+  // Reseta horário quando a lista de slots muda (novo prof ou nova data).
   useEffect(() => {
     setHorario((cur) => {
       if (!cur) return cur;
@@ -127,23 +162,38 @@ export default function NovoAgendamentoPage() {
     });
   }, [horariosBlocos]);
 
+  // Resolve o turnoFixo (e portanto o consultório) do horário selecionado.
+  const turnoDoHorario: Turno | null = useMemo(() => {
+    if (!horario) return null;
+    const tarde = blocos.find((b) => b.periodo === "Tarde")?.inicio ?? "13:00";
+    const noite = blocos.find((b) => b.periodo === "Noite")?.inicio ?? "18:00";
+    if (horario < tarde) return "manha";
+    if (horario < noite) return "tarde";
+    return "noite";
+  }, [horario, blocos]);
+
+  const turnoFixoDoSlot = useMemo(() => {
+    if (dowDaData === null || !turnoDoHorario) return null;
+    return turnosPorDow.get(dowDaData)?.get(turnoDoHorario) ?? null;
+  }, [dowDaData, turnoDoHorario, turnosPorDow]);
+
   const dataLabel = useMemo(() => {
     if (!data) return "—";
-    try {
-      return formatDateLong(data);
-    } catch {
-      return data;
-    }
+    return formatDateLong(data) || data;
   }, [data]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!pacienteId) {
+      toast.warning("Selecione um paciente");
+      return;
+    }
     if (!horario) {
       toast.warning("Escolha um horário disponível");
       return;
     }
-    if (!pacienteId) {
-      toast.warning("Selecione um paciente");
+    if (!turnoFixoDoSlot) {
+      toast.error("Profissional não atende neste dia/horário");
       return;
     }
     setSubmitting(true);
@@ -151,7 +201,7 @@ export default function NovoAgendamentoPage() {
       await apiCreateAgendamento({
         pacienteId,
         profissionalId,
-        consultorioId,
+        consultorioId: turnoFixoDoSlot.consultorioId,
         data,
         hora: horario,
         observacoes: observacoes.trim() || undefined,
@@ -201,45 +251,36 @@ export default function NovoAgendamentoPage() {
                   .
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="profissional">Profissional</Label>
-                  {profissionais.length === 0 ? (
-                    <Skeleton className="h-10 w-full rounded-xl" />
-                  ) : (
-                    <Select
-                      id="profissional"
-                      required
-                      value={profissionalId}
-                      onChange={(e) => setProfissionalId(e.target.value)}
-                    >
-                      {profissionais.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.nome} — {p.especialidade}
-                        </option>
-                      ))}
-                    </Select>
+              <div className="space-y-1.5">
+                <Label htmlFor="profissional">Profissional</Label>
+                {profissionais.length === 0 ? (
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                ) : (
+                  <Select
+                    id="profissional"
+                    required
+                    value={profissionalId}
+                    onChange={(e) => {
+                      setProfissionalId(e.target.value);
+                      setHorario(null);
+                    }}
+                  >
+                    {profissionais.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome} — {p.especialidade}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+                {profSelecionado &&
+                  (!profSelecionado.turnosFixos ||
+                    profSelecionado.turnosFixos.length === 0) && (
+                    <p className="flex items-start gap-1.5 text-xs text-warning">
+                      <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                      Este profissional não tem turnos fixos cadastrados.
+                      Cadastre antes de agendar.
+                    </p>
                   )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="consultorio">Consultório</Label>
-                  {consultorios.length === 0 ? (
-                    <Skeleton className="h-10 w-full rounded-xl" />
-                  ) : (
-                    <Select
-                      id="consultorio"
-                      required
-                      value={consultorioId}
-                      onChange={(e) => setConsultorioId(e.target.value)}
-                    >
-                      {consultorios.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -261,15 +302,31 @@ export default function NovoAgendamentoPage() {
                   }}
                   required
                 />
+                {data && profSelecionado && !profAtendeNaData && (
+                  <p className="flex items-start gap-1.5 text-xs text-warning">
+                    <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                    {profSelecionado.nome} não atende em{" "}
+                    {dowDaData !== null ? NOME_DOW[dowDaData] : "—"}. Escolha
+                    outro dia.
+                  </p>
+                )}
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Slots gerados conforme a duração padrão de{" "}
-                <span className="font-medium text-foreground">
-                  {duracaoMin} min
-                </span>
-                {profSelecionado ? ` de ${profSelecionado.nome}` : ""}.
-              </p>
+              {profAtendeNaData && (
+                <p className="text-xs text-muted-foreground">
+                  Horários disponíveis nos turnos fixos de{" "}
+                  <span className="font-medium text-foreground">
+                    {profSelecionado?.nome}
+                  </span>{" "}
+                  · slots de {duracaoMin} min.
+                </p>
+              )}
+
+              {horariosBlocos.length === 0 && profAtendeNaData && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum slot disponível para esta combinação.
+                </p>
+              )}
 
               {horariosBlocos.map((bloco) => (
                 <div key={bloco.periodo}>
@@ -343,10 +400,40 @@ export default function NovoAgendamentoPage() {
                     )}
                   </span>
                 </p>
+                <p>
+                  <span className="text-muted-foreground">Sala:</span>{" "}
+                  {turnoFixoDoSlot ? (
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <DoorOpen size={12} />
+                      {turnoFixoDoSlot.consultorio.nome}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      — definida pelo turno —
+                    </span>
+                  )}
+                </p>
+                {turnoFixoDoSlot && turnoDoHorario && (
+                  <p className="text-xs text-muted-foreground">
+                    Turno fixo do profissional: {NOME_DOW[turnoFixoDoSlot.diaSemana]}{" "}
+                    · {TURNO_LABEL[turnoDoHorario]}
+                  </p>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Após confirmar, o sistema bloqueia automaticamente o horário
-                escolhido para evitar conflito.
+                A sala é definida automaticamente pelo turno fixo do
+                profissional cadastrado em{" "}
+                <Link
+                  href={
+                    profSelecionado
+                      ? `/profissionais/${profSelecionado.id}/editar`
+                      : "/profissionais"
+                  }
+                  className="font-medium text-primary hover:underline"
+                >
+                  {profSelecionado ? "perfil do profissional" : "profissionais"}
+                </Link>
+                .
               </p>
             </CardContent>
           </Card>
@@ -355,7 +442,7 @@ export default function NovoAgendamentoPage() {
             type="submit"
             className="w-full"
             size="lg"
-            disabled={!horario || submitting}
+            disabled={!horario || !turnoFixoDoSlot || submitting}
           >
             <CheckCircle2 size={16} />
             {submitting ? "Salvando..." : "Confirmar agendamento"}

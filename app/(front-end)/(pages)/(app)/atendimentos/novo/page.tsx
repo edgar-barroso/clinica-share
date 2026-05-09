@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, ShieldAlert } from "lucide-react";
+import { AlertCircle, CheckCircle2, DoorOpen, ShieldAlert } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -22,16 +22,23 @@ import { PacienteCombobox } from "@/components/paciente/paciente-combobox";
 import {
   apiListProfissionais,
   type Profissional,
+  type Turno,
+  type TurnoFixo,
 } from "@/lib/api/profissionais";
 import {
-  apiListConsultorios,
-  type Consultorio,
-} from "@/lib/api/consultorios";
-import {
   apiCreateWalkIn,
+  apiListAtendimentos,
   type FinalizarAtendimentoInput,
 } from "@/lib/api/atendimentos";
+import { apiGetTurnos } from "@/lib/api/configuracoes";
 import { apiErrorMessage } from "@/lib/api-client";
+import {
+  BLOCOS_PADRAO,
+  gerarSlots,
+  slotConflita,
+  turnosConfigParaBlocos,
+  type Bloco,
+} from "@/lib/horarios";
 
 function hojeISO() {
   const d = new Date();
@@ -42,14 +49,35 @@ function hojeISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+const PERIODO_TO_TURNO: Record<string, Turno> = {
+  Manhã: "manha",
+  Tarde: "tarde",
+  Noite: "noite",
+};
+
+const TURNO_LABEL: Record<Turno, string> = {
+  manha: "manhã",
+  tarde: "tarde",
+  noite: "noite",
+};
+
+const NOME_DOW = [
+  "domingo",
+  "segunda",
+  "terça",
+  "quarta",
+  "quinta",
+  "sexta",
+  "sábado",
+];
+
 export default function NovoAtendimentoPage() {
   const router = useRouter();
 
   const [pacienteId, setPacienteId] = useState("");
   const [profissionalId, setProfissionalId] = useState("");
-  const [consultorioId, setConsultorioId] = useState("");
   const [data, setData] = useState(hojeISO);
-  const [hora, setHora] = useState("09:00");
+  const [horario, setHorario] = useState<string | null>(null);
   const [valorConsulta, setValorConsulta] = useState("250");
   const [statusPagamento, setStatusPagamento] =
     useState<FinalizarAtendimentoInput["statusPagamento"]>("pago");
@@ -69,8 +97,9 @@ export default function NovoAtendimentoPage() {
   const [prontuarioExternoRef, setProntuarioExternoRef] = useState("");
 
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
-  const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
+  const [ocupados, setOcupados] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [blocos, setBlocos] = useState<Bloco[]>(BLOCOS_PADRAO);
 
   useEffect(() => {
     apiListProfissionais({ ativo: true })
@@ -79,26 +108,113 @@ export default function NovoAtendimentoPage() {
         if (res.profissionais.length > 0) {
           const primeiro = res.profissionais[0];
           setProfissionalId(primeiro.id);
-          // Pré-preenche o valor com a base do profissional selecionado.
           setValorConsulta(String(Number(primeiro.valorConsultaBase)));
         }
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
 
-    apiListConsultorios({ ativo: true })
+    apiGetTurnos()
+      .then((res) => setBlocos(turnosConfigParaBlocos(res.turnos)))
+      .catch(() => {
+        // mantém BLOCOS_PADRAO
+      });
+  }, []);
+
+  // Carrega ocupados quando (profissional, data) mudam — evita registrar
+  // dois atendimentos na mesma (data, hora, sala).
+  useEffect(() => {
+    if (!profissionalId || !data) {
+      setOcupados(new Set());
+      return;
+    }
+    apiListAtendimentos({ data, profissionalId })
       .then((res) => {
-        setConsultorios(res.consultorios);
-        if (res.consultorios.length > 0) {
-          setConsultorioId(res.consultorios[0].id);
+        const set = new Set<string>();
+        for (const a of res.atendimentos) {
+          if (a.status !== "cancelado") set.add(a.hora);
         }
+        setOcupados(set);
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
-  }, []);
+  }, [profissionalId, data]);
+
+  const profSelecionado = useMemo(
+    () => profissionais.find((p) => p.id === profissionalId) ?? null,
+    [profissionais, profissionalId],
+  );
+
+  const duracaoMin = profSelecionado?.duracaoConsultaMinutos ?? 30;
+
+  const turnosPorDow = useMemo(() => {
+    const map = new Map<number, Map<Turno, TurnoFixo>>();
+    if (!profSelecionado?.turnosFixos) return map;
+    for (const tf of profSelecionado.turnosFixos) {
+      if (!map.has(tf.diaSemana)) map.set(tf.diaSemana, new Map());
+      map.get(tf.diaSemana)!.set(tf.turno, tf);
+    }
+    return map;
+  }, [profSelecionado]);
+
+  const dowDaData = useMemo(() => {
+    if (!data) return null;
+    return new Date(`${data}T12:00:00`).getDay();
+  }, [data]);
+
+  const profAtendeNaData = useMemo(() => {
+    if (dowDaData === null) return false;
+    return turnosPorDow.has(dowDaData);
+  }, [dowDaData, turnosPorDow]);
+
+  const blocosPermitidos = useMemo(() => {
+    if (dowDaData === null) return [];
+    const turnos = turnosPorDow.get(dowDaData);
+    if (!turnos || turnos.size === 0) return [];
+    return blocos.filter((b) => {
+      const t = PERIODO_TO_TURNO[b.periodo];
+      return t !== undefined && turnos.has(t);
+    });
+  }, [blocos, dowDaData, turnosPorDow]);
+
+  const horariosBlocos = useMemo(
+    () => gerarSlots(blocosPermitidos, duracaoMin),
+    [blocosPermitidos, duracaoMin],
+  );
+
+  // Reseta horário quando lista de slots muda (prof ou data novo).
+  useEffect(() => {
+    setHorario((cur) => {
+      if (!cur) return cur;
+      const valid = horariosBlocos.some((b) => b.slots.includes(cur));
+      return valid ? cur : null;
+    });
+  }, [horariosBlocos]);
+
+  const turnoDoHorario: Turno | null = useMemo(() => {
+    if (!horario) return null;
+    const tarde = blocos.find((b) => b.periodo === "Tarde")?.inicio ?? "13:00";
+    const noite = blocos.find((b) => b.periodo === "Noite")?.inicio ?? "18:00";
+    if (horario < tarde) return "manha";
+    if (horario < noite) return "tarde";
+    return "noite";
+  }, [horario, blocos]);
+
+  const turnoFixoDoSlot = useMemo(() => {
+    if (dowDaData === null || !turnoDoHorario) return null;
+    return turnosPorDow.get(dowDaData)?.get(turnoDoHorario) ?? null;
+  }, [dowDaData, turnoDoHorario, turnosPorDow]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!pacienteId) {
       toast.warning("Selecione um paciente");
+      return;
+    }
+    if (!horario) {
+      toast.warning("Escolha um horário disponível");
+      return;
+    }
+    if (!turnoFixoDoSlot) {
+      toast.error("Profissional não atende neste dia/horário");
       return;
     }
     if (statusPagamento === "gratuito" && motivo.trim().length < 3) {
@@ -109,8 +225,6 @@ export default function NovoAtendimentoPage() {
     setSubmitting(true);
     try {
       // Monta o payload do prontuário conforme o tipo escolhido.
-      // - interno: salva os 4 campos preenchidos (omite se todos vazios)
-      // - externo: salva uma flag + referência opcional (onde o prontuário fica)
       let prontuarioPayload: Record<string, unknown> | undefined;
       if (tipoProntuario === "externo") {
         prontuarioPayload = {
@@ -135,9 +249,9 @@ export default function NovoAtendimentoPage() {
       await apiCreateWalkIn({
         pacienteId,
         profissionalId,
-        consultorioId,
+        consultorioId: turnoFixoDoSlot.consultorioId,
         data,
-        hora,
+        hora: horario,
         valorConsulta: Number(valorConsulta) || 0,
         statusPagamento,
         motivoDescontoOuGratuidade:
@@ -187,8 +301,8 @@ export default function NovoAtendimentoPage() {
             <CardHeader>
               <CardTitle>Identificação</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
                 <Label htmlFor="paciente">Paciente</Label>
                 <PacienteCombobox
                   id="paciente"
@@ -208,6 +322,7 @@ export default function NovoAtendimentoPage() {
                     onChange={(e) => {
                       const novoId = e.target.value;
                       setProfissionalId(novoId);
+                      setHorario(null);
                       const prof = profissionais.find((p) => p.id === novoId);
                       if (prof) {
                         setValorConsulta(String(Number(prof.valorConsultaBase)));
@@ -222,46 +337,107 @@ export default function NovoAtendimentoPage() {
                     ))}
                   </Select>
                 )}
+                {profSelecionado &&
+                  (!profSelecionado.turnosFixos ||
+                    profSelecionado.turnosFixos.length === 0) && (
+                    <p className="flex items-start gap-1.5 text-xs text-warning">
+                      <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                      Este profissional não tem turnos fixos cadastrados.
+                      Cadastre antes de registrar atendimento.
+                    </p>
+                  )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="consultorio">Consultório</Label>
-                {consultorios.length === 0 ? (
-                  <Skeleton className="h-10 w-full rounded-xl" />
-                ) : (
-                  <Select
-                    id="consultorio"
-                    value={consultorioId}
-                    onChange={(e) => setConsultorioId(e.target.value)}
-                    required
-                  >
-                    {consultorios.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="data">Data</Label>
+                <Label htmlFor="data">Data do atendimento</Label>
                 <Input
                   id="data"
                   type="date"
                   value={data}
-                  onChange={(e) => setData(e.target.value)}
+                  onChange={(e) => {
+                    setData(e.target.value);
+                    setHorario(null);
+                  }}
                   required
                 />
+                {data && profSelecionado && !profAtendeNaData && (
+                  <p className="flex items-start gap-1.5 text-xs text-warning">
+                    <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                    {profSelecionado.nome} não atende em{" "}
+                    {dowDaData !== null ? NOME_DOW[dowDaData] : "—"}. Escolha
+                    outro dia.
+                  </p>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="hora">Horário</Label>
-                <Input
-                  id="hora"
-                  type="time"
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  required
-                />
-              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Horário</CardTitle>
+              <CardDescription>
+                Sala vem do turno fixo do profissional — sem seleção manual.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {profAtendeNaData && (
+                <p className="text-xs text-muted-foreground">
+                  Slots de {duracaoMin} min nos turnos fixos de{" "}
+                  <span className="font-medium text-foreground">
+                    {profSelecionado?.nome}
+                  </span>
+                  .
+                </p>
+              )}
+
+              {horariosBlocos.length === 0 && profAtendeNaData && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum slot disponível nesta combinação.
+                </p>
+              )}
+
+              {horariosBlocos.map((bloco) => (
+                <div key={bloco.periodo}>
+                  <p className="mb-2 text-sm font-medium">{bloco.periodo}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {bloco.slots.map((h) => {
+                      const ocupado = slotConflita(h, ocupados, duracaoMin);
+                      const selecionado = horario === h;
+                      return (
+                        <button
+                          key={h}
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => setHorario(h)}
+                          className={`rounded-xl border px-3 py-2 text-sm font-medium tabular-nums transition-colors ${
+                            ocupado
+                              ? "border-border bg-muted/50 text-muted-foreground line-through cursor-not-allowed"
+                              : selecionado
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card hover:bg-muted"
+                          }`}
+                        >
+                          {h}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {turnoFixoDoSlot && (
+                <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <DoorOpen size={14} className="shrink-0 text-primary" />
+                  <span>
+                    Sala atribuída:{" "}
+                    <strong>{turnoFixoDoSlot.consultorio.nome}</strong>{" "}
+                    <span className="text-muted-foreground">
+                      ·{" "}
+                      {dowDaData !== null && NOME_DOW[dowDaData]}
+                      {turnoDoHorario && ` (${TURNO_LABEL[turnoDoHorario]})`}
+                    </span>
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -300,8 +476,7 @@ export default function NovoAtendimentoPage() {
               </div>
               {statusPagamento === "gratuito" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="motivo">
-                    Justificativa da gratuidade                  </Label>
+                  <Label htmlFor="motivo">Justificativa da gratuidade</Label>
                   <Input
                     id="motivo"
                     value={motivo}
@@ -436,7 +611,9 @@ export default function NovoAtendimentoPage() {
             type="submit"
             size="lg"
             className="w-full"
-            disabled={submitting || !pacienteId}
+            disabled={
+              submitting || !pacienteId || !horario || !turnoFixoDoSlot
+            }
           >
             <CheckCircle2 size={16} />
             {submitting ? "Salvando..." : "Registrar atendimento"}
