@@ -227,7 +227,8 @@ async function seedProfissionais() {
       email: "prof1@clinicashare.local",
       telefone: "11977770001",
       modalidadeContrato: "percentual" as const,
-      percentualRepasse: new Prisma.Decimal(0.7),
+      // 30% do bruto vai pra clínica (profissional fica com 70%).
+      percentualRepasse: new Prisma.Decimal(0.3),
       valorConsultaBase: new Prisma.Decimal(220),
       duracaoConsultaMinutos: 30,
     },
@@ -238,7 +239,8 @@ async function seedProfissionais() {
       email: "prof2@clinicashare.local",
       telefone: "11977770002",
       modalidadeContrato: "percentual" as const,
-      percentualRepasse: new Prisma.Decimal(0.65),
+      // 30% pra clínica.
+      percentualRepasse: new Prisma.Decimal(0.3),
       valorConsultaBase: new Prisma.Decimal(240),
       duracaoConsultaMinutos: 30,
     },
@@ -271,7 +273,8 @@ async function seedProfissionais() {
       email: "prof5@clinicashare.local",
       telefone: "11977770005",
       modalidadeContrato: "percentual" as const,
-      percentualRepasse: new Prisma.Decimal(0.6),
+      // Dermato cobra mais; clínica fica com 25%.
+      percentualRepasse: new Prisma.Decimal(0.25),
       valorConsultaBase: new Prisma.Decimal(280),
       duracaoConsultaMinutos: 30,
     },

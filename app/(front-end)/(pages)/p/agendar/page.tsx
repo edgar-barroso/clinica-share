@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
 import { apiCancelarAgendamento, apiCreateAgendamento, apiGetAgendamento, apiListAgendamentos, type AgendamentoListItem } from '@/lib/api/agendamentos';
-import { apiListProfissionais, type Profissional } from '@/lib/api/profissionais';
+import { apiListProfissionais, type Profissional, type Turno, type TurnoFixo } from '@/lib/api/profissionais';
 import { apiListConsultorios, type Consultorio } from '@/lib/api/consultorios';
 import { apiGetTurnos } from '@/lib/api/configuracoes';
 import { apiErrorMessage } from '@/lib/api-client';
@@ -115,7 +115,47 @@ function AgendarPageInner() {
 
   const duracaoMin = profSelecionado?.duracaoConsultaMinutos ?? 30;
 
-  const horariosBlocos = useMemo(() => gerarSlots(blocos, duracaoMin), [blocos, duracaoMin]);
+  // Indexa turnos fixos do profissional por dia da semana → turno → TurnoFixo.
+  // Se Helena tem [Seg-Tarde, Qui-Manhã], o map fica:
+  //   { 1: { tarde: TF(seg-tarde) }, 4: { manha: TF(qui-manha) } }
+  // Usamos isso pra filtrar dias do calendário e blocos da grade de horários.
+  const turnosPorDow = useMemo(() => {
+    const map = new Map<number, Map<Turno, TurnoFixo>>();
+    if (!profSelecionado?.turnosFixos) return map;
+    for (const tf of profSelecionado.turnosFixos) {
+      if (!map.has(tf.diaSemana)) map.set(tf.diaSemana, new Map());
+      map.get(tf.diaSemana)!.set(tf.turno, tf);
+    }
+    return map;
+  }, [profSelecionado]);
+
+  // Mapeia label do bloco ("Manhã"/"Tarde"/"Noite") pro identificador
+  // de turno persistido ("manha"/"tarde"/"noite"). Usado pra cruzar
+  // os blocos da clínica com os turnos fixos do profissional.
+  const PERIODO_TO_TURNO: Record<string, Turno> = {
+    Manhã: 'manha',
+    Tarde: 'tarde',
+    Noite: 'noite',
+  };
+
+  // Blocos restritos ao DOW da data selecionada. Sem data ou prof, lista
+  // vazia (a UI da etapa de horário só aparece depois que a data é escolhida).
+  const blocosPermitidos = useMemo(() => {
+    if (!data || !profSelecionado) return [];
+    const dow = new Date(`${data}T12:00:00`).getDay();
+    const turnos = turnosPorDow.get(dow);
+    if (!turnos || turnos.size === 0) return [];
+    return blocos.filter((b) => {
+      const t = PERIODO_TO_TURNO[b.periodo];
+      return t !== undefined && turnos.has(t);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocos, data, profSelecionado, turnosPorDow]);
+
+  const horariosBlocos = useMemo(
+    () => gerarSlots(blocosPermitidos, duracaoMin),
+    [blocosPermitidos, duracaoMin],
+  );
 
   const stepIndex = STEPS.findIndex((s) => s.key === step);
   const isUltimoStep = step === 'horario';
@@ -179,7 +219,10 @@ function AgendarPageInner() {
   }, [data, profId]);
 
   // Pré-carrega o mês visível para descobrir quais dias estão totalmente
-  // lotados — esses dias ficam desabilitados no calendário.
+  // lotados — esses dias ficam desabilitados no calendário. Para cada dia,
+  // os slots possíveis dependem dos turnos fixos do profissional naquele
+  // DOW (Helena em terça nem aparece como opção; em segunda, só os slots
+  // do bloco "Tarde" entram na conta).
   useEffect(() => {
     if (!profId) {
       setDiasLotados(new Set());
@@ -190,30 +233,39 @@ function AgendarPageInner() {
     const dataInicio = isoDate(new Date(ano, mes, 1));
     const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
     const dataFim = isoDate(new Date(ano, mes, ultimoDiaMes));
-    const todosSlots = horariosBlocos.flatMap((b) => b.slots);
-    if (todosSlots.length === 0) {
-      setDiasLotados(new Set());
-      return;
-    }
     apiListAgendamentos({ dataInicio, dataFim, profissionalId: profId })
       .then((res) => {
         const horasPorDia = new Map<string, string[]>();
         for (const a of res.agendamentos) {
           if (a.status === 'cancelado') continue;
-          const iso = a.data.slice(0, 10); // tolera ISO datetime do Prisma @db.Date
+          const iso = a.data.slice(0, 10);
           const arr = horasPorDia.get(iso) ?? [];
           arr.push(a.hora);
           horasPorDia.set(iso, arr);
         }
         const lotados = new Set<string>();
         for (const [iso, horas] of horasPorDia) {
-          const temLivre = todosSlots.some((h) => !slotConflita(h, horas, duracaoMin));
+          const dow = new Date(`${iso}T12:00:00`).getDay();
+          const turnos = turnosPorDow.get(dow);
+          if (!turnos || turnos.size === 0) continue; // nem aparece no calendário
+          const blocosDoDia = blocos.filter((b) => {
+            const t = PERIODO_TO_TURNO[b.periodo];
+            return t !== undefined && turnos.has(t);
+          });
+          const slotsDoDia = gerarSlots(blocosDoDia, duracaoMin).flatMap(
+            (b) => b.slots,
+          );
+          if (slotsDoDia.length === 0) continue;
+          const temLivre = slotsDoDia.some(
+            (h) => !slotConflita(h, horas, duracaoMin),
+          );
           if (!temLivre) lotados.add(iso);
         }
         setDiasLotados(lotados);
       })
       .catch(() => setDiasLotados(new Set()));
-  }, [profId, mesVisivel, duracaoMin, horariosBlocos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profId, mesVisivel, duracaoMin, blocos, turnosPorDow]);
 
   // Mostra o valor real cadastrado no profissional. O servidor copia esse
   // valor para Atendimento.valorConsulta no momento do agendamento, então
@@ -245,10 +297,21 @@ function AgendarPageInner() {
 
   async function finalizar() {
     if (!pacienteId || !profId || !data || !horario) return;
-    // Escolhe consultório compatível com a especialidade, ou primeiro ativo
-    const consPreferido = consultorios.find((c) => c.especialidadesCompativeis.includes(profSelecionado?.especialidade ?? '')) ?? consultorios[0];
+    // Resolve o consultório pelo turno fixo do profissional naquele
+    // (DOW, turno) — bate exatamente com o que o backend valida.
+    const dow = new Date(`${data}T12:00:00`).getDay();
+    const turnoDoSlot: Turno =
+      horario < (blocos.find((b) => b.periodo === 'Tarde')?.inicio ?? '13:00')
+        ? 'manha'
+        : horario < (blocos.find((b) => b.periodo === 'Noite')?.inicio ?? '18:00')
+          ? 'tarde'
+          : 'noite';
+    const turnoFixoDoSlot = turnosPorDow.get(dow)?.get(turnoDoSlot);
+    const consPreferido = turnoFixoDoSlot
+      ? (consultorios.find((c) => c.id === turnoFixoDoSlot.consultorioId) ?? null)
+      : null;
     if (!consPreferido) {
-      toast.error('Nenhum consultório disponível');
+      toast.error('Profissional não atende neste dia/horário');
       return;
     }
     setSubmitting(true);
@@ -467,10 +530,14 @@ function AgendarPageInner() {
                       const isPast = d.getTime() < hojeRef.getTime();
                       const isFds = dow === 0 || dow === 6;
                       const isLotado = diasLotados.has(iso);
-                      const disabled = isPast || isFds || isLotado;
-                      const aria = isLotado
-                        ? `${formatDateLong(d)} — sem horários disponíveis`
-                        : formatDateLong(d);
+                      const profNaoAtende =
+                        !!profSelecionado && !turnosPorDow.has(dow);
+                      const disabled = isPast || isFds || isLotado || profNaoAtende;
+                      const aria = profNaoAtende
+                        ? `${formatDateLong(d)} — profissional não atende neste dia`
+                        : isLotado
+                          ? `${formatDateLong(d)} — sem horários disponíveis`
+                          : formatDateLong(d);
                       return (
                         <button
                           key={iso}

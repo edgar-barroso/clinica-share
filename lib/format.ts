@@ -34,40 +34,57 @@ export function formatCompact(value: number): string {
  * Trata strings vindas de colunas `@db.Date` (sem hora) como data local.
  * Sem isso, "2026-05-11T00:00:00.000Z" vira 10/05 em fuso BR (UTC-3) porque
  * o Date é interpretado como UTC midnight e recua um dia ao formatar local.
+ *
+ * Retorna `null` quando a entrada é vazia, undefined ou produz Invalid Date
+ * — usado por callsites que recebem inputs do usuário (date pickers do
+ * dashboard, relatórios) onde apagar o campo não pode quebrar a tela.
  */
-function parseDateInput(date: Date | string): Date {
-  if (typeof date !== "string") return date;
-  // YYYY-MM-DD ou YYYY-MM-DDT00:00:00(.000)?Z (Prisma @db.Date)
-  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.000)?Z?)?$/);
-  if (m) {
-    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+function parseDateInput(date: Date | string | null | undefined): Date | null {
+  if (date == null) return null;
+  if (typeof date === "string") {
+    if (date.trim() === "") return null;
+    // YYYY-MM-DD ou YYYY-MM-DDT00:00:00(.000)?Z (Prisma @db.Date)
+    const m = date.match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.000)?Z?)?$/);
+    if (m) {
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(date);
+    return Number.isNaN(d.getTime()) ? null : d;
   }
-  return new Date(date);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function formatDate(date: Date | string, pattern = "dd/MM/yyyy"): string {
-  return dfFormat(parseDateInput(date), pattern, { locale: ptBR });
+export function formatDate(
+  date: Date | string | null | undefined,
+  pattern = "dd/MM/yyyy",
+): string {
+  const d = parseDateInput(date);
+  if (!d) return "";
+  return dfFormat(d, pattern, { locale: ptBR });
 }
 
-export function formatDateLong(date: Date | string): string {
+export function formatDateLong(date: Date | string | null | undefined): string {
   return formatDate(date, "dd 'de' MMMM 'de' yyyy");
 }
 
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string | null | undefined): string {
   return formatDate(date, "dd/MM/yyyy 'às' HH:mm");
 }
 
-export function formatTime(date: Date | string): string {
+export function formatTime(date: Date | string | null | undefined): string {
   return formatDate(date, "HH:mm");
 }
 
-export function formatRelative(date: Date | string): string {
-  return formatDistanceToNow(parseDateInput(date), {
+export function formatRelative(date: Date | string | null | undefined): string {
+  const d = parseDateInput(date);
+  if (!d) return "";
+  return formatDistanceToNow(d, {
     locale: ptBR,
     addSuffix: true,
   });
 }
 
-export function formatWeekday(date: Date | string): string {
+export function formatWeekday(date: Date | string | null | undefined): string {
   return formatDate(date, "EEEE");
 }

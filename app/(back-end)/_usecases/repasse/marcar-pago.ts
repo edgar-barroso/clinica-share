@@ -26,6 +26,20 @@ export async function marcarRepassePago(
     const updated = await tx.repasse.update({
       where: { id },
       data: { status: "pago", dataPagamento: new Date() },
+      // Mesmo shape de `listRepasses` — o frontend substitui o item da
+      // lista pelo retorno; sem `profissional`/`atendimentos`, o render
+      // seguinte estoura `repasse.profissional.nome` e cai no error.tsx.
+      include: {
+        profissional: {
+          select: {
+            id: true,
+            nome: true,
+            especialidade: true,
+            modalidadeContrato: true,
+          },
+        },
+        atendimentos: { select: { atendimentoId: true } },
+      },
     });
 
     await audit(

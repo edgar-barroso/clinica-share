@@ -1,13 +1,16 @@
 import { apiGet } from "@/lib/api-client";
 
 export interface DashboardStats {
-  receitaBruta: string;
-  qtdAtendimentosRealizados: number;
-  repasseProjetado: string;
-  margemClinica: string;
+  repassesAbertos: string;
+  repassesPagos: string;
+  repassesTotal: string;
+  qtdRepassesAbertos: number;
+  qtdRepassesPagos: number;
   profissionaisAtivos: number;
   profissionaisTotal: number;
   atendimentosPendentes: number;
+  receitaBruta: string;
+  qtdAtendimentosRealizados: number;
   receitaPorDia: { data: string; receita: string }[];
 }
 

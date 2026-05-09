@@ -48,6 +48,7 @@ export default function RelatorioConsultoriosPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    if (!dataInicio || !dataFim) return; // usuário ainda editando
     setLoading(true);
     try {
       const { linhas } = await apiRelatorioConsultorios({ dataInicio, dataFim });
