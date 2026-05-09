@@ -48,6 +48,7 @@ export default function RelatorioFinanceiroPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    if (!dataInicio || !dataFim) return; // usuário ainda editando
     setLoading(true);
     try {
       const res = await apiRelatorioFinanceiro({ dataInicio, dataFim });

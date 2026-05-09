@@ -68,6 +68,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    if (!periodo.inicio || !periodo.fim) return; // usuário ainda editando
     if (periodo.fim < periodo.inicio) return; // intervalo inválido
     setLoading(true);
     try {
