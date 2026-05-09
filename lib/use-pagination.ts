@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export const PAGE_SIZE = 20;
 
@@ -12,43 +12,60 @@ export interface PaginationState {
   slice: <T>(items: T[]) => T[];
 }
 
+/**
+ * Estado de paginação client-side com persistência em `?page=N`.
+ *
+ * Não usamos `useSearchParams()` porque ele força o componente a entrar
+ * em CSR-bailout e exige um `<Suspense>` boundary acima — quebrando o
+ * prerender estático no Next 16. Ler `window.location.search` direto no
+ * mount e atualizar via `router.replace` cobre o caso do nosso app
+ * (paginação só muda por clique do usuário, não por navegação externa).
+ */
 export function usePagination(total: number): PaginationState {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+
+  const [page, setPageState] = useState(1);
+
+  // Inicializa a partir do URL no mount — só client-side.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = Number.parseInt(
+      new URLSearchParams(window.location.search).get("page") ?? "1",
+      10,
+    );
+    if (Number.isFinite(raw) && raw > 0) setPageState(raw);
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const rawPage = Number.parseInt(searchParams.get("page") ?? "1", 10);
-  const parsed = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
-  const page = Math.min(parsed, totalPages);
+  const current = Math.min(Math.max(1, page), totalPages);
 
   const setPage = useCallback(
     (next: number) => {
       const target = Math.min(Math.max(1, next), totalPages);
-      const params = new URLSearchParams(searchParams.toString());
-      if (target === 1) {
-        params.delete("page");
-      } else {
-        params.set("page", String(target));
-      }
+      setPageState(target);
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      if (target === 1) params.delete("page");
+      else params.set("page", String(target));
       const query = params.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, {
         scroll: true,
       });
     },
-    [pathname, router, searchParams, totalPages],
+    [pathname, router, totalPages],
   );
 
   const slice = useCallback(
     <T,>(items: T[]): T[] => {
-      const start = (page - 1) * PAGE_SIZE;
+      const start = (current - 1) * PAGE_SIZE;
       return items.slice(start, start + PAGE_SIZE);
     },
-    [page],
+    [current],
   );
 
   return useMemo(
-    () => ({ page, totalPages, setPage, slice }),
-    [page, totalPages, setPage, slice],
+    () => ({ page: current, totalPages, setPage, slice }),
+    [current, totalPages, setPage, slice],
   );
 }
