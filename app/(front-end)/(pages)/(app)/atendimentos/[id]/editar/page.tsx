@@ -74,8 +74,7 @@ export default function EditarAtendimentoPage({
     return (
       <div className="py-20 text-center">
         <p className="text-sm font-medium">
-          Apenas admin e auxiliar podem editar atendimentos pós-realizado
-          (PEND-031).
+          Apenas admin e auxiliar podem editar atendimentos pós-realizado.
         </p>
         <Link
           href={`/atendimentos/${id}`}
@@ -153,7 +152,7 @@ export default function EditarAtendimentoPage({
 
       <PageHeader
         title={`Editar atendimento #${id.slice(0, 8)}`}
-        description="Edição pós-realizado (FI11) — toda alteração é auditada (RNF-102)"
+        description="Edição pós-realizado — toda alteração é auditada"
       />
 
       <form
@@ -200,8 +199,7 @@ export default function EditarAtendimentoPage({
               {statusPag === "gratuito" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="motivoGratuidade">
-                    Justificativa da gratuidade (FI06)
-                  </Label>
+                    Justificativa da gratuidade                  </Label>
                   <Input
                     id="motivoGratuidade"
                     value={motivoGratuidade}
@@ -241,8 +239,8 @@ export default function EditarAtendimentoPage({
                 required
               />
               <p className="mt-2 text-xs text-muted-foreground">
-                Esta justificativa fica gravada em AuditLog junto com o nome do
-                usuário, valor antes e depois da alteração (RNF-102 / RF-025).
+                Esta justificativa fica gravada na auditoria junto com o nome do
+                usuário, valor antes e depois da alteração.
               </p>
             </CardContent>
           </Card>

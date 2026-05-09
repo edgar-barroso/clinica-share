@@ -46,6 +46,60 @@ describe("POST /api/pacientes", () => {
     expect(res.status).toBe(201);
   });
 
+  it("retorna senha temporária + cria User vinculado para login", async () => {
+    const { token } = await createUserWithRole("admin");
+    const res = await createPost(
+      withAuthCookie(
+        jsonRequest("/api/pacientes", {
+          ...validInput,
+          email: "novo-paciente@example.com",
+        }),
+        token,
+      ),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.senhaTemporaria).toMatch(/^[A-Za-z2-9]{8}$/);
+
+    const user = await prisma.user.findUnique({
+      where: { email: "novo-paciente@example.com" },
+    });
+    expect(user?.role).toBe("paciente");
+    expect(user?.pacienteId).toBe(body.paciente.id);
+    expect(user?.passwordHash).toBeTruthy();
+  });
+
+  it("e-mail duplicado em User também bloqueia (mesma rota → 409)", async () => {
+    const { token } = await createUserWithRole("admin");
+    // Cria primeiro paciente
+    const res1 = await createPost(
+      withAuthCookie(
+        jsonRequest("/api/pacientes", {
+          ...validInput,
+          email: "duplo@example.com",
+        }),
+        token,
+      ),
+    );
+    expect(res1.status).toBe(201);
+    // Apaga o Paciente mas o User sobrevive (cenário hipotético) — segunda
+    // tentativa com mesmo e-mail deve falhar pelo User existente.
+    await prisma.paciente.delete({
+      where: { email: "duplo@example.com" },
+    });
+    const res2 = await createPost(
+      withAuthCookie(
+        jsonRequest("/api/pacientes", {
+          ...validInput,
+          email: "duplo@example.com",
+          nome: "Outro Nome",
+        }),
+        token,
+      ),
+    );
+    expect(res2.status).toBe(409);
+  });
+
   it("auxiliar é negado (só admin/atendente)", async () => {
     const { token } = await createUserWithRole("auxiliar");
     const res = await createPost(

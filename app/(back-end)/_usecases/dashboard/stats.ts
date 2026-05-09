@@ -20,6 +20,13 @@ export interface DashboardStats {
   profissionaisAtivos: number;
   profissionaisTotal: number;
   atendimentosPendentes: number;
+  /**
+   * Receita bruta: soma de `valorConsulta` de TODOS os atendimentos com
+   * status `realizado` no período, independentemente do pagamento. Mede
+   * o volume total que passou pela clínica (inclui gratuitos e pendentes).
+   */
+  receitaBruta: string;
+  qtdAtendimentosRealizados: number;
   receitaPorDia: DashboardChartPoint[];
 }
 
@@ -33,29 +40,41 @@ export async function dashboardStats(
   const inicio = new Date(input.dataInicio);
   const fim = new Date(input.dataFim);
 
-  const [repasses, profCount, profAtivos, pendentes, receitaDoDia] =
-    await Promise.all([
-      prisma.repasse.findMany({
-        where: { periodoInicio: { gte: inicio }, periodoFim: { lte: fim } },
-        select: { valorRepasse: true, status: true },
-      }),
-      prisma.profissional.count(),
-      prisma.profissional.count({ where: { ativo: true } }),
-      prisma.atendimento.count({
-        where: {
-          statusPagamento: "pendente",
-          data: { gte: inicio, lte: fim },
-        },
-      }),
-      prisma.atendimento.findMany({
-        where: {
-          status: "realizado",
-          statusPagamento: "pago",
-          data: { gte: inicio, lte: fim },
-        },
-        select: { data: true, valorConsulta: true },
-      }),
-    ]);
+  const [
+    repasses,
+    profCount,
+    profAtivos,
+    pendentes,
+    receitaDoDia,
+    realizadosBrutos,
+  ] = await Promise.all([
+    prisma.repasse.findMany({
+      where: { periodoInicio: { gte: inicio }, periodoFim: { lte: fim } },
+      select: { valorRepasse: true, status: true },
+    }),
+    prisma.profissional.count(),
+    prisma.profissional.count({ where: { ativo: true } }),
+    prisma.atendimento.count({
+      where: {
+        statusPagamento: "pendente",
+        data: { gte: inicio, lte: fim },
+      },
+    }),
+    prisma.atendimento.findMany({
+      where: {
+        status: "realizado",
+        statusPagamento: "pago",
+        data: { gte: inicio, lte: fim },
+      },
+      select: { data: true, valorConsulta: true },
+    }),
+    // Receita bruta: tudo que passou pela clínica no período, independente
+    // de já ter sido pago. Inclui pagos, pendentes e gratuitos (R$ 0).
+    prisma.atendimento.findMany({
+      where: { status: "realizado", data: { gte: inicio, lte: fim } },
+      select: { valorConsulta: true },
+    }),
+  ]);
 
   const repassesAbertos = repasses
     .filter((r) => r.status === "aberto")
@@ -76,6 +95,11 @@ export async function dashboardStats(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([data, val]) => ({ data, receita: val.toFixed(2) }));
 
+  const receitaBruta = realizadosBrutos.reduce(
+    (s, a) => s.plus(a.valorConsulta),
+    new Prisma.Decimal(0),
+  );
+
   return {
     repassesAbertos: repassesAbertos.toFixed(2),
     repassesPagos: repassesPagos.toFixed(2),
@@ -85,6 +109,8 @@ export async function dashboardStats(
     profissionaisAtivos: profAtivos,
     profissionaisTotal: profCount,
     atendimentosPendentes: pendentes,
+    receitaBruta: receitaBruta.toFixed(2),
+    qtdAtendimentosRealizados: realizadosBrutos.length,
     receitaPorDia,
   };
 }

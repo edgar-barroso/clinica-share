@@ -53,7 +53,10 @@ export const apiGetPaciente = (id: string) =>
   apiGet<{ paciente: Paciente }>(`/api/pacientes/${id}`);
 
 export const apiCreatePaciente = (input: CreatePacienteInput) =>
-  apiPost<{ paciente: Paciente }>("/api/pacientes", input);
+  apiPost<{ paciente: Paciente; senhaTemporaria: string }>(
+    "/api/pacientes",
+    input,
+  );
 
 export const apiUpdatePaciente = (id: string, input: UpdatePacienteInput) =>
   apiPatch<{ paciente: Paciente }>(`/api/pacientes/${id}`, input);

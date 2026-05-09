@@ -74,7 +74,7 @@ export default function RelatorioConsultoriosPage() {
 
       <PageHeader
         title="Ranking de consultórios"
-        description="RE03 · Quais salas geram mais receita no período"
+        description="Quais salas geram mais receita no período"
       />
 
       <Card className="mb-6">

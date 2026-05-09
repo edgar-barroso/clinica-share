@@ -133,7 +133,7 @@ export default function AtendimentoDetailPage({
   async function handleFinalizar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (statusPag === "gratuito" && motivoGratuidade.trim().length < 3) {
-      toast.warning("Motivo é obrigatório para atendimento gratuito (FI06)");
+      toast.warning("Motivo é obrigatório para atendimento gratuito");
       return;
     }
     setSubmitting(true);
@@ -235,7 +235,7 @@ export default function AtendimentoDetailPage({
           {showFinalize && (
             <Card>
               <CardHeader>
-                <CardTitle>Finalizar atendimento (AT06)</CardTitle>
+                <CardTitle>Finalizar atendimento</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleFinalizar} className="space-y-4">
@@ -273,8 +273,7 @@ export default function AtendimentoDetailPage({
                   {statusPag === "gratuito" && (
                     <div className="space-y-1.5">
                       <Label htmlFor="motivoGratuidade">
-                        Justificativa da gratuidade (FI06)
-                      </Label>
+                        Justificativa da gratuidade                      </Label>
                       <Input
                         id="motivoGratuidade"
                         value={motivoGratuidade}
@@ -284,9 +283,7 @@ export default function AtendimentoDetailPage({
                     </div>
                   )}
                   <div className="space-y-3 border-t border-border pt-4">
-                    <p className="text-sm font-medium">
-                      Prontuário (PEND-017 — campos sugeridos)
-                    </p>
+                    <p className="text-sm font-medium">Prontuário</p>
                     <ProntuarioField
                       label="Anamnese"
                       value={prontuario.anamnese}
@@ -362,8 +359,7 @@ export default function AtendimentoDetailPage({
                     Prontuário ainda não preenchido
                   </Badge>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    O prontuário será preenchido na finalização (AT06).
-                    Estrutura atual segue PEND-017 com campos livres.
+                    O prontuário será preenchido na finalização do atendimento.
                   </p>
                 </div>
               )}
@@ -389,7 +385,7 @@ export default function AtendimentoDetailPage({
           {atendimento.motivoDescontoOuGratuidade && (
             <Card className="border-warning/40 bg-warning/5">
               <CardHeader>
-                <CardTitle className="text-sm">Justificativa (FI06)</CardTitle>
+                <CardTitle className="text-sm">Justificativa</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm">
@@ -403,7 +399,7 @@ export default function AtendimentoDetailPage({
             <Card className="border-destructive/40 bg-destructive/5">
               <CardHeader>
                 <CardTitle className="text-sm">
-                  Motivo do cancelamento (AG06)
+                  Motivo do cancelamento
                 </CardTitle>
               </CardHeader>
               <CardContent>

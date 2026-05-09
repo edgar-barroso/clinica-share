@@ -100,7 +100,7 @@ export default function NovoConsultorioPage() {
     <>
       <PageHeader
         title="Novo consultório"
-        description="Cadastre uma sala da clínica com seu tipo, equipamentos e especialidades compatíveis (CO01)"
+        description="Cadastre uma sala da clínica com seu tipo, equipamentos e especialidades compatíveis"
         actions={
           <Link href="/consultorios" className={buttonVariants({ variant: "outline" })}>
             Cancelar
@@ -224,9 +224,8 @@ export default function NovoConsultorioPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p className="text-muted-foreground">
-                Este cadastro segue o requisito <strong>CO01</strong>. Após criar, o
-                consultório fica disponível para alocação de turnos por profissional
-                (CO02/CO03).
+                Após criar, o consultório fica disponível para alocação de
+                turnos fixos por profissional.
               </p>
               <div className="space-y-2 rounded-xl bg-muted/50 p-3 text-xs">
                 <p>

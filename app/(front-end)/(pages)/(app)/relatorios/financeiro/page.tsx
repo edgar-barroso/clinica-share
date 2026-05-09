@@ -74,7 +74,7 @@ export default function RelatorioFinanceiroPage() {
 
       <PageHeader
         title="Relatório financeiro"
-        description="RE02 · Receita bruta, repasses estimados e margem por profissional"
+        description="Receita bruta, repasses estimados e margem por profissional"
       />
 
       <Card className="mb-6">

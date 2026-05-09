@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { UserPlus, X } from "lucide-react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+import { Copy, KeyRound, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +16,27 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { apiCreatePaciente, type Paciente } from "@/lib/api/pacientes";
 import { apiErrorMessage } from "@/lib/api-client";
+
+// Garante que `createPortal` só roda no client. No SSR, retorna null.
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
+/**
+ * Portal pra fora do DOM atual — evita que o dialog (que tem `<form>`
+ * interno) caia dentro de um `<form>` da página chamadora (caso típico:
+ * /agenda/novo). Forms aninhados são inválidos em HTML; o browser faz
+ * unwrap e o submit do dialog dispara o form errado.
+ */
+function DialogPortal({ children }: { children: ReactNode }) {
+  const isClient = useIsClient();
+  if (!isClient) return null;
+  return createPortal(children, document.body);
+}
 
 interface Props {
   open: boolean;
@@ -54,6 +82,10 @@ function NovoPacienteDialogInner({
   const [dataNascimento, setDataNascimento] = useState("");
   const [sexo, setSexo] = useState<"M" | "F" | "outro" | "">("");
   const [submitting, setSubmitting] = useState(false);
+  // Após cadastrar, exibimos um passo final com a senha temporária
+  // gerada para o paciente. O atendente repassa para o paciente.
+  const [senhaTemporaria, setSenhaTemporaria] = useState<string | null>(null);
+  const [pacienteCriado, setPacienteCriado] = useState<Paciente | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -67,7 +99,7 @@ function NovoPacienteDialogInner({
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { paciente } = await apiCreatePaciente({
+      const { paciente, senhaTemporaria: senha } = await apiCreatePaciente({
         nome: nome.trim(),
         telefone: telefone.trim(),
         email: email.trim(),
@@ -76,14 +108,92 @@ function NovoPacienteDialogInner({
         sexo: sexo || null,
       });
       toast.success("Paciente cadastrado");
-      onCreate(paciente);
+      // Exibe o passo final com a senha. Só fechamos o dialog quando
+      // o atendente confirma que anotou/passou a senha.
+      setPacienteCriado(paciente);
+      setSenhaTemporaria(senha);
     } catch (err) {
       toast.error(apiErrorMessage(err));
       setSubmitting(false);
     }
   }
 
+  async function copiarSenha() {
+    if (!senhaTemporaria) return;
+    try {
+      await navigator.clipboard.writeText(senhaTemporaria);
+      toast.success("Senha copiada");
+    } catch {
+      toast.error("Não foi possível copiar — copie manualmente");
+    }
+  }
+
+  function concluir() {
+    if (pacienteCriado) onCreate(pacienteCriado);
+  }
+
+  if (senhaTemporaria && pacienteCriado) {
+    return (
+      <DialogPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+        />
+        <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-xl">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <KeyRound size={18} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold">
+                Paciente cadastrado — anote a senha temporária
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Esta senha é exibida apenas uma vez. Repasse para o paciente
+                agora; ele troca depois em &quot;Meu perfil&quot;.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-xl border border-border bg-muted/40 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {pacienteCriado.nome}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {pacienteCriado.email}
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-background p-3">
+              <code className="text-lg font-bold tracking-wider tabular-nums">
+                {senhaTemporaria}
+              </code>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copiarSenha}
+              >
+                <Copy size={12} />
+                Copiar
+              </Button>
+            </div>
+          </div>
+
+          <Button type="button" className="w-full" onClick={concluir}>
+            Já anotei — concluir
+          </Button>
+        </div>
+      </div>
+      </DialogPortal>
+    );
+  }
+
   return (
+    <DialogPortal>
     <div
       role="dialog"
       aria-modal="true"
@@ -207,5 +317,6 @@ function NovoPacienteDialogInner({
         </form>
       </div>
     </div>
+    </DialogPortal>
   );
 }

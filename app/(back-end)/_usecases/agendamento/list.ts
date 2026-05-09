@@ -6,6 +6,7 @@ export interface ListAgendamentosFilter {
   dataInicio?: string;
   dataFim?: string;
   profissionalId?: string;
+  pacienteId?: string;
   consultorioId?: string;
   status?: StatusAgendamento;
 }
@@ -36,6 +37,7 @@ export async function listAgendamentos(
     if (filter.dataFim) where.data.lte = new Date(filter.dataFim);
   }
   if (filter.profissionalId) where.profissionalId = filter.profissionalId;
+  if (filter.pacienteId) where.pacienteId = filter.pacienteId;
   if (filter.consultorioId) where.consultorioId = filter.consultorioId;
   if (filter.status) where.status = filter.status;
 

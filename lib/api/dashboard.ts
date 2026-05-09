@@ -9,6 +9,8 @@ export interface DashboardStats {
   profissionaisAtivos: number;
   profissionaisTotal: number;
   atendimentosPendentes: number;
+  receitaBruta: string;
+  qtdAtendimentosRealizados: number;
   receitaPorDia: { data: string; receita: string }[];
 }
 

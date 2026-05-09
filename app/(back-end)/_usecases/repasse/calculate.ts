@@ -2,6 +2,7 @@ import { Prisma, type ModalidadeContrato } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { NaoEncontrado, RegraNegocio } from "@/app/(back-end)/_lib/errors";
 import { horaToTurno, type Turno } from "@/app/(back-end)/_lib/turnos";
+import { getTurnos } from "@/app/(back-end)/_usecases/configuracao/turnos";
 
 export interface CalculateRepasseInput {
   profissionalId: string;
@@ -53,6 +54,9 @@ export async function calculateRepasse(
 
   const inicio = new Date(input.periodoInicio);
   const fim = new Date(input.periodoFim);
+  // Carrega a configuração de turnos persistida — admin pode ter
+  // ajustado os blocos manhã/tarde/noite em /configuracoes/turnos.
+  const turnosConfig = await getTurnos();
 
   if (profissional.modalidadeContrato === "percentual") {
     if (profissional.percentualRepasse === null) {
@@ -84,7 +88,7 @@ export async function calculateRepasse(
     const turnosSet = new Set<string>();
     const turnosUtilizados: { data: string; turno: Turno }[] = [];
     const detalhes: RepasseAtendimentoBreakdown[] = elegiveis.map((a) => {
-      const turno = horaToTurno(a.hora);
+      const turno = horaToTurno(a.hora, turnosConfig);
       const dataIso = a.data.toISOString().slice(0, 10);
       const key = `${dataIso}|${turno}`;
       if (!turnosSet.has(key)) {

@@ -315,7 +315,7 @@ export default function EditarProfissionalPage({
             <CardHeader>
               <CardTitle>Contrato e repasse</CardTitle>
               <CardDescription>
-                Alteração em contrato exige motivo (RNF-102) e gera audit log.
+                Alteração em contrato exige motivo e gera registro de auditoria.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -394,7 +394,7 @@ export default function EditarProfissionalPage({
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Obrigatório quando modalidade ou valor de contrato mudam (RNF-102).
+                    Obrigatório quando modalidade ou valor de contrato mudam.
                   </p>
                 </div>
               )}

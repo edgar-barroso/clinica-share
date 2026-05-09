@@ -77,7 +77,7 @@ export default function RepasseDetailPage({
     try {
       await apiMarcarRepassePago(id);
       toast.success("Repasse marcado como pago", {
-        description: "Audit log gravado (RNF-102)",
+        description: "Registro gravado na auditoria",
       });
       await fetchData();
     } catch (err) {
@@ -256,7 +256,7 @@ export default function RepasseDetailPage({
         <aside className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Cálculo (RNF-103)</CardTitle>
+              <CardTitle>Cálculo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm tabular-nums">
               <div className="flex justify-between">
@@ -295,9 +295,9 @@ export default function RepasseDetailPage({
                 <span>{formatBRL(Number(repasse.valorRepasse))}</span>
               </div>
               <p className="pt-1 text-xs text-muted-foreground">
-                Cálculo realizado no servidor (DEC-A04). Atendimentos
-                gratuitos não entram na base, exceto na contagem de turnos no
-                modelo aluguel-fixo (PEND-002).
+                Cálculo realizado no servidor. Atendimentos gratuitos não
+                entram na base, exceto na contagem de turnos no modelo
+                aluguel-fixo.
               </p>
             </CardContent>
           </Card>

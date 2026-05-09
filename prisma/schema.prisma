@@ -231,6 +231,9 @@ model Atendimento {
   // Estrutura aberta até PEND-017 — DEC-E01 dados clínicos fora do MVP no schema relacional
   prontuarioInterno          Json?
   observacoes                String?
+  // Cron de lembrete D-1: marca quando email/WhatsApp foi disparado para
+  // evitar reenvio se o cron rodar mais de uma vez no mesmo dia.
+  lembreteEnviadoEm          DateTime?
 
   paciente     Paciente             @relation(fields: [pacienteId], references: [id])
   profissional Profissional         @relation(fields: [profissionalId], references: [id])

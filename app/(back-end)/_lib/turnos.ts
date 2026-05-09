@@ -1,16 +1,22 @@
 /**
- * Mapeia hora ("HH:mm") para turno conforme PEND-014:
- * - manhã: 07:00–12:59
- * - tarde: 13:00–17:59
- * - noite: 18:00–19:59
+ * Mapeia hora ("HH:mm") para turno conforme a configuração persistida
+ * em /configuracoes/turnos.
  *
- * Default até confirmação em R2. A configuração futura (Fase 8) virá
- * de `Configuracao.turnosHorarios`.
+ * A versão sem `config` mantém os defaults (07–13 / 13–18 / 18–20) para
+ * casos legados — testes e cálculos antigos. O caminho preferido é passar
+ * `TurnosConfig` carregada via `getTurnos()`.
  */
+import type { TurnosConfig } from "@/app/(back-end)/_usecases/configuracao/turnos";
+
 export type Turno = "manha" | "tarde" | "noite";
 
-export function horaToTurno(hora: string): Turno {
-  if (hora < "13:00") return "manha";
-  if (hora < "18:00") return "tarde";
+const DEFAULT_TARDE_INICIO = "13:00";
+const DEFAULT_NOITE_INICIO = "18:00";
+
+export function horaToTurno(hora: string, config?: TurnosConfig): Turno {
+  const tardeInicio = config?.tarde.inicio ?? DEFAULT_TARDE_INICIO;
+  const noiteInicio = config?.noite.inicio ?? DEFAULT_NOITE_INICIO;
+  if (hora < tardeInicio) return "manha";
+  if (hora < noiteInicio) return "tarde";
   return "noite";
 }

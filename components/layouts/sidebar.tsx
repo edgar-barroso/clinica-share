@@ -12,6 +12,7 @@ import {
   FileBarChart,
   FileSearch,
   Headset,
+  Heart,
   Home,
   Settings,
   Stethoscope,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
+import { isNavItemActive } from "@/lib/nav-active";
 import { useRole } from "@/lib/role";
 
 function semanaAtualLabel(): string {
@@ -42,6 +44,7 @@ const navAll: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
+  { href: "/pacientes", label: "Pacientes", icon: Heart },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
   { href: "/equipe", label: "Equipe", icon: Headset },
@@ -65,8 +68,8 @@ const navProfissional: NavItem[] = [
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro/repasses", "/relatorios", "/auditoria"],
-  atendente: ["/agenda", "/atendimentos"],
+  auxiliar: ["/dashboard", "/atendimentos", "/pacientes", "/financeiro/repasses", "/relatorios", "/auditoria"],
+  atendente: ["/agenda", "/atendimentos", "/pacientes"],
 };
 
 export function Sidebar() {
@@ -103,9 +106,13 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+          const active = isNavItemActive(
+            href,
+            pathname,
+            items.map((i) => i.href),
+          );
           return (
             <Link
               key={href}

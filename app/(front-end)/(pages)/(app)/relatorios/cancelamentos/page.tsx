@@ -79,7 +79,7 @@ export default function RelatorioCancelamentosPage() {
 
       <PageHeader
         title="Cancelamentos & não comparecimentos"
-        description="RE05 · Padrões de no-show e cancelamento"
+        description="Padrões de não comparecimento e cancelamento"
       />
 
       <Card className="mb-6">

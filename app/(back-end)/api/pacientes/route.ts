@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
     requireRole(req, ["admin", "atendente"]);
     const body = await req.json();
     const input = createPacienteSchema.parse(body);
-    const paciente = await createPaciente(input);
-    return NextResponse.json({ paciente }, { status: 201 });
+    const { paciente, senhaTemporaria } = await createPaciente(input);
+    return NextResponse.json({ paciente, senhaTemporaria }, { status: 201 });
   } catch (err) {
     return handleError(err);
   }

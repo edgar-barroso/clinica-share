@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       dataInicio: searchParams.get("dataInicio") ?? undefined,
       dataFim: searchParams.get("dataFim") ?? undefined,
       profissionalId: searchParams.get("profissionalId") ?? undefined,
+      pacienteId: searchParams.get("pacienteId") ?? undefined,
       consultorioId: searchParams.get("consultorioId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
     });

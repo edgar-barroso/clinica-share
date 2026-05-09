@@ -84,12 +84,6 @@ export const apiListRepasses = (filter?: {
 export const apiGetRepasse = (id: string) =>
   apiGet<RepasseDetalheResponse>(`/api/repasses/${id}`);
 
-export const apiGerarRepasse = (input: {
-  profissionalId: string;
-  periodoInicio: string;
-  periodoFim: string;
-}) => apiPost<{ repasse: RepasseListItem }>("/api/repasses/gerar", input);
-
 export const apiMarcarRepassePago = (id: string, motivo?: string) =>
   apiPost<{ repasse: RepasseListItem }>(
     `/api/repasses/${id}/marcar-pago`,

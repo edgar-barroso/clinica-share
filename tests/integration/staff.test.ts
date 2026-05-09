@@ -167,6 +167,75 @@ describe("PATCH+DELETE /api/staff/[id]", () => {
     expect(body.staff.nome).toBe("Carla Souza");
   });
 
+  it("trocar cargo de atendente → auxiliar atualiza User.role correspondente", async () => {
+    const { token } = await createUserWithRole("admin");
+
+    // Cria staff (atendente) via rota — também cria o User com role=atendente
+    const createRes = await createPost(
+      withAuthCookie(
+        jsonRequest("/api/staff", {
+          nome: "Quem Trocou",
+          cargo: "atendente",
+          email: "trocou@example.com",
+          telefone: "11988887777",
+        }),
+        token,
+      ),
+    );
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()).staff;
+
+    const userAntes = await prisma.user.findFirst({
+      where: { staffId: created.id },
+    });
+    expect(userAntes?.role).toBe("atendente");
+
+    // Promove para auxiliar (financeiro)
+    const patchRes = await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/staff/${created.id}`, { cargo: "auxiliar" }),
+        token,
+      ),
+      ctxId(created.id),
+    );
+    expect(patchRes.status).toBe(200);
+
+    const userDepois = await prisma.user.findFirst({
+      where: { staffId: created.id },
+    });
+    expect(userDepois?.role).toBe("auxiliar");
+  });
+
+  it("update sem mexer em cargo NÃO toca em User.role", async () => {
+    const { token } = await createUserWithRole("admin");
+    const createRes = await createPost(
+      withAuthCookie(
+        jsonRequest("/api/staff", {
+          nome: "Sem mudar role",
+          cargo: "atendente",
+          email: "estavel@example.com",
+          telefone: "11977776666",
+        }),
+        token,
+      ),
+    );
+    const created = (await createRes.json()).staff;
+
+    const res = await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/staff/${created.id}`, { nome: "Renomeado" }),
+        token,
+      ),
+      ctxId(created.id),
+    );
+    expect(res.status).toBe(200);
+
+    const user = await prisma.user.findFirst({
+      where: { staffId: created.id },
+    });
+    expect(user?.role).toBe("atendente");
+  });
+
   it("admin desativa (soft delete)", async () => {
     const { token } = await createUserWithRole("admin");
     const s = await prisma.staff.create({ data: validInput });

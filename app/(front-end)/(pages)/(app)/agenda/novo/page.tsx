@@ -24,31 +24,16 @@ import {
   apiCreateAgendamento,
   apiListAgendamentos,
 } from "@/lib/api/agendamentos";
+import { apiGetTurnos } from "@/lib/api/configuracoes";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatDateLong } from "@/lib/format";
-
-const HORARIOS_MANHA = [
-  "08:00",
-  "08:30",
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-];
-const HORARIOS_TARDE = [
-  "13:00",
-  "13:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-  "16:30",
-  "17:00",
-  "17:30",
-];
+import {
+  BLOCOS_PADRAO,
+  gerarSlots,
+  slotConflita,
+  turnosConfigParaBlocos,
+  type Bloco,
+} from "@/lib/horarios";
 
 function amanhaISO() {
   const d = new Date();
@@ -73,6 +58,8 @@ export default function NovoAgendamentoPage() {
   const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
   const [ocupados, setOcupados] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  // Blocos da clínica vindos de /configuracoes/turnos.
+  const [blocos, setBlocos] = useState<Bloco[]>(BLOCOS_PADRAO);
 
   useEffect(() => {
     apiListProfissionais({ ativo: true })
@@ -92,6 +79,12 @@ export default function NovoAgendamentoPage() {
         }
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
+
+    apiGetTurnos()
+      .then((res) => setBlocos(turnosConfigParaBlocos(res.turnos)))
+      .catch(() => {
+        // mantém BLOCOS_PADRAO se a API falhar
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,6 +104,27 @@ export default function NovoAgendamentoPage() {
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
   }, [profissionalId, data]);
+
+  const profSelecionado = useMemo(
+    () => profissionais.find((p) => p.id === profissionalId) ?? null,
+    [profissionais, profissionalId],
+  );
+
+  const duracaoMin = profSelecionado?.duracaoConsultaMinutos ?? 30;
+
+  const horariosBlocos = useMemo(
+    () => gerarSlots(blocos, duracaoMin),
+    [blocos, duracaoMin],
+  );
+
+  // Reseta horário quando duração muda (profissional diferente).
+  useEffect(() => {
+    setHorario((cur) => {
+      if (!cur) return cur;
+      const valid = horariosBlocos.some((b) => b.slots.includes(cur));
+      return valid ? cur : null;
+    });
+  }, [horariosBlocos]);
 
   const dataLabel = useMemo(() => {
     if (!data) return "—";
@@ -154,7 +168,7 @@ export default function NovoAgendamentoPage() {
     <>
       <PageHeader
         title="Novo agendamento"
-        description="Atendente registra consulta em nome do paciente (AG02)"
+        description="Atendente registra consulta em nome do paciente"
         actions={
           <Link href="/agenda" className={buttonVariants({ variant: "outline" })}>
             Cancelar
@@ -246,59 +260,42 @@ export default function NovoAgendamentoPage() {
                 />
               </div>
 
-              <div>
-                <p className="mb-2 text-sm font-medium">Manhã</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {HORARIOS_MANHA.map((h) => {
-                    const ocupado = ocupados.has(h);
-                    const selecionado = horario === h;
-                    return (
-                      <button
-                        key={h}
-                        type="button"
-                        disabled={ocupado}
-                        onClick={() => setHorario(h)}
-                        className={`rounded-xl border px-3 py-2 text-sm font-medium tabular-nums transition-colors ${
-                          ocupado
-                            ? "border-border bg-muted/50 text-muted-foreground line-through cursor-not-allowed"
-                            : selecionado
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-card hover:bg-muted"
-                        }`}
-                      >
-                        {h}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Slots gerados conforme a duração padrão de{" "}
+                <span className="font-medium text-foreground">
+                  {duracaoMin} min
+                </span>
+                {profSelecionado ? ` de ${profSelecionado.nome}` : ""}.
+              </p>
 
-              <div>
-                <p className="mb-2 text-sm font-medium">Tarde</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {HORARIOS_TARDE.map((h) => {
-                    const ocupado = ocupados.has(h);
-                    const selecionado = horario === h;
-                    return (
-                      <button
-                        key={h}
-                        type="button"
-                        disabled={ocupado}
-                        onClick={() => setHorario(h)}
-                        className={`rounded-xl border px-3 py-2 text-sm font-medium tabular-nums transition-colors ${
-                          ocupado
-                            ? "border-border bg-muted/50 text-muted-foreground line-through cursor-not-allowed"
-                            : selecionado
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-card hover:bg-muted"
-                        }`}
-                      >
-                        {h}
-                      </button>
-                    );
-                  })}
+              {horariosBlocos.map((bloco) => (
+                <div key={bloco.periodo}>
+                  <p className="mb-2 text-sm font-medium">{bloco.periodo}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {bloco.slots.map((h) => {
+                      const ocupado = slotConflita(h, ocupados, duracaoMin);
+                      const selecionado = horario === h;
+                      return (
+                        <button
+                          key={h}
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => setHorario(h)}
+                          className={`rounded-xl border px-3 py-2 text-sm font-medium tabular-nums transition-colors ${
+                            ocupado
+                              ? "border-border bg-muted/50 text-muted-foreground line-through cursor-not-allowed"
+                              : selecionado
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card hover:bg-muted"
+                          }`}
+                        >
+                          {h}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -346,7 +343,7 @@ export default function NovoAgendamentoPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Após confirmar, o sistema bloqueia automaticamente o horário
-                (AG05).
+                escolhido para evitar conflito.
               </p>
             </CardContent>
           </Card>

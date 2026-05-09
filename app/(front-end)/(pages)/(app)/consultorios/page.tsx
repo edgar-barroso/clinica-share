@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layouts/page-header";
 import { apiListConsultorios, type Consultorio } from "@/lib/api/consultorios";
 import { apiErrorMessage } from "@/lib/api-client";
+import { usePagination } from "@/lib/use-pagination";
 
 export default function ConsultoriosPage() {
   const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
@@ -23,6 +25,9 @@ export default function ConsultoriosPage() {
       .catch((err) => toast.error(apiErrorMessage(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  const { page, totalPages, setPage, slice } = usePagination(consultorios.length);
+  const visiveis = slice(consultorios);
 
   return (
     <>
@@ -60,8 +65,9 @@ export default function ConsultoriosPage() {
           }
         />
       ) : (
+        <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {consultorios.map((c) => (
+          {visiveis.map((c) => (
             <Link key={c.id} href={`/consultorios/${c.id}`} className="block">
               <Card className="h-full transition-colors hover:border-primary/30">
                 <CardHeader>
@@ -106,6 +112,8 @@ export default function ConsultoriosPage() {
               </Card>
             </Link>
           ))}
+        </div>
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
     </>

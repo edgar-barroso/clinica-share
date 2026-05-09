@@ -22,6 +22,7 @@ import {
   DoorOpen,
   FileBarChart,
   FileSearch,
+  Heart,
   Home,
   Menu,
   Settings,
@@ -32,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/current-user";
+import { isNavItemActive } from "@/lib/nav-active";
 import { useRole } from "@/lib/role";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,7 @@ const navAll: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
+  { href: "/pacientes", label: "Pacientes", icon: Heart },
   { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
   { href: "/profissionais", label: "Profissionais", icon: Users },
   { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
@@ -58,9 +61,9 @@ const navPaciente: NavItem[] = [
 
 const navByRole: Record<string, string[]> = {
   admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/financeiro/repasses", "/relatorios", "/auditoria"],
+  auxiliar: ["/dashboard", "/atendimentos", "/pacientes", "/financeiro/repasses", "/relatorios", "/auditoria"],
   profissional: ["/agenda", "/atendimentos"],
-  atendente: ["/agenda", "/atendimentos"],
+  atendente: ["/agenda", "/atendimentos", "/pacientes"],
   paciente: navPaciente.map((n) => n.href),
 };
 
@@ -132,8 +135,11 @@ export function MobileSidebarTrigger() {
 
         <nav className="space-y-1 px-3 py-4">
           {items.map(({ href, label, icon: Icon }) => {
-            const active =
-              pathname === href || pathname.startsWith(`${href}/`);
+            const active = isNavItemActive(
+              href,
+              pathname,
+              items.map((i) => i.href),
+            );
             return (
               <Link
                 key={href}

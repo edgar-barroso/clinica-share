@@ -331,7 +331,7 @@ export default function ProfissionalDetailPage({
                 {prof.duracaoConsultaMinutos} min
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Define o bloco mínimo de agenda (AG04).
+                Define o bloco padrão na agenda.
               </p>
             </CardContent>
           </Card>

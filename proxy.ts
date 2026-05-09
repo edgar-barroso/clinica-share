@@ -45,6 +45,11 @@ const publicApiRoutes: { path: string; method: string }[] = [
   { path: "/api/auth/logout", method: "POST" },
   { path: "/api/auth/me", method: "GET" },
   { path: "/api/hello", method: "GET" },
+  // Cron interno: autenticado por bearer secret na própria rota, não por cookie.
+  { path: "/api/cron/gerar-repasses", method: "POST" },
+  { path: "/api/cron/gerar-repasses", method: "GET" },
+  { path: "/api/cron/lembretes-amanha", method: "POST" },
+  { path: "/api/cron/lembretes-amanha", method: "GET" },
 ];
 
 // Páginas públicas (rotas exatas)

@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Search } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -38,16 +38,7 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 backdrop-blur lg:px-10">
       <MobileSidebarTrigger />
-      <div className="relative hidden max-w-md flex-1 md:block">
-        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          placeholder="Buscar paciente, profissional, atendimento…"
-          className="h-9 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      <div className="flex-1 md:hidden" />
+      <div className="flex-1" />
 
       <div ref={menuRef} className="relative">
         <button type="button" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu do usuário" aria-expanded={menuOpen} className="flex items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-muted">

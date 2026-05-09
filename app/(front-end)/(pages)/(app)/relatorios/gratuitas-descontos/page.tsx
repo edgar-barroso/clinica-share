@@ -75,7 +75,7 @@ export default function RelatorioGratuitasPage() {
 
       <PageHeader
         title="Gratuidades & cortesias"
-        description="RE04 · Atendimentos com motivoDescontoOuGratuidade (FI06)"
+        description="Atendimentos com desconto ou gratuidade concedidos no período"
       />
 
       <Card className="mb-6">

@@ -175,19 +175,26 @@ export default function MinhasConsultasPage() {
               </TableHeader>
               <TableBody>
                 {visiveis.map((a) => (
-                  <TableRow key={a.id}>
+                  <TableRow
+                    key={a.id}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => router.push(`/p/consultas/${a.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/p/consultas/${a.id}`);
+                      }
+                    }}
+                    className="cursor-pointer focus:outline-none focus-visible:bg-muted/60"
+                  >
                     <TableCell className="whitespace-nowrap">
-                      <Link
-                        href={`/p/consultas/${a.id}`}
-                        className="block hover:text-primary"
-                      >
-                        <div className="text-sm font-medium">
-                          {formatDate(a.data, "dd/MM/yyyy")}
-                        </div>
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          {a.hora}
-                        </div>
-                      </Link>
+                      <div className="text-sm font-medium">
+                        {formatDate(a.data, "dd/MM/yyyy")}
+                      </div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {a.hora}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm font-medium">{a.profissional.nome}</p>

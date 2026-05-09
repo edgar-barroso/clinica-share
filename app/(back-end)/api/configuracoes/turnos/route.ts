@@ -29,7 +29,9 @@ const turnosSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    await requireUser(req, ["admin", "auxiliar", "atendente", "profissional"]);
+    // Liberado para qualquer usuário autenticado — paciente precisa
+    // dos blocos para gerar slots no wizard de agendamento.
+    await requireUser(req);
     const turnos = await getTurnos();
     return NextResponse.json({ turnos });
   } catch (err) {

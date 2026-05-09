@@ -224,7 +224,7 @@ export default function NovoProfissionalPage() {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Define o bloco de agenda (AG04).
+                  Define o bloco padrão na agenda.
                 </p>
               </div>
             </CardContent>
@@ -232,7 +232,7 @@ export default function NovoProfissionalPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Contrato e repasse (FI01 / FI02 / FI08)</CardTitle>
+              <CardTitle>Contrato e repasse</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
@@ -306,7 +306,7 @@ export default function NovoProfissionalPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Turnos fixos (AG03 / CO02 / CO03)</CardTitle>
+              <CardTitle>Turnos fixos</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addTurno}>
                 Adicionar turno
               </Button>

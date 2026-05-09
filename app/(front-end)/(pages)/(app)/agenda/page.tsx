@@ -20,9 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AgendamentoStatusBadge,
   PaymentStatusBadge,
@@ -72,6 +71,11 @@ function buildDiasSemana(): DiaSemana[] {
   });
 }
 
+type ConfirmAction =
+  | { kind: "chegada"; id: string; nome: string; hora: string }
+  | { kind: "naoCompareceu"; id: string; nome: string; hora: string }
+  | { kind: "cancelar"; id: string; nome: string; hora: string };
+
 export default function AgendaPage() {
   const { role, profissionalId } = useCurrentUser();
   const DIAS = useMemo(() => buildDiasSemana(), []);
@@ -88,8 +92,7 @@ export default function AgendaPage() {
   );
   const [agendamentos, setAgendamentos] = useState<AgendamentoListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
-  const [motivo, setMotivo] = useState("");
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -117,6 +120,7 @@ export default function AgendaPage() {
     try {
       await apiMarcarChegada(id);
       toast.success("Chegada registrada");
+      setConfirmAction(null);
       await fetchData();
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -127,22 +131,18 @@ export default function AgendaPage() {
     try {
       await apiNaoCompareceu(id);
       toast.success("Marcado como não compareceu");
+      setConfirmAction(null);
       await fetchData();
     } catch (err) {
       toast.error(apiErrorMessage(err));
     }
   }
 
-  async function handleCancelar(id: string) {
-    if (motivo.trim().length < 3) {
-      toast.warning("Motivo é obrigatório (mínimo 3 caracteres)");
-      return;
-    }
+  async function handleCancelar(id: string, motivo: string) {
     try {
-      await apiCancelarAgendamento(id, motivo.trim());
+      await apiCancelarAgendamento(id, motivo);
       toast.success("Agendamento cancelado");
-      setCancelandoId(null);
-      setMotivo("");
+      setConfirmAction(null);
       await fetchData();
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -203,24 +203,110 @@ export default function AgendaPage() {
               atendimento={a}
               role={role}
               profissionalId={profissionalId}
-              cancelandoId={cancelandoId}
-              motivo={motivo}
-              onMotivoChange={setMotivo}
-              onIniciarCancelar={() => {
-                setCancelandoId(a.id);
-                setMotivo("");
-              }}
-              onConfirmCancelar={() => handleCancelar(a.id)}
-              onAbortCancelar={() => {
-                setCancelandoId(null);
-                setMotivo("");
-              }}
-              onMarcarChegada={() => handleMarcarChegada(a.id)}
-              onNaoCompareceu={() => handleNaoCompareceu(a.id)}
+              onMarcarChegada={() =>
+                setConfirmAction({
+                  kind: "chegada",
+                  id: a.id,
+                  nome: a.paciente.nome,
+                  hora: a.hora,
+                })
+              }
+              onNaoCompareceu={() =>
+                setConfirmAction({
+                  kind: "naoCompareceu",
+                  id: a.id,
+                  nome: a.paciente.nome,
+                  hora: a.hora,
+                })
+              }
+              onCancelar={() =>
+                setConfirmAction({
+                  kind: "cancelar",
+                  id: a.id,
+                  nome: a.paciente.nome,
+                  hora: a.hora,
+                })
+              }
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmAction?.kind === "chegada"}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title="Confirmar chegada do paciente"
+        description={
+          confirmAction?.kind === "chegada" ? (
+            <>
+              Registrar que <strong>{confirmAction.nome}</strong> chegou para a
+              consulta das <strong>{confirmAction.hora}</strong>? O profissional
+              será notificado para iniciar o atendimento.
+            </>
+          ) : null
+        }
+        confirmLabel="Sim, registrar chegada"
+        cancelLabel="Voltar"
+        onConfirm={() => {
+          if (confirmAction?.kind === "chegada") {
+            void handleMarcarChegada(confirmAction.id);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmAction?.kind === "naoCompareceu"}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title="Marcar como não compareceu?"
+        variant="warning"
+        description={
+          confirmAction?.kind === "naoCompareceu" ? (
+            <>
+              <strong>{confirmAction.nome}</strong> ({confirmAction.hora}) será
+              registrado como falta. Esta ação fica registrada no histórico e
+              não pode ser desfeita.
+            </>
+          ) : null
+        }
+        confirmLabel="Sim, marcar falta"
+        cancelLabel="Voltar"
+        onConfirm={() => {
+          if (confirmAction?.kind === "naoCompareceu") {
+            void handleNaoCompareceu(confirmAction.id);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmAction?.kind === "cancelar"}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title="Cancelar agendamento?"
+        variant="destructive"
+        description={
+          confirmAction?.kind === "cancelar" ? (
+            <>
+              Cancelando consulta de <strong>{confirmAction.nome}</strong> às{" "}
+              <strong>{confirmAction.hora}</strong>. O motivo abaixo é
+              registrado no audit log e o paciente é notificado.
+            </>
+          ) : null
+        }
+        confirmLabel="Confirmar cancelamento"
+        cancelLabel="Voltar"
+        prompt={{
+          label: "Motivo do cancelamento",
+          placeholder: "Ex: Paciente solicitou remarcação",
+          required: true,
+          minLength: 3,
+          helper: "Mínimo 3 caracteres. Visível em relatórios e auditoria.",
+        }}
+        onConfirm={() => {}}
+        onConfirmWithValue={(motivo) => {
+          if (confirmAction?.kind === "cancelar") {
+            void handleCancelar(confirmAction.id, motivo);
+          }
+        }}
+      />
     </>
   );
 }
@@ -229,28 +315,18 @@ interface CardProps {
   atendimento: AgendamentoListItem;
   role: Role;
   profissionalId: string | null;
-  cancelandoId: string | null;
-  motivo: string;
-  onMotivoChange: (v: string) => void;
-  onIniciarCancelar: () => void;
-  onConfirmCancelar: () => void;
-  onAbortCancelar: () => void;
   onMarcarChegada: () => void;
   onNaoCompareceu: () => void;
+  onCancelar: () => void;
 }
 
 function AgendamentoCard({
   atendimento: a,
   role,
   profissionalId,
-  cancelandoId,
-  motivo,
-  onMotivoChange,
-  onIniciarCancelar,
-  onConfirmCancelar,
-  onAbortCancelar,
   onMarcarChegada,
   onNaoCompareceu,
+  onCancelar,
 }: CardProps) {
   const isStaff =
     role === "admin" || role === "auxiliar" || role === "atendente";
@@ -258,7 +334,6 @@ function AgendamentoCard({
     role === "profissional" && profissionalId === a.profissionalId;
   const podeAtuar =
     role === "admin" || role === "auxiliar" || isProfissionalDono;
-  const cancelando = cancelandoId === a.id;
 
   return (
     <Card>
@@ -339,7 +414,7 @@ function AgendamentoCard({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={onIniciarCancelar}
+                onClick={onCancelar}
                 className="text-destructive hover:text-destructive"
               >
                 <XCircle size={14} />
@@ -347,41 +422,6 @@ function AgendamentoCard({
               </Button>
             )}
         </div>
-
-        {cancelando && (
-          <div className="basis-full border-t border-border pt-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor={`motivo-${a.id}`}>
-                  Motivo do cancelamento
-                </Label>
-                <Input
-                  id={`motivo-${a.id}`}
-                  value={motivo}
-                  onChange={(e) => onMotivoChange(e.target.value)}
-                  placeholder="Ex: Paciente solicitou remarcação"
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onAbortCancelar}
-                >
-                  Voltar
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={onConfirmCancelar}
-                >
-                  Confirmar cancelamento
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

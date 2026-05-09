@@ -5,9 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  CalendarClock,
   CheckCircle2,
   ChevronDown,
-  Plus,
   Send,
   X,
 } from "lucide-react";
@@ -20,9 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -34,7 +31,6 @@ import {
 import { RepasseStatusBadge } from "@/components/financial/status-badge";
 import { PageHeader } from "@/components/layouts/page-header";
 import {
-  apiGerarRepasse,
   apiListRepasses,
   apiMarcarRepassePago,
   type RepasseListItem,
@@ -91,14 +87,7 @@ export default function RepassesPage() {
   const [pendingPayId, setPendingPayId] = useState<string | null>(null);
   const [limite, setLimite] = useState(SEMANAS_INICIAIS);
 
-  // Form de gerar repasse
-  const [showGerar, setShowGerar] = useState(false);
   const semanaAtual = useMemo(() => semanaAtualISO(), []);
-  const [genProfId, setGenProfId] = useState("");
-  const [genInicio, setGenInicio] = useState(semanaAtual.inicio);
-  const [genFim, setGenFim] = useState(semanaAtual.fim);
-  const [generating, setGenerating] = useState(false);
-
   const hoje = hojeISO();
 
   const fetchData = useCallback(async () => {
@@ -112,51 +101,27 @@ export default function RepassesPage() {
       ]);
       setRepasses(rep.repasses);
       setProfissionais(profs.profissionais);
-      if (profs.profissionais.length > 0 && !genProfId) {
-        setGenProfId(profs.profissionais[0].id);
-      }
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [podeGerenciar]);
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
 
-  async function handleGerar() {
-    if (!genProfId) {
-      toast.warning("Selecione um profissional");
-      return;
-    }
-    setGenerating(true);
-    try {
-      await apiGerarRepasse({
-        profissionalId: genProfId,
-        periodoInicio: genInicio,
-        periodoFim: genFim,
-      });
-      toast.success("Repasse gerado");
-      setShowGerar(false);
-      await fetchData();
-    } catch (err) {
-      toast.error(apiErrorMessage(err));
-    } finally {
-      setGenerating(false);
-    }
-  }
-
   async function confirmarPagamento(id: string) {
     try {
-      await apiMarcarRepassePago(id);
+      // Atualiza só o repasse afetado em memória — evita re-fetchar tudo
+      // (que causava o "flicker" de página recarregando).
+      const { repasse } = await apiMarcarRepassePago(id);
+      setRepasses((prev) => prev.map((r) => (r.id === id ? repasse : r)));
       toast.success("Repasse marcado como pago", {
-        description: "Audit log gravado (RNF-102).",
+        description: "Registro gravado na auditoria.",
       });
       setPendingPayId(null);
-      await fetchData();
     } catch (err) {
       toast.error(apiErrorMessage(err));
     }
@@ -225,65 +190,23 @@ export default function RepassesPage() {
     <>
       <PageHeader
         title="Repasses"
-        description="Prestação de contas semanal (FI07/FI08)"
-        actions={
-          podeGerenciar && (
-            <Button onClick={() => setShowGerar((s) => !s)}>
-              <Plus size={16} />
-              Gerar repasse
-            </Button>
-          )
-        }
+        description="Prestação de contas semanal aos profissionais"
       />
 
-      {showGerar && podeGerenciar && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Gerar repasse — período</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5 lg:col-span-2">
-              <Label htmlFor="prof">Profissional</Label>
-              <Select
-                id="prof"
-                value={genProfId}
-                onChange={(e) => setGenProfId(e.target.value)}
-              >
-                {profissionais.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome} — {p.especialidade}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ini">Início</Label>
-              <Input
-                id="ini"
-                type="date"
-                value={genInicio}
-                onChange={(e) => setGenInicio(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fim">Fim</Label>
-              <Input
-                id="fim"
-                type="date"
-                value={genFim}
-                onChange={(e) => setGenFim(e.target.value)}
-              />
-            </div>
-            <div className="flex justify-end gap-2 lg:col-span-4">
-              <Button variant="outline" onClick={() => setShowGerar(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleGerar} disabled={generating}>
-                {generating ? "Calculando…" : "Calcular e salvar"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {podeGerenciar && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <CalendarClock size={16} className="mt-0.5 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">
+              Geração automática toda segunda-feira
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Os repasses são calculados pelo servidor a cada segunda às
+              06:00 cobrindo a semana anterior (segunda → domingo). Esta
+              tela apenas exibe e marca como pago.
+            </p>
+          </div>
+        </div>
       )}
 
       {atrasados.length > 0 && (
@@ -362,9 +285,8 @@ export default function RepassesPage() {
       ) : grupos.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Nenhum repasse gerado ainda.
-            {podeGerenciar &&
-              ' Clique em "Gerar repasse" para calcular o período.'}
+            Nenhum repasse fechado ainda. O próximo cálculo acontece na
+            próxima segunda-feira, cobrindo a semana atual.
           </CardContent>
         </Card>
       ) : (
@@ -586,7 +508,7 @@ function ConfirmarPagamentoDialog({
           <div>
             <h2 className="text-base font-semibold">Confirmar pagamento</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Esta ação registra audit log (RNF-102) e não pode ser desfeita.
+              Esta ação fica registrada na auditoria e não pode ser desfeita.
             </p>
           </div>
           <button

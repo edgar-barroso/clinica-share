@@ -8,12 +8,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layouts/page-header";
 import { apiListProfissionais, type Profissional } from "@/lib/api/profissionais";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatPercent } from "@/lib/format";
+import { usePagination } from "@/lib/use-pagination";
 
 function initials(name: string) {
   const parts = name.split(" ").filter((p) => !["Dr.", "Dra.", "Sr.", "Sra."].includes(p));
@@ -30,6 +32,9 @@ export default function ProfissionaisPage() {
       .catch((err) => toast.error(apiErrorMessage(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  const { page, totalPages, setPage, slice } = usePagination(profissionais.length);
+  const visiveis = slice(profissionais);
 
   return (
     <>
@@ -66,7 +71,7 @@ export default function ProfissionaisPage() {
         <Card>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
-              {profissionais.map((p) => (
+              {visiveis.map((p) => (
                 <Link
                   key={p.id}
                   href={`/profissionais/${p.id}`}
@@ -124,6 +129,7 @@ export default function ProfissionaisPage() {
                 </Link>
               ))}
             </div>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </CardContent>
         </Card>
       )}

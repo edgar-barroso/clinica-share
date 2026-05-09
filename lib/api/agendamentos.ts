@@ -40,6 +40,7 @@ export const apiListAgendamentos = (filter?: {
   dataInicio?: string;
   dataFim?: string;
   profissionalId?: string;
+  pacienteId?: string;
   consultorioId?: string;
   status?: StatusAgendamento;
 }) => {
@@ -48,6 +49,7 @@ export const apiListAgendamentos = (filter?: {
   if (filter?.dataInicio) params.set("dataInicio", filter.dataInicio);
   if (filter?.dataFim) params.set("dataFim", filter.dataFim);
   if (filter?.profissionalId) params.set("profissionalId", filter.profissionalId);
+  if (filter?.pacienteId) params.set("pacienteId", filter.pacienteId);
   if (filter?.consultorioId) params.set("consultorioId", filter.consultorioId);
   if (filter?.status) params.set("status", filter.status);
   const qs = params.toString();

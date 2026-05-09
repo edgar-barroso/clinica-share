@@ -85,7 +85,7 @@ export default function NovoAtendimentoPage() {
       return;
     }
     if (statusPagamento === "gratuito" && motivo.trim().length < 3) {
-      toast.warning("Motivo é obrigatório para atendimento gratuito (FI06)");
+      toast.warning("Motivo é obrigatório para atendimento gratuito");
       return;
     }
 
@@ -250,8 +250,7 @@ export default function NovoAtendimentoPage() {
               {statusPagamento === "gratuito" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="motivo">
-                    Justificativa da gratuidade (FI06)
-                  </Label>
+                    Justificativa da gratuidade                  </Label>
                   <Input
                     id="motivo"
                     value={motivo}
