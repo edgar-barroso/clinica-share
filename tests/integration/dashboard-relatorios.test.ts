@@ -90,6 +90,30 @@ async function fixtureCenario() {
         status: "nao_compareceu",
         statusPagamento: "pendente",
       },
+      // Atendimentos realizados aguardando cobrança — esses entram em
+      // "atendimentos pendentes" (fila de cobrança, não pendência de
+      // agenda). Implementação em dashboard/stats.ts: status=realizado
+      // AND statusPagamento=pendente.
+      {
+        pacienteId: paciente.id,
+        profissionalId: profissional.id,
+        consultorioId: consultorio.id,
+        data: new Date("2026-06-06"),
+        hora: "10:00",
+        valorConsulta: new Prisma.Decimal(180),
+        status: "realizado",
+        statusPagamento: "pendente",
+      },
+      {
+        pacienteId: paciente.id,
+        profissionalId: profissional.id,
+        consultorioId: consultorio.id,
+        data: new Date("2026-06-06"),
+        hora: "11:00",
+        valorConsulta: new Prisma.Decimal(220),
+        status: "realizado",
+        statusPagamento: "pendente",
+      },
     ],
   });
   return { profissional, paciente, consultorio };
@@ -106,7 +130,9 @@ describe("GET /api/dashboard", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.stats.profissionaisAtivos).toBe(1);
-    expect(body.stats.atendimentosPendentes).toBe(2); // cancelado + nao_compareceu
+    // Fila de cobrança: realizado + statusPagamento=pendente (não inclui
+    // cancelado/nao_compareceu, esses são "pendência de agenda")
+    expect(body.stats.atendimentosPendentes).toBe(2);
     expect(body.stats.receitaPorDia).toHaveLength(1); // só 1 dia com pago
     expect(body.stats.receitaPorDia[0].receita).toBe("200.00");
   });

@@ -11,7 +11,6 @@ const ADMIN_EMAIL = `admin-rel-e2e-${Date.now()}@example.com`;
 const ADMIN_PASSWORD = "admin-rel-12345";
 
 test.beforeAll(async () => {
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();

@@ -16,7 +16,6 @@ const ADMIN_EMAIL = `admin-proxy-${Date.now()}@example.com`;
 const ADMIN_PASSWORD = "proxy-12345";
 
 test.beforeAll(async () => {
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();

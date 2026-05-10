@@ -1,0 +1,159 @@
+%% ClinicaShare — MER (Modelo Entidade Relacionamento)
+%% Gerado a partir de prisma/schema.prisma
+%% Renderize com: npx -p @mermaid-js/mermaid-cli mmdc -i prisma/mer.mmd -o prisma/mer.svg
+%% Ou cole em https://mermaid.live
+
+erDiagram
+    %% =================== AUTH ===================
+    %% (0..1) ↔ (0..1): User pode existir sem profissional/paciente/staff e vice-versa
+    User |o--o| Profissional : "vincula"
+    User |o--o| Paciente     : "vincula"
+    User |o--o| Staff        : "vincula"
+    User ||--o{ AuditLog     : "registra"
+
+    %% =================== AGENDA / OPERAÇÃO ===================
+    Profissional ||--o{ TurnoFixo   : "tem"
+    Consultorio  ||--o{ TurnoFixo   : "recebe"
+    Profissional ||--o{ Atendimento : "executa"
+    Paciente     ||--o{ Atendimento : "recebe"
+    Consultorio  ||--o{ Atendimento : "sedia"
+
+    %% =================== FINANCEIRO ===================
+    %% 1:N (não N:M): cada atendimento só pode estar em UM repasse — invariante RNF-104
+    Profissional ||--o{ Repasse     : "recebe"
+    Repasse      |o--o{ Atendimento : "agrega"
+
+    %% Configuracao é tabela key-value isolada (sem FK por design)
+
+    User {
+        string id PK
+        string email UK
+        string passwordHash "nullable (Google OAuth)"
+        string googleId UK "nullable"
+        Role   role "admin|auxiliar|profissional|atendente|paciente"
+        bool   ativo
+        datetime ultimoAcesso
+        string passwordResetToken
+        datetime passwordResetTokenExpiresAt
+        string profissionalId FK "UK, nullable"
+        string pacienteId FK "UK, nullable"
+        string staffId FK "UK, nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Profissional {
+        string id PK
+        string nome
+        string especialidade
+        string conselho
+        string email UK
+        string telefone
+        bool   ativo
+        ModalidadeContrato modalidadeContrato "aluguel-fixo|percentual"
+        decimal percentualRepasse "Decimal(5,4) 0..1, nullable"
+        decimal valorAluguelPorTurno "Decimal(10,2), nullable"
+        decimal valorConsultaBase "Decimal(10,2)"
+        int    duracaoConsultaMinutos
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Paciente {
+        string id PK
+        string nome
+        string telefone
+        string email UK
+        string cpf UK "nullable, PII LGPD"
+        date   dataNascimento
+        Sexo   sexo "M|F|outro"
+        json   endereco "{cep,rua,numero,cidade,uf}"
+        json   plano    "{temPlano,operadora?,numeroCarteirinha?}"
+        bool   senhaDefinida
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Staff {
+        string id PK
+        string nome
+        CargoStaff cargo "atendente|auxiliar"
+        string email UK
+        string telefone
+        bool   ativo
+        bool   senhaDefinida
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Consultorio {
+        string id PK
+        string nome
+        string tipo
+        string_array equipamentos
+        string_array especialidadesCompativeis
+        bool   ativo
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    TurnoFixo {
+        string id PK
+        string profissionalId FK
+        string consultorioId  FK
+        int    diaSemana "1=seg..5=sex"
+        Turno  turno "manha|tarde|noite"
+    }
+
+    Atendimento {
+        string id PK
+        date   data
+        string hora "HH:mm"
+        string pacienteId FK
+        string profissionalId FK
+        string consultorioId FK
+        string repasseId FK "nullable, SetNull"
+        decimal valorConsulta "Decimal(10,2)"
+        StatusAgendamento status "agendado|em_atendimento|realizado|cancelado|nao_compareceu"
+        StatusPagamento statusPagamento "pago|pendente|gratuito"
+        string motivoCancelamento "obrigatório se cancelado/nao_compareceu"
+        string motivoDescontoOuGratuidade "obrigatório se gratuito (FI06)"
+        bool   usaProntuarioExterno
+        json   prontuarioInterno
+        string observacoes
+        datetime lembreteEnviadoEm "cron D-1"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Repasse {
+        string id PK
+        string profissionalId FK
+        date   periodoInicio
+        date   periodoFim
+        decimal receitaBruta "Decimal(12,2)"
+        decimal valorRepasse "Decimal(12,2) calc server"
+        StatusRepasse status "aberto|pago"
+        datetime dataPagamento
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    AuditLog {
+        string id PK
+        datetime timestamp
+        string userId FK
+        string userNome "snapshot RF-025"
+        string entidade
+        string entidadeId
+        string campo
+        string valorAntes
+        string valorDepois
+        string motivo "obrigatório RNF-102"
+    }
+
+    Configuracao {
+        string chave PK
+        json   valor
+        datetime updatedAt
+    }

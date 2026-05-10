@@ -45,6 +45,16 @@ async function createFixtures() {
       especialidadesCompativeis: [],
     },
   });
+  // Turno fixo cobrindo 2026-06-01 (segunda) 10:00 (manhã) — exigido pelo
+  // createAgendamento desde commit d70ec4e (validação dia/turno × turno fixo).
+  await prisma.turnoFixo.create({
+    data: {
+      profissionalId: profissional.id,
+      consultorioId: consultorio.id,
+      diaSemana: 1,
+      turno: "manha",
+    },
+  });
   return { paciente, profissional, consultorio };
 }
 

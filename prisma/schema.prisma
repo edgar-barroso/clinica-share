@@ -235,11 +235,15 @@ model Atendimento {
   // Cron de lembrete D-1: marca quando email/WhatsApp foi disparado para
   // evitar reenvio se o cron rodar mais de uma vez no mesmo dia.
   lembreteEnviadoEm          DateTime?
+  // FK para Repasse (1:N): null até ser incluído num fechamento semanal.
+  // Garante que um atendimento só pertence a UM repasse — invariante
+  // financeiro RNF-104. Se o Repasse for excluído, volta a null.
+  repasseId                  String?
 
-  paciente     Paciente             @relation(fields: [pacienteId], references: [id])
-  profissional Profissional         @relation(fields: [profissionalId], references: [id])
-  consultorio  Consultorio          @relation(fields: [consultorioId], references: [id])
-  repasses     RepasseAtendimento[]
+  paciente     Paciente     @relation(fields: [pacienteId], references: [id])
+  profissional Profissional @relation(fields: [profissionalId], references: [id])
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  repasse      Repasse?     @relation(fields: [repasseId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -250,6 +254,7 @@ model Atendimento {
   @@index([pacienteId])
   @@index([status])
   @@index([statusPagamento])
+  @@index([repasseId])
   @@map("appointments")
 }
 
@@ -266,8 +271,8 @@ model Repasse {
   status         StatusRepasse @default(aberto)
   dataPagamento  DateTime?
 
-  profissional Profissional         @relation(fields: [profissionalId], references: [id])
-  atendimentos RepasseAtendimento[]
+  profissional Profissional  @relation(fields: [profissionalId], references: [id])
+  atendimentos Atendimento[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -275,20 +280,6 @@ model Repasse {
   @@unique([profissionalId, periodoInicio, periodoFim])
   @@index([status])
   @@map("payouts")
-}
-
-model RepasseAtendimento {
-  repasseId     String
-  atendimentoId String
-
-  repasse     Repasse     @relation(fields: [repasseId], references: [id], onDelete: Cascade)
-  atendimento Atendimento @relation(fields: [atendimentoId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@id([repasseId, atendimentoId])
-  @@index([atendimentoId])
-  @@map("payout_appointments")
 }
 
 model AuditLog {

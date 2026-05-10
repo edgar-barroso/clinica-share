@@ -38,7 +38,7 @@ export async function marcarRepassePago(
             modalidadeContrato: true,
           },
         },
-        atendimentos: { select: { atendimentoId: true } },
+        atendimentos: { select: { id: true } },
       },
     });
 

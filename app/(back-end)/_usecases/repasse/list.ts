@@ -46,7 +46,7 @@ export async function listRepasses(
       profissional: {
         select: { id: true, nome: true, especialidade: true, modalidadeContrato: true },
       },
-      atendimentos: { select: { atendimentoId: true } },
+      atendimentos: { select: { id: true } },
     },
     take: 200,
   });

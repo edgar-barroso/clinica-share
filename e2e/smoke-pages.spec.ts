@@ -30,7 +30,6 @@ let atendimentoRealizadoId = "";
 let repasseId = "";
 
 test.beforeAll(async () => {
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();
@@ -165,7 +164,7 @@ test.beforeAll(async () => {
       periodoFim: fimSemana,
       receitaBruta: new Prisma.Decimal(200),
       valorRepasse: new Prisma.Decimal(60),
-      atendimentos: { create: [{ atendimentoId: realizado.id }] },
+      atendimentos: { connect: [{ id: realizado.id }] },
     },
   });
   repasseId = r.id;
