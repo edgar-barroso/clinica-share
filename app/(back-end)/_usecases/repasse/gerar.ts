@@ -14,6 +14,11 @@ interface GerarInput {
  * profissional/período. Idempotente: se já existe `Repasse` no período
  * com `@@unique(profissionalId, periodoInicio, periodoFim)`, retorna
  * o existente sem recalcular (evita sobrescrever pagamento já marcado).
+ *
+ * Invariante 1:N: cada atendimento só pode estar em UM repasse.
+ * O `updateMany` filtra `repasseId: null` — atendimentos já vinculados
+ * a outro repasse (cenário só possível com períodos sobrepostos, fora
+ * da convenção semanal Mon→Sun) são silenciosamente ignorados.
  */
 export async function gerarRepasse(input: GerarInput) {
   const existing = await prisma.repasse.findUnique({
@@ -35,7 +40,7 @@ export async function gerarRepasse(input: GerarInput) {
 
   try {
     return await prisma.$transaction(async (tx) => {
-      const repasse = await tx.repasse.create({
+      const created = await tx.repasse.create({
         data: {
           profissionalId: input.profissionalId,
           periodoInicio: new Date(input.periodoInicio),
@@ -43,18 +48,28 @@ export async function gerarRepasse(input: GerarInput) {
           receitaBruta: calc.receitaBruta,
           valorRepasse: calc.valorRepasse,
           status: "aberto",
-          atendimentos: {
-            create: calc.atendimentosIds.map((atendimentoId) => ({
-              atendimentoId,
-            })),
-          },
-        },
-        include: {
-          atendimentos: true,
-          profissional: { select: { id: true, nome: true, especialidade: true } },
         },
       });
-      return repasse;
+
+      if (calc.atendimentosIds.length > 0) {
+        await tx.atendimento.updateMany({
+          where: {
+            id: { in: calc.atendimentosIds },
+            repasseId: null,
+          },
+          data: { repasseId: created.id },
+        });
+      }
+
+      return tx.repasse.findUniqueOrThrow({
+        where: { id: created.id },
+        include: {
+          atendimentos: true,
+          profissional: {
+            select: { id: true, nome: true, especialidade: true },
+          },
+        },
+      });
     });
   } catch (err) {
     // Race condition: outro request criou nesse meio tempo

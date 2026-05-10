@@ -19,7 +19,7 @@ export interface RepasseListItem {
     especialidade: string;
     modalidadeContrato: ModalidadeContrato;
   };
-  atendimentos: { atendimentoId: string }[];
+  atendimentos: { id: string }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -49,16 +49,13 @@ export interface RepasseDetalheResponse {
       valorAluguelPorTurno: string | null;
     };
     atendimentos: {
-      atendimentoId: string;
-      atendimento: {
-        id: string;
-        data: string;
-        hora: string;
-        valorConsulta: string;
-        statusPagamento: "pago" | "pendente" | "gratuito";
-        paciente: { id: string; nome: string };
-        consultorio: { id: string; nome: string };
-      };
+      id: string;
+      data: string;
+      hora: string;
+      valorConsulta: string;
+      statusPagamento: "pago" | "pendente" | "gratuito";
+      paciente: { id: string; nome: string };
+      consultorio: { id: string; nome: string };
     }[];
   };
   breakdown: RepasseBreakdown;

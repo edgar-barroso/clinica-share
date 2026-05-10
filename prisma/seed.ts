@@ -94,7 +94,8 @@ const rand = mulberry32(42);
 
 async function cleanAll() {
   console.log("🧹 Limpando banco...");
-  await prisma.repasseAtendimento.deleteMany();
+  // Atendimento.repasseId tem onDelete: SetNull — Repasse pode ser
+  // deletado primeiro mesmo com atendimentos vinculados.
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();
@@ -732,7 +733,7 @@ async function seedRepasses(
           status: sem.status,
           dataPagamento: sem.status === "pago" ? addDays(fim, 2) : null,
           atendimentos: {
-            create: elegiveis.map((a) => ({ atendimentoId: a.id })),
+            connect: elegiveis.map((a) => ({ id: a.id })),
           },
         },
       });

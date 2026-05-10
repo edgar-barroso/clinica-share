@@ -13,7 +13,6 @@ const PACIENTE_EMAIL = `pac-portal-e2e-${Date.now()}@example.com`;
 const PACIENTE_PASSWORD = "paciente-12345";
 
 test.beforeAll(async () => {
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();

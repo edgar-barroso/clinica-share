@@ -30,13 +30,10 @@ export async function getRepasse(id: string, viewer: Viewer) {
       },
       atendimentos: {
         include: {
-          atendimento: {
-            include: {
-              paciente: { select: { id: true, nome: true } },
-              consultorio: { select: { id: true, nome: true } },
-            },
-          },
+          paciente: { select: { id: true, nome: true } },
+          consultorio: { select: { id: true, nome: true } },
         },
+        orderBy: [{ data: "asc" }, { hora: "asc" }],
       },
     },
   });

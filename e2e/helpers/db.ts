@@ -6,8 +6,8 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 export async function cleanAuthData() {
-  // Ordem importa por FKs: filhos antes dos pais
-  await prisma.repasseAtendimento.deleteMany();
+  // Ordem importa por FKs: filhos antes dos pais.
+  // Repasse antes de Atendimento porque Atendimento.repasseId tem onDelete: SetNull.
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();

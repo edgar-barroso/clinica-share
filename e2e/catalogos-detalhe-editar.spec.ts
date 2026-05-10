@@ -16,7 +16,6 @@ let staffId: string;
 
 test.beforeAll(async () => {
   // Limpa
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();

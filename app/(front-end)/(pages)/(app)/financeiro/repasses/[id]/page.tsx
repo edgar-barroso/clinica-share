@@ -226,7 +226,7 @@ export default function RepasseDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {repasse.atendimentos.map(({ atendimento: a }) => (
+                  {repasse.atendimentos.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell className="whitespace-nowrap">
                         <div className="text-sm">

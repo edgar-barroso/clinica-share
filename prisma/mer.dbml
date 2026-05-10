@@ -1,0 +1,331 @@
+// =====================================================================
+// ClinicaShare — Modelo Entidade-Relacionamento (DBML)
+// =====================================================================
+// Fonte de verdade: prisma/schema.prisma
+// Compile em: https://dbdiagram.io/d (exporta PDF/PNG/SQL DDL)
+// CLI:        npm i -g @dbml/cli && dbml2sql prisma/mer.dbml -o ddl.sql
+//
+// Convenções:
+// - Nomes físicos em snake_case inglês (regra inegociável do projeto).
+// - Valores monetários sempre em DECIMAL (RNF-101 / DEC-A03), nunca FLOAT.
+// - PII de paciente protegida por LGPD; ver notas em `patients`.
+// - Toda mutação financeira gera linha em `audit_logs` (RNF-102 / RF-025).
+// =====================================================================
+
+Project clinicashare {
+  database_type: 'PostgreSQL'
+  Note: '''
+  ClinicaShare — Sistema de gestão de repasses para clínica multiprofissional
+  do Dr. Edson Andrade. Suporta 5 atores (admin, auxiliar, profissional,
+  atendente, paciente), 35 RFs e 10 RNFs. Versão DBML refletindo o
+  schema.prisma após a refatoração de 2026-05-10 (Repasse↔Atendimento 1:N).
+  '''
+}
+
+// =====================================================================
+// 1. ENUMS DE DOMÍNIO
+// =====================================================================
+
+Enum role {
+  admin       [note: 'Dr. Edson + sócios — controle total + auditoria']
+  auxiliar    [note: 'Gerencia agendamento, atendimento e financeiro (sem RH)']
+  profissional [note: 'Vê apenas próprios atendimentos e repasses']
+  atendente   [note: 'Recepção: agenda, marca chegada, sem leitura financeira']
+  paciente    [note: 'Portal: vê próprios agendamentos e prontuário']
+}
+
+Enum turno {
+  manha
+  tarde
+  noite
+}
+
+Enum modalidade_contrato {
+  "aluguel-fixo" [note: 'Profissional paga aluguel/turno utilizado (DEC-R1-08)']
+  percentual    [note: 'Clínica retém X% do bruto pago']
+}
+
+Enum cargo_staff {
+  atendente
+  auxiliar
+}
+
+Enum sexo {
+  M
+  F
+  outro
+}
+
+Enum status_pagamento {
+  pago
+  pendente
+  gratuito [note: 'Requer motivo (FI06)']
+}
+
+Enum status_agendamento {
+  agendado
+  em_atendimento [note: 'Paciente chegou, sendo atendido']
+  realizado
+  cancelado     [note: 'Requer motivoCancelamento']
+  nao_compareceu [note: 'Requer motivoCancelamento']
+}
+
+Enum status_repasse {
+  aberto [note: 'Calculado mas não pago ao profissional']
+  pago   [note: 'Quitação registrada — gera audit log (FI08)']
+}
+
+// =====================================================================
+// 2. TABELAS
+// =====================================================================
+
+// ----- 2.1. AUTH ------------------------------------------------------
+
+Table users [note: 'Identidade autenticável. 1:1 opcional com profissional/paciente/staff.'] {
+  id                              uuid                       [pk, default: `gen_random_uuid()`]
+  email                           varchar(255)               [not null, unique, note: 'Login']
+  password_hash                   varchar(255)               [null, note: 'bcrypt; null se OAuth-only']
+  google_id                       varchar(255)               [null, unique, note: 'sub do Google OAuth']
+  role                            role                       [not null]
+  ativo                           boolean                    [not null, default: true]
+  ultimo_acesso                   timestamptz                [null]
+  password_reset_token            varchar(255)               [null]
+  password_reset_token_expires_at timestamptz                [null]
+  profissional_id                 uuid                       [null, unique]
+  paciente_id                     uuid                       [null, unique]
+  staff_id                        uuid                       [null, unique]
+  created_at                      timestamptz                [not null, default: `now()`]
+  updated_at                      timestamptz                [not null]
+
+  Indexes {
+    role [name: 'users_role_idx']
+  }
+
+  Note: 'Exatamente 1 dos 3 FKs (profissional/paciente/staff) deve ser preenchido — enforced em app-level.'
+}
+
+// ----- 2.2. PESSOAS ---------------------------------------------------
+
+Table professionals [note: 'Médicos, psicólogos, etc. Recebem repasse semanal.'] {
+  id                       uuid                  [pk, default: `gen_random_uuid()`]
+  nome                     varchar(255)          [not null]
+  especialidade            varchar(100)          [not null, note: 'Texto livre — sem normalização no MVP']
+  conselho                 varchar(50)           [not null, note: 'Ex: CRM-SP 123456']
+  email                    varchar(255)          [not null, unique]
+  telefone                 varchar(20)           [not null]
+  ativo                    boolean               [not null, default: true]
+  modalidade_contrato      modalidade_contrato   [not null]
+  percentual_repasse       "decimal(5,4)"        [null, note: 'Obrigatório se modalidade=percentual; range 0..1']
+  valor_aluguel_por_turno  "decimal(10,2)"       [null, note: 'Obrigatório se modalidade=aluguel-fixo']
+  valor_consulta_base      "decimal(10,2)"       [not null, note: 'Default p/ Atendimento.valor_consulta']
+  duracao_consulta_minutos int                   [not null, default: 30]
+  created_at               timestamptz           [not null, default: `now()`]
+  updated_at               timestamptz           [not null]
+
+  Indexes {
+    ativo [name: 'professionals_ativo_idx']
+  }
+
+  Note: 'Exclusividade percentual_repasse XOR valor_aluguel_por_turno enforced em app-level (CHECK constraint pendente — PEND-R2).'
+}
+
+Table patients [note: 'Pacientes da clínica. PII alta sensibilidade — ver LGPD.'] {
+  id              uuid                  [pk, default: `gen_random_uuid()`]
+  nome            varchar(255)          [not null]
+  telefone        varchar(20)           [not null]
+  email           varchar(255)          [not null, unique]
+  cpf             varchar(11)           [null, unique, note: 'PII alta — opcional até PEND-025 definir mínimo (LGPD)']
+  data_nascimento date                  [null]
+  sexo            sexo                  [null]
+  endereco        jsonb                 [null, note: '{cep, rua, numero, cidade, uf} — não normalizado no MVP']
+  plano           jsonb                 [null, note: '{temPlano, operadora?, numeroCarteirinha?}']
+  senha_definida  boolean               [not null, default: false, note: 'true após paciente ativar User']
+  created_at      timestamptz           [not null, default: `now()`]
+  updated_at      timestamptz           [not null]
+
+  Note: 'Dados clínicos NÃO entram aqui — ver Atendimento.prontuario_interno (DEC-E01 / LGPD).'
+}
+
+Table staff_members [note: 'Equipe administrativa: atendente e auxiliar.'] {
+  id             uuid          [pk, default: `gen_random_uuid()`]
+  nome           varchar(255)  [not null]
+  cargo          cargo_staff   [not null]
+  email          varchar(255)  [not null, unique]
+  telefone       varchar(20)   [not null]
+  ativo          boolean       [not null, default: true]
+  senha_definida boolean       [not null, default: false]
+  created_at     timestamptz   [not null, default: `now()`]
+  updated_at     timestamptz   [not null]
+}
+
+// ----- 2.3. INFRAESTRUTURA FÍSICA ------------------------------------
+
+Table consulting_rooms [note: 'Salas físicas da clínica. Soft-delete via ativo=false.'] {
+  id                          uuid          [pk, default: `gen_random_uuid()`]
+  nome                        varchar(100)  [not null]
+  tipo                        varchar(50)   [not null, note: 'Ex: Clínico, Pediátrico, Psicoterapia']
+  equipamentos                "text[]"      [not null, default: `ARRAY[]::text[]`]
+  especialidades_compativeis  "text[]"      [not null, default: `ARRAY[]::text[]`]
+  ativo                       boolean       [not null, default: true]
+  created_at                  timestamptz   [not null, default: `now()`]
+  updated_at                  timestamptz   [not null]
+}
+
+Table fixed_shifts [note: 'Alocação fixa profissional × consultório × dia × turno.'] {
+  id              uuid   [pk, default: `gen_random_uuid()`]
+  profissional_id uuid   [not null]
+  consultorio_id  uuid   [not null]
+  dia_semana      smallint [not null, note: '1=segunda ... 5=sexta. MVP não opera fim de semana']
+  turno           turno  [not null]
+
+  Indexes {
+    (profissional_id, dia_semana, turno) [unique, name: 'fixed_shifts_prof_dow_turno_uniq', note: 'Profissional não duplica turno']
+    (consultorio_id, dia_semana, turno)  [unique, name: 'fixed_shifts_room_dow_turno_uniq', note: 'Consultório aceita 1 prof/turno (PEND-015)']
+  }
+}
+
+// ----- 2.4. OPERAÇÃO -------------------------------------------------
+
+Table appointments [note: 'Atendimentos: agendamentos + execução + cobrança em uma só linha.'] {
+  id                              uuid                [pk, default: `gen_random_uuid()`]
+  data                            date                [not null]
+  hora                            varchar(5)          [not null, note: 'HH:mm — string p/ simplificar formatação']
+  paciente_id                     uuid                [not null]
+  profissional_id                 uuid                [not null]
+  consultorio_id                  uuid                [not null]
+  repasse_id                      uuid                [null, note: '1:N — null até entrar num fechamento. Move só via gerarRepasse']
+  valor_consulta                  "decimal(10,2)"     [not null, note: 'Cobrado nesta consulta. RNF-101: nunca float']
+  status                          status_agendamento  [not null, default: 'agendado']
+  status_pagamento                status_pagamento    [not null, default: 'pendente', note: 'Independente do status — pode estar agendado e pago']
+  motivo_cancelamento             text                [null, note: 'Obrigatório se status in (cancelado, nao_compareceu)']
+  motivo_desconto_ou_gratuidade   text                [null, note: 'Obrigatório se status_pagamento=gratuito (FI06)']
+  usa_prontuario_externo          boolean             [not null, default: false]
+  prontuario_interno              jsonb               [null, note: 'Estrutura aberta até PEND-017. Dados clínicos: alta sensibilidade LGPD']
+  observacoes                     text                [null]
+  lembrete_enviado_em             timestamptz         [null, note: 'Cron D-1 marca aqui pra evitar reenvio']
+  created_at                      timestamptz         [not null, default: `now()`]
+  updated_at                      timestamptz         [not null]
+
+  Indexes {
+    (data, hora, consultorio_id) [unique, name: 'appointments_dthora_room_uniq', note: 'AG05: sem choque de sala']
+    (profissional_id, data)      [name: 'appointments_prof_data_idx', note: 'Agenda do profissional']
+    paciente_id                  [name: 'appointments_paciente_idx']
+    status                       [name: 'appointments_status_idx']
+    status_pagamento             [name: 'appointments_status_pag_idx']
+    repasse_id                   [name: 'appointments_repasse_idx', note: 'Filtro p/ findMany por repasse']
+  }
+}
+
+// ----- 2.5. FINANCEIRO -----------------------------------------------
+
+Table payouts [note: 'Repasse semanal ao profissional (DEC-R1-02 / FI07).'] {
+  id              uuid             [pk, default: `gen_random_uuid()`]
+  profissional_id uuid             [not null]
+  periodo_inicio  date             [not null, note: 'Segunda-feira']
+  periodo_fim     date             [not null, note: 'Domingo (inclusivo)']
+  receita_bruta   "decimal(12,2)"  [not null, note: 'Soma de valor_consulta dos atendimentos pagos']
+  valor_repasse   "decimal(12,2)"  [not null, note: 'Calculado SEMPRE no servidor (DEC-A04 / RNF-103)']
+  status          status_repasse   [not null, default: 'aberto']
+  data_pagamento  timestamptz      [null, note: 'Preenchido em FI08 quando admin/auxiliar marca pago']
+  created_at      timestamptz      [not null, default: `now()`]
+  updated_at      timestamptz      [not null]
+
+  Indexes {
+    (profissional_id, periodo_inicio, periodo_fim) [unique, name: 'payouts_prof_periodo_uniq', note: 'FI07: 1 repasse por (prof, semana)']
+    status [name: 'payouts_status_idx']
+  }
+}
+
+// ----- 2.6. AUDITORIA ------------------------------------------------
+
+Table audit_logs [note: 'Trilha imutável de mutações financeiras (RNF-102 / RF-025).'] {
+  id           uuid         [pk, default: `gen_random_uuid()`]
+  timestamp    timestamptz  [not null, default: `now()`]
+  user_id      uuid         [not null]
+  user_nome    varchar(255) [not null, note: 'Snapshot do nome — sobrevive a renomeação']
+  entidade     varchar(50)  [not null, note: 'Nome lógico: Atendimento, Repasse, Profissional...']
+  entidade_id  varchar(64)  [not null, note: 'Sem FK por design (entidade pode ser excluída)']
+  campo        varchar(50)  [not null]
+  valor_antes  text         [not null]
+  valor_depois text         [not null]
+  motivo       text         [not null, note: 'RNF-102: sempre preenchido']
+
+  Indexes {
+    (entidade, entidade_id) [name: 'audit_logs_entidade_idx', note: 'Reconstrução de histórico por entidade']
+    user_id                 [name: 'audit_logs_user_idx']
+    timestamp               [name: 'audit_logs_ts_idx', note: 'Listagem cronológica reversa']
+  }
+
+  Note: 'Tabela append-only. Não há DELETE/UPDATE em prod (enforced via permissão app-level).'
+}
+
+// ----- 2.7. INFRA --------------------------------------------------
+
+Table configuracoes [note: 'Key-value JSON para overrides editáveis pelo admin (turnos, horários...).'] {
+  chave      varchar(100) [pk]
+  valor      jsonb        [not null]
+  updated_at timestamptz  [not null]
+
+  Note: 'Substitui constantes hardcoded em runtime. Usecases síncronos (_lib/turnos.ts) caem em defaults se chave ausente.'
+}
+
+// =====================================================================
+// 3. RELACIONAMENTOS
+// =====================================================================
+//
+// Convenções:
+// - "ref: > X" = N:1 (FK no lado do many)
+// - "ref: - X" = 1:1 (unique do lado do FK)
+// - Nomes seguem convenção <table>_<col>_fkey (PostgreSQL default)
+// =====================================================================
+
+// User ↔ Profissional/Paciente/Staff: 0..1 ↔ 0..1
+Ref users_profissional_id_fkey: users.profissional_id - professionals.id [delete: restrict, update: cascade]
+Ref users_paciente_id_fkey:     users.paciente_id     - patients.id      [delete: restrict, update: cascade]
+Ref users_staff_id_fkey:        users.staff_id        - staff_members.id [delete: restrict, update: cascade]
+
+// User ↔ AuditLog: 1:N (toda linha de auditoria pertence a um user)
+Ref audit_logs_user_id_fkey: audit_logs.user_id > users.id [delete: restrict, update: cascade]
+
+// Profissional/Consultorio ↔ TurnoFixo: 1:N
+Ref fixed_shifts_profissional_fkey: fixed_shifts.profissional_id > professionals.id     [delete: cascade, update: cascade]
+Ref fixed_shifts_consultorio_fkey:  fixed_shifts.consultorio_id  > consulting_rooms.id  [delete: restrict, update: cascade]
+
+// Atendimento → Paciente/Profissional/Consultorio: N:1
+Ref appointments_paciente_fkey:     appointments.paciente_id     > patients.id          [delete: restrict, update: cascade]
+Ref appointments_profissional_fkey: appointments.profissional_id > professionals.id     [delete: restrict, update: cascade]
+Ref appointments_consultorio_fkey:  appointments.consultorio_id  > consulting_rooms.id  [delete: restrict, update: cascade]
+
+// Atendimento → Repasse: N:1 com SetNull
+//   - Atendimento elegível pode entrar em UM repasse (FK opcional)
+//   - Se Repasse for excluído, atendimento volta a estar disponível
+Ref appointments_repasse_fkey: appointments.repasse_id > payouts.id [delete: set null, update: cascade]
+
+// Repasse → Profissional: N:1
+Ref payouts_profissional_fkey: payouts.profissional_id > professionals.id [delete: restrict, update: cascade]
+
+// =====================================================================
+// 4. NOTAS DE PRODUÇÃO
+// =====================================================================
+//
+// Backups: tabelas críticas para PITR/dump nightly:
+//   - audit_logs (compliance)
+//   - payouts + appointments (financeiro)
+//
+// Hot tables (write-heavy):
+//   - audit_logs (toda mutação financeira)
+//   - appointments (~50/dia em escala atual)
+//
+// Constraints adicionais a avaliar em R2:
+//   1. CHECK (modalidade_contrato='percentual') = (percentual_repasse IS NOT NULL)
+//   2. CHECK (modalidade_contrato='aluguel-fixo') = (valor_aluguel_por_turno IS NOT NULL)
+//   3. CHECK (status='cancelado' OR status='nao_compareceu') => motivo_cancelamento IS NOT NULL
+//   4. CHECK (status_pagamento='gratuito') => motivo_desconto_ou_gratuidade IS NOT NULL
+//   5. CHECK (status='pago') => data_pagamento IS NOT NULL  (em payouts)
+// Hoje enforced apenas em app-level (zod + usecase). PEND-R2 avalia mover ao DB.
+//
+// LGPD:
+//   - patients.cpf, patients.endereco, patients.plano = PII alta
+//   - appointments.prontuario_interno = dados clínicos sensíveis
+//   - audit_logs nunca expõe esses campos crus (só nome lógico do campo + valor)
+// =====================================================================

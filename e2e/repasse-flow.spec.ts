@@ -13,7 +13,6 @@ const ADMIN_PASSWORD = "admin-rep-12345";
 let profissionalId = "";
 
 test.beforeAll(async () => {
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();

@@ -152,6 +152,96 @@ describe("POST /api/repasses/gerar", () => {
     );
     expect(res.status).toBe(422);
   });
+
+  it("vincula atendimentos via FK 1:N (atendimento.repasseId)", async () => {
+    const { token } = await createUserWithRole("admin");
+    const { profissional } = await fixtureCenario();
+
+    const res = await gerarPost(
+      withAuthCookie(
+        jsonRequest("/api/repasses/gerar", {
+          profissionalId: profissional.id,
+          periodoInicio: PERIODO_INICIO,
+          periodoFim: PERIODO_FIM,
+        }),
+        token,
+      ),
+    );
+    const body = await res.json();
+    const repasseId = body.repasse.id;
+
+    const atendimentos = await prisma.atendimento.findMany({
+      where: { profissionalId: profissional.id },
+    });
+    expect(atendimentos).toHaveLength(1);
+    expect(atendimentos[0]?.repasseId).toBe(repasseId);
+  });
+
+  it("INVARIANT: atendimento já em outro repasse NÃO é re-vinculado", async () => {
+    const { token } = await createUserWithRole("admin");
+    const { profissional } = await fixtureCenario();
+
+    // 1º repasse: vincula o atendimento
+    const r1 = await gerarPost(
+      withAuthCookie(
+        jsonRequest("/api/repasses/gerar", {
+          profissionalId: profissional.id,
+          periodoInicio: PERIODO_INICIO,
+          periodoFim: PERIODO_FIM,
+        }),
+        token,
+      ),
+    );
+    const b1 = await r1.json();
+    const primeiroRepasseId = b1.repasse.id;
+
+    // Cria 2º repasse de outro período cobrindo o mesmo atendimento
+    // (cenário só possível com período sobreposto). O atendimento NÃO
+    // deve ser movido para o novo repasse.
+    const r2 = await gerarPost(
+      withAuthCookie(
+        jsonRequest("/api/repasses/gerar", {
+          profissionalId: profissional.id,
+          periodoInicio: "2026-06-02",
+          periodoFim: "2026-06-08",
+        }),
+        token,
+      ),
+    );
+    expect(r2.status).toBe(201);
+
+    const atendimento = await prisma.atendimento.findFirst({
+      where: { profissionalId: profissional.id },
+    });
+    expect(atendimento?.repasseId).toBe(primeiroRepasseId);
+  });
+
+  it("DELETE Repasse → atendimento.repasseId volta a null (SetNull)", async () => {
+    const { token } = await createUserWithRole("admin");
+    const { profissional } = await fixtureCenario();
+
+    const r = await gerarPost(
+      withAuthCookie(
+        jsonRequest("/api/repasses/gerar", {
+          profissionalId: profissional.id,
+          periodoInicio: PERIODO_INICIO,
+          periodoFim: PERIODO_FIM,
+        }),
+        token,
+      ),
+    );
+    const body = await r.json();
+    const repasseId = body.repasse.id;
+
+    await prisma.repasse.delete({ where: { id: repasseId } });
+
+    const atendimento = await prisma.atendimento.findFirst({
+      where: { profissionalId: profissional.id },
+    });
+    expect(atendimento?.repasseId).toBeNull();
+    // O atendimento sobrevive — só perde o vínculo
+    expect(atendimento?.status).toBe("realizado");
+  });
 });
 
 describe("POST /api/repasses/[id]/marcar-pago — FI08", () => {

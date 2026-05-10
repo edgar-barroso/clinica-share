@@ -6,13 +6,11 @@ import { prisma } from "@/lib/db";
  */
 export async function cleanDb() {
   // Ordem de FK (filhos antes de pais):
-  // RepasseAtendimento → Repasse + Atendimento
-  // Atendimento → Paciente + Profissional + Consultorio
+  // Atendimento → Paciente + Profissional + Consultorio + Repasse (SetNull)
   // TurnoFixo → Profissional + Consultorio
   // Repasse → Profissional
   // AuditLog → User
   // User → Paciente/Profissional/Staff (FK opcional 1:1)
-  await prisma.repasseAtendimento.deleteMany();
   await prisma.repasse.deleteMany();
   await prisma.atendimento.deleteMany();
   await prisma.turnoFixo.deleteMany();
