@@ -4,16 +4,17 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowRight,
   CheckCircle2,
+  ClipboardList,
   Clock,
+  Download,
   Info,
-  Trophy,
+  Percent,
   TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,23 +24,83 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PageHeader } from "@/components/layouts/page-header";
 import { MetricStat } from "@/components/dashboard/metric-stat";
 import { ReceitaChart } from "@/components/dashboard/receita-chart";
+import { ConsultorioDetalheModal } from "@/components/consultorios/consultorio-detalhe-modal";
 import {
   apiDashboardStats,
   type DashboardStats,
 } from "@/lib/api/dashboard";
 import {
-  apiRelatorioConsultorios,
-  type RelatorioConsultoriosLinha,
-} from "@/lib/api/relatorios";
+  apiDashboardConsultorios,
+  type DashboardConsultoriosResponse,
+  type DashboardConsultoriosLinha,
+  type ModalidadeFiltro,
+} from "@/lib/api/consultorios";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatDate, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-const TOP_CONSULTORIOS = 5;
+const MODALIDADE_LABEL: Record<ModalidadeFiltro, string> = {
+  todos: "Todas as modalidades",
+  aluguel_fixo: "Apenas aluguel fixo",
+  percentual: "Apenas percentual",
+};
+
+function formatPercent(v: number): string {
+  return `${(v * 100).toFixed(1)}%`;
+}
+
+function gerarCsvConsultorios(linhas: DashboardConsultoriosLinha[]): string {
+  const header = [
+    "Posição",
+    "Consultório",
+    "Tipo",
+    "Atendimentos",
+    "Receita total",
+    "Receita média por atendimento",
+    "Taxa de ocupação (%)",
+  ];
+  const rows = linhas.map((l, idx) => [
+    String(idx + 1),
+    l.nome,
+    l.tipo,
+    String(l.qtdAtendimentos),
+    l.receitaTotal,
+    l.receitaMediaPorAtendimento,
+    (l.taxaOcupacao * 100).toFixed(1),
+  ]);
+  const escape = (cell: string) =>
+    /[",;\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+  return [header, ...rows]
+    .map((r) => r.map(escape).join(";"))
+    .join("\n");
+}
+
+function baixarCsv(filename: string, conteudo: string) {
+  const blob = new Blob([`﻿${conteudo}`], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 function fmtIso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -73,34 +134,51 @@ export default function DashboardPage() {
   }, [modo, mesAtual, customInicio, customFim]);
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [rankingConsultorios, setRankingConsultorios] = useState<
-    RelatorioConsultoriosLinha[]
-  >([]);
+  const [consultoriosData, setConsultoriosData] =
+    useState<DashboardConsultoriosResponse | null>(null);
+  const [modalidade, setModalidade] = useState<ModalidadeFiltro>("todos");
   const [loading, setLoading] = useState(true);
+  const [consultorioAberto, setConsultorioAberto] = useState<
+    DashboardConsultoriosLinha | null
+  >(null);
 
   const fetchData = useCallback(async () => {
     if (!periodo.inicio || !periodo.fim) return; // usuário ainda editando
     if (periodo.fim < periodo.inicio) return; // intervalo inválido
     setLoading(true);
     try {
-      const [{ stats }, { linhas }] = await Promise.all([
+      const [statsRes, consultoriosRes] = await Promise.all([
         apiDashboardStats({
           dataInicio: periodo.inicio,
           dataFim: periodo.fim,
         }),
-        apiRelatorioConsultorios({
+        apiDashboardConsultorios({
           dataInicio: periodo.inicio,
           dataFim: periodo.fim,
+          modalidade,
         }),
       ]);
-      setStats(stats);
-      setRankingConsultorios(linhas);
+      setStats(statsRes.stats);
+      setConsultoriosData(consultoriosRes);
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [periodo]);
+  }, [periodo, modalidade]);
+
+  const handleExportarConsultorios = useCallback(() => {
+    if (!consultoriosData || consultoriosData.linhas.length === 0) {
+      toast.error("Nada para exportar no período selecionado");
+      return;
+    }
+    const csv = gerarCsvConsultorios(consultoriosData.linhas);
+    baixarCsv(
+      `dashboard-consultorios_${periodo.inicio}_${periodo.fim}.csv`,
+      csv,
+    );
+    toast.success("CSV exportado");
+  }, [consultoriosData, periodo]);
 
   useEffect(() => {
     void fetchData();
@@ -323,71 +401,159 @@ export default function DashboardPage() {
             </Card>
           </section>
 
-          <section className="mt-8">
+          <section className="mt-12 space-y-6">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-semibold">
+                Ocupação e receita por consultório
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Indicadores e ranking dos consultórios da clínica no período
+              </p>
+            </div>
+
             <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+              <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-end">
                 <div className="space-y-1.5">
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy size={18} className="text-primary" />
-                    Top consultórios por receita
-                  </CardTitle>
-                  <CardDescription>
-                    Os {TOP_CONSULTORIOS} consultórios que mais geraram receita
-                    no período
-                  </CardDescription>
+                  <Label htmlFor="modalidade">Modalidade de contrato</Label>
+                  <Select
+                    id="modalidade"
+                    value={modalidade}
+                    onChange={(e) =>
+                      setModalidade(e.target.value as ModalidadeFiltro)
+                    }
+                  >
+                    {(
+                      ["todos", "aluguel_fixo", "percentual"] as ModalidadeFiltro[]
+                    ).map((m) => (
+                      <option key={m} value={m}>
+                        {MODALIDADE_LABEL[m]}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
-                <Link
-                  href="/relatorios/consultorios"
-                  className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportarConsultorios}
+                  disabled={
+                    !consultoriosData || consultoriosData.linhas.length === 0
+                  }
                 >
-                  Ver ranking completo
-                  <ArrowRight size={14} />
-                </Link>
+                  <Download size={16} />
+                  Exportar CSV
+                </Button>
+              </CardContent>
+            </Card>
+
+            {consultoriosData && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <MetricStat
+                  label="Atendimentos no período"
+                  value={consultoriosData.kpis.totalAtendimentos.toLocaleString(
+                    "pt-BR",
+                  )}
+                  icon={ClipboardList}
+                  tone="neutral"
+                  hint="Realizados e pagos"
+                />
+                <MetricStat
+                  label="Receita dos consultórios"
+                  value={formatBRL(Number(consultoriosData.kpis.receitaTotal))}
+                  icon={TrendingUp}
+                  tone="primary"
+                />
+                <MetricStat
+                  label="Taxa de ocupação média"
+                  value={formatPercent(consultoriosData.kpis.taxaOcupacaoMedia)}
+                  icon={Percent}
+                  tone="success"
+                  hint="3 turnos × dias úteis"
+                />
+              </div>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Ranking por receita</CardTitle>
+                <CardDescription>
+                  Clique numa linha para ver atendimentos, profissionais e
+                  modalidade de contrato
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                {rankingConsultorios.length === 0 ? (
+              <CardContent className="p-0">
+                {!consultoriosData || consultoriosData.linhas.length === 0 ? (
                   <p className="py-10 text-center text-sm text-muted-foreground">
                     Sem atendimentos pagos no período.
                   </p>
                 ) : (
-                  <ol className="space-y-2">
-                    {rankingConsultorios
-                      .slice(0, TOP_CONSULTORIOS)
-                      .map((c, idx) => (
-                        <li
-                          key={c.consultorioId}
-                          className="flex items-center gap-4 rounded-xl border border-border p-3"
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Consultório</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">
+                          Atendimentos
+                        </TableHead>
+                        <TableHead className="text-right">Receita</TableHead>
+                        <TableHead className="text-right">
+                          Média/atend.
+                        </TableHead>
+                        <TableHead className="text-right">Ocupação</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {consultoriosData.linhas.map((l, idx) => (
+                        <TableRow
+                          key={l.consultorioId}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setConsultorioAberto(l)}
                         >
-                          <span
+                          <TableCell
                             className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums",
-                              idx === 0
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-foreground",
+                              "font-bold tabular-nums",
+                              idx === 0 && "text-primary",
                             )}
                           >
                             {idx + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              {c.nome}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {c.tipo} · {c.qtdAtendimentos} atendimentos
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-sm font-semibold tabular-nums">
-                            {formatBRL(Number(c.receita))}
-                          </p>
-                        </li>
+                          </TableCell>
+                          <TableCell className="font-medium">{l.nome}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {l.tipo}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {l.qtdAtendimentos}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatBRL(Number(l.receitaTotal))}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {l.qtdAtendimentos > 0
+                              ? formatBRL(Number(l.receitaMediaPorAtendimento))
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatPercent(l.taxaOcupacao)}
+                          </TableCell>
+                        </TableRow>
                       ))}
-                  </ol>
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
           </section>
         </>
       )}
+
+      <ConsultorioDetalheModal
+        open={consultorioAberto !== null}
+        onOpenChange={(open) => !open && setConsultorioAberto(null)}
+        consultorioId={consultorioAberto?.consultorioId ?? null}
+        nomeFallback={consultorioAberto?.nome ?? ""}
+        dataInicio={periodo.inicio}
+        dataFim={periodo.fim}
+      />
     </>
   );
 }

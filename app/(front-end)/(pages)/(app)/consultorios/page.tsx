@@ -41,7 +41,7 @@ export default function ConsultoriosPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/consultorios/dashboard"
+              href="/dashboard"
               className={buttonVariants({ variant: "outline" })}
             >
               <BarChart3 size={16} />
