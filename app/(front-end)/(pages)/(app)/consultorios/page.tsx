@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { DoorOpen, Plus } from "lucide-react";
+import { BarChart3, DoorOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,10 +39,19 @@ export default function ConsultoriosPage() {
             : `${consultorios.length} sala${consultorios.length === 1 ? "" : "s"} cadastrada${consultorios.length === 1 ? "" : "s"}`
         }
         actions={
-          <Link href="/consultorios/novo" className={buttonVariants()}>
-            <Plus size={16} />
-            Novo consultório
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/consultorios/dashboard"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <BarChart3 size={16} />
+              Dashboard de ocupação
+            </Link>
+            <Link href="/consultorios/novo" className={buttonVariants()}>
+              <Plus size={16} />
+              Novo consultório
+            </Link>
+          </div>
         }
       />
 

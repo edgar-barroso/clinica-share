@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  ArrowRight,
   CheckCircle2,
   Clock,
   Info,
+  Trophy,
   TrendingUp,
   Users,
   Wallet,
@@ -29,9 +31,15 @@ import {
   apiDashboardStats,
   type DashboardStats,
 } from "@/lib/api/dashboard";
+import {
+  apiRelatorioConsultorios,
+  type RelatorioConsultoriosLinha,
+} from "@/lib/api/relatorios";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatDate, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const TOP_CONSULTORIOS = 5;
 
 function fmtIso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -65,6 +73,9 @@ export default function DashboardPage() {
   }, [modo, mesAtual, customInicio, customFim]);
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [rankingConsultorios, setRankingConsultorios] = useState<
+    RelatorioConsultoriosLinha[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -72,11 +83,18 @@ export default function DashboardPage() {
     if (periodo.fim < periodo.inicio) return; // intervalo inválido
     setLoading(true);
     try {
-      const { stats } = await apiDashboardStats({
-        dataInicio: periodo.inicio,
-        dataFim: periodo.fim,
-      });
+      const [{ stats }, { linhas }] = await Promise.all([
+        apiDashboardStats({
+          dataInicio: periodo.inicio,
+          dataFim: periodo.fim,
+        }),
+        apiRelatorioConsultorios({
+          dataInicio: periodo.inicio,
+          dataFim: periodo.fim,
+        }),
+      ]);
       setStats(stats);
+      setRankingConsultorios(linhas);
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -185,6 +203,9 @@ export default function DashboardPage() {
           <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Skeleton className="h-80 rounded-2xl lg:col-span-2" />
             <Skeleton className="h-80 rounded-2xl" />
+          </section>
+          <section className="mt-8">
+            <Skeleton className="h-72 rounded-2xl" />
           </section>
         </div>
       ) : (
@@ -298,6 +319,70 @@ export default function DashboardPage() {
                     {stats.atendimentosPendentes} com pagamento pendente
                   </p>
                 </Link>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className="mt-8">
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                <div className="space-y-1.5">
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy size={18} className="text-primary" />
+                    Top consultórios por receita
+                  </CardTitle>
+                  <CardDescription>
+                    Os {TOP_CONSULTORIOS} consultórios que mais geraram receita
+                    no período
+                  </CardDescription>
+                </div>
+                <Link
+                  href="/relatorios/consultorios"
+                  className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                  Ver ranking completo
+                  <ArrowRight size={14} />
+                </Link>
+              </CardHeader>
+              <CardContent>
+                {rankingConsultorios.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">
+                    Sem atendimentos pagos no período.
+                  </p>
+                ) : (
+                  <ol className="space-y-2">
+                    {rankingConsultorios
+                      .slice(0, TOP_CONSULTORIOS)
+                      .map((c, idx) => (
+                        <li
+                          key={c.consultorioId}
+                          className="flex items-center gap-4 rounded-xl border border-border p-3"
+                        >
+                          <span
+                            className={cn(
+                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums",
+                              idx === 0
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground",
+                            )}
+                          >
+                            {idx + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {c.nome}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {c.tipo} · {c.qtdAtendimentos} atendimentos
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums">
+                            {formatBRL(Number(c.receita))}
+                          </p>
+                        </li>
+                      ))}
+                  </ol>
+                )}
               </CardContent>
             </Card>
           </section>
