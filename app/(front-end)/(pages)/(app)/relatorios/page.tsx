@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Ban, DoorOpen, FileBarChart, Gift, Wallet } from 'lucide-react';
+import { ArrowRight, Ban, Gift, Wallet } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layouts/page-header';
 
@@ -9,12 +9,6 @@ const reports = [
     icon: Wallet,
     title: 'Financeiro por profissional e período',
     description: 'Receita bruta e repasse calculado, com filtros por profissional, consultório e período',
-  },
-  {
-    href: '/relatorios/consultorios',
-    icon: DoorOpen,
-    title: 'Ranking de consultórios por receita',
-    description: 'Qual sala gera mais receita no período? Insumo estratégico para decisões de contrato',
   },
   {
     href: '/relatorios/gratuitas-descontos',
@@ -33,7 +27,7 @@ const reports = [
 export default function RelatoriosPage() {
   return (
     <>
-      <PageHeader title="Relatórios" description="Quatro relatórios gerenciais derivados dos atendimentos, pagamentos e cancelamentos" />
+      <PageHeader title="Relatórios" description="Relatórios gerenciais derivados dos atendimentos, pagamentos e cancelamentos. O ranking de consultórios fica em Dashboard." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {reports.map((r) => (

@@ -1,5 +1,31 @@
 import { z } from "zod";
 
+export const dashboardConsultoriosSchema = z
+  .object({
+    dataInicio: z.string().date(),
+    dataFim: z.string().date(),
+    modalidade: z.enum(["aluguel_fixo", "percentual", "todos"]).optional(),
+  })
+  .refine((v) => v.dataFim >= v.dataInicio, {
+    message: "dataFim deve ser >= dataInicio",
+    path: ["dataFim"],
+  });
+
+export const detalheConsultorioSchema = z
+  .object({
+    dataInicio: z.string().date(),
+    dataFim: z.string().date(),
+  })
+  .refine((v) => v.dataFim >= v.dataInicio, {
+    message: "dataFim deve ser >= dataInicio",
+    path: ["dataFim"],
+  });
+
+export type DashboardConsultoriosInput = z.infer<
+  typeof dashboardConsultoriosSchema
+>;
+export type DetalheConsultorioInput = z.infer<typeof detalheConsultorioSchema>;
+
 export const createConsultorioSchema = z.object({
   nome: z.string().min(2, "Nome muito curto").max(80, "Nome muito longo"),
   tipo: z.string().min(2, "Tipo muito curto").max(60),
