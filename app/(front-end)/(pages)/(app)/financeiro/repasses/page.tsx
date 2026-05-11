@@ -1,63 +1,37 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
-  ChevronDown,
-  Send,
-  X,
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { RepasseStatusBadge } from "@/components/financial/status-badge";
-import { PageHeader } from "@/components/layouts/page-header";
-import {
-  apiListRepasses,
-  apiMarcarRepassePago,
-  type RepasseListItem,
-} from "@/lib/api/repasses";
-import {
-  apiListProfissionais,
-  type Profissional,
-} from "@/lib/api/profissionais";
-import { apiErrorMessage } from "@/lib/api-client";
-import { formatBRL, formatDate, formatPercent } from "@/lib/format";
-import { useCurrentUser } from "@/lib/current-user";
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronDown, Send, X } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RepasseStatusBadge } from '@/components/financial/status-badge';
+import { PageHeader } from '@/components/layouts/page-header';
+import { apiListRepasses, apiMarcarRepassePago, type RepasseListItem } from '@/lib/api/repasses';
+import { apiListProfissionais, type Profissional } from '@/lib/api/profissionais';
+import { apiErrorMessage } from '@/lib/api-client';
+import { formatBRL, formatDate, formatPercent } from '@/lib/format';
+import { useCurrentUser } from '@/lib/current-user';
 
 const SEMANAS_INICIAIS = 4;
 const SEMANAS_INCREMENTO = 3;
 
 function initials(name: string) {
-  const parts = name.split(" ").filter((p) => !["Dr.", "Dra."].includes(p));
-  return (parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "");
+  const parts = name.split(' ').filter((p) => !['Dr.', 'Dra.'].includes(p));
+  return (parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '');
 }
 
 function hojeISO(): string {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -69,18 +43,17 @@ function semanaAtualISO(): { inicio: string; fim: string } {
   segunda.setDate(hoje.getDate() + (dow === 0 ? -6 : 1 - dow));
   const domingo = new Date(segunda);
   domingo.setDate(segunda.getDate() + 6);
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return { inicio: fmt(segunda), fim: fmt(domingo) };
 }
 
 function isAtrasado(r: RepasseListItem, hoje: string): boolean {
-  return r.status === "aberto" && r.periodoFim < hoje;
+  return r.status === 'aberto' && r.periodoFim < hoje;
 }
 
 export default function RepassesPage() {
   const { role } = useCurrentUser();
-  const podeGerenciar = role === "admin" || role === "auxiliar";
+  const podeGerenciar = role === 'admin' || role === 'auxiliar';
 
   const [repasses, setRepasses] = useState<RepasseListItem[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
@@ -94,12 +67,7 @@ export default function RepassesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rep, profs] = await Promise.all([
-        apiListRepasses(),
-        podeGerenciar
-          ? apiListProfissionais({ ativo: true })
-          : Promise.resolve({ profissionais: [] as Profissional[] }),
-      ]);
+      const [rep, profs] = await Promise.all([apiListRepasses(), podeGerenciar ? apiListProfissionais({ ativo: true }) : Promise.resolve({ profissionais: [] as Profissional[] })]);
       setRepasses(rep.repasses);
       setProfissionais(profs.profissionais);
     } catch (err) {
@@ -119,8 +87,8 @@ export default function RepassesPage() {
       // (que causava o "flicker" de página recarregando).
       const { repasse } = await apiMarcarRepassePago(id);
       setRepasses((prev) => prev.map((r) => (r.id === id ? repasse : r)));
-      toast.success("Repasse marcado como pago", {
-        description: "Registro gravado na auditoria.",
+      toast.success('Repasse marcado como pago', {
+        description: 'Registro gravado na auditoria.',
       });
       setPendingPayId(null);
     } catch (err) {
@@ -128,9 +96,7 @@ export default function RepassesPage() {
     }
   }
 
-  const repasseEmConfirmacao = pendingPayId
-    ? repasses.find((r) => r.id === pendingPayId)
-    : null;
+  const repasseEmConfirmacao = pendingPayId ? repasses.find((r) => r.id === pendingPayId) : null;
 
   // Agrupa por (periodoInicio, periodoFim) e ordena descendente
   const todosGrupos = useMemo(() => {
@@ -145,7 +111,7 @@ export default function RepassesPage() {
     return Array.from(map.entries())
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([key, list]) => {
-        const [inicio, fim] = key.split("|");
+        const [inicio, fim] = key.split('|');
         const temAtrasado = list.some((r) => isAtrasado(r, hoje));
         return { inicio, fim, list, temAtrasado };
       });
@@ -167,45 +133,23 @@ export default function RepassesPage() {
   const semanasOcultas = todosGrupos.length - grupos.length;
 
   const atrasados = repasses.filter((r) => isAtrasado(r, hoje));
-  const abertosNoPrazo = repasses.filter(
-    (r) => r.status === "aberto" && !isAtrasado(r, hoje),
-  );
+  const abertosNoPrazo = repasses.filter((r) => r.status === 'aberto' && !isAtrasado(r, hoje));
   const totalAtrasado = atrasados.reduce((s, r) => s + Number(r.valorRepasse), 0);
-  const totalAbertosNoPrazo = abertosNoPrazo.reduce(
-    (s, r) => s + Number(r.valorRepasse),
-    0,
-  );
-  const repassesSemanaAtual = repasses.filter(
-    (r) => r.periodoInicio.slice(0, 10) === semanaAtual.inicio,
-  );
-  const totalRepasseSemana = repassesSemanaAtual.reduce(
-    (s, r) => s + Number(r.valorRepasse),
-    0,
-  );
-  const totalBrutoSemana = repassesSemanaAtual.reduce(
-    (s, r) => s + Number(r.receitaBruta),
-    0,
-  );
+  const totalAbertosNoPrazo = abertosNoPrazo.reduce((s, r) => s + Number(r.valorRepasse), 0);
+  const repassesSemanaAtual = repasses.filter((r) => r.periodoInicio.slice(0, 10) === semanaAtual.inicio);
+  const totalRepasseSemana = repassesSemanaAtual.reduce((s, r) => s + Number(r.valorRepasse), 0);
+  const totalBrutoSemana = repassesSemanaAtual.reduce((s, r) => s + Number(r.receitaBruta), 0);
 
   return (
     <>
-      <PageHeader
-        title="Repasses"
-        description="Prestação de contas semanal aos profissionais"
-      />
+      <PageHeader title="Repasses" description="Prestação de contas semanal aos profissionais" />
 
       {podeGerenciar && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
           <CalendarClock size={16} className="mt-0.5 shrink-0 text-primary" />
           <div className="min-w-0">
-            <p className="font-medium text-foreground">
-              Geração automática toda segunda-feira
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Os repasses são calculados pelo servidor a cada segunda às
-              06:00 cobrindo a semana anterior (segunda → domingo). Esta
-              tela apenas exibe e marca como pago.
-            </p>
+            <p className="font-medium text-foreground">Geração automática toda segunda-feira</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Os repasses são calculados pelo servidor a cada segunda às 00:00 cobrindo a semana anterior (segunda → domingo). Esta tela apenas exibe e marca como pago.</p>
           </div>
         </div>
       )}
@@ -213,19 +157,11 @@ export default function RepassesPage() {
       {atrasados.length > 0 && (
         <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4 sm:flex-row sm:items-center">
           <div className="flex items-start gap-3">
-            <AlertTriangle
-              size={18}
-              className="mt-0.5 shrink-0 text-destructive"
-            />
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-destructive" />
             <div>
-              <p className="text-sm font-semibold text-destructive">
-                {atrasados.length} repasses atrasados de semanas anteriores
-              </p>
+              <p className="text-sm font-semibold text-destructive">{atrasados.length} repasses atrasados de semanas anteriores</p>
               <p className="text-xs text-muted-foreground">
-                Total atrasado:{" "}
-                <span className="font-medium text-foreground tabular-nums">
-                  {formatBRL(totalAtrasado)}
-                </span>
+                Total atrasado: <span className="font-medium text-foreground tabular-nums">{formatBRL(totalAtrasado)}</span>
               </p>
             </div>
           </div>
@@ -235,47 +171,23 @@ export default function RepassesPage() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-5">
           <p className="text-sm text-muted-foreground">Atrasados</p>
-          <p
-            className={`mt-1 text-2xl font-bold tabular-nums ${
-              atrasados.length > 0 ? "text-destructive" : "text-muted-foreground"
-            }`}
-          >
-            {formatBRL(totalAtrasado)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {atrasados.length} repasses
-          </p>
+          <p className={`mt-1 text-2xl font-bold tabular-nums ${atrasados.length > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>{formatBRL(totalAtrasado)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{atrasados.length} repasses</p>
         </Card>
         <Card className="p-5">
           <p className="text-sm text-muted-foreground">Em aberto (no prazo)</p>
-          <p className="mt-1 text-2xl font-bold text-warning tabular-nums">
-            {formatBRL(totalAbertosNoPrazo)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {abertosNoPrazo.length} repasses
-          </p>
+          <p className="mt-1 text-2xl font-bold text-warning tabular-nums">{formatBRL(totalAbertosNoPrazo)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{abertosNoPrazo.length} repasses</p>
         </Card>
         <Card className="p-5">
-          <p className="text-sm text-muted-foreground">
-            Total repasses · semana atual
-          </p>
-          <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
-            {formatBRL(totalRepasseSemana)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            sobre {formatBRL(totalBrutoSemana)} bruto
-          </p>
+          <p className="text-sm text-muted-foreground">Total repasses · semana atual</p>
+          <p className="mt-1 text-2xl font-bold text-primary tabular-nums">{formatBRL(totalRepasseSemana)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">sobre {formatBRL(totalBrutoSemana)} bruto</p>
         </Card>
         <Card className="p-5">
-          <p className="text-sm text-muted-foreground">
-            Margem · semana atual
-          </p>
-          <p className="mt-1 text-2xl font-bold text-success tabular-nums">
-            {formatBRL(totalBrutoSemana - totalRepasseSemana)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Receita que fica com a clínica
-          </p>
+          <p className="text-sm text-muted-foreground">Margem · semana atual</p>
+          <p className="mt-1 text-2xl font-bold text-success tabular-nums">{formatBRL(totalBrutoSemana - totalRepasseSemana)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Receita que fica com a clínica</p>
         </Card>
       </div>
 
@@ -343,17 +255,14 @@ export default function RepassesPage() {
         </div>
       ) : grupos.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Nenhum repasse fechado ainda. O próximo cálculo acontece na
-            próxima segunda-feira, cobrindo a semana atual.
-          </CardContent>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">Nenhum repasse fechado ainda. O próximo cálculo acontece na próxima segunda-feira, cobrindo a semana atual.</CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
           {grupos.map((g) => {
             const ehSemanaAtual = g.inicio === semanaAtual.inicio;
-            const abertosGrupo = g.list.filter((r) => r.status === "aberto");
-            const pagosGrupo = g.list.filter((r) => r.status === "pago");
+            const abertosGrupo = g.list.filter((r) => r.status === 'aberto');
+            const pagosGrupo = g.list.filter((r) => r.status === 'pago');
             const atrasadosGrupo = g.list.filter((r) => isAtrasado(r, hoje));
 
             return (
@@ -361,8 +270,7 @@ export default function RepassesPage() {
                 <CardHeader className="flex flex-row items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">
-                      Semana de {formatDate(g.inicio, "dd/MM")} a{" "}
-                      {formatDate(g.fim, "dd/MM")}
+                      Semana de {formatDate(g.inicio, 'dd/MM')} a {formatDate(g.fim, 'dd/MM')}
                       {ehSemanaAtual && (
                         <Badge variant="info" className="ml-2 align-middle">
                           Semana atual
@@ -370,23 +278,12 @@ export default function RepassesPage() {
                       )}
                     </CardTitle>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {atrasadosGrupo.length > 0 && (
-                        <span className="font-medium text-destructive">
-                          {atrasadosGrupo.length} atrasados ·{" "}
-                        </span>
-                      )}
-                      {abertosGrupo.length - atrasadosGrupo.length > 0 && (
-                        <>
-                          {abertosGrupo.length - atrasadosGrupo.length} em
-                          aberto ·{" "}
-                        </>
-                      )}
+                      {atrasadosGrupo.length > 0 && <span className="font-medium text-destructive">{atrasadosGrupo.length} atrasados · </span>}
+                      {abertosGrupo.length - atrasadosGrupo.length > 0 && <>{abertosGrupo.length - atrasadosGrupo.length} em aberto · </>}
                       {pagosGrupo.length} pagos
                     </p>
                   </div>
-                  {abertosGrupo.length === 0 && (
-                    <Badge variant="success">Semana fechada</Badge>
-                  )}
+                  {abertosGrupo.length === 0 && <Badge variant="success">Semana fechada</Badge>}
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
@@ -394,9 +291,7 @@ export default function RepassesPage() {
                       <TableRow>
                         <TableHead>Profissional</TableHead>
                         <TableHead>Modalidade</TableHead>
-                        <TableHead className="text-right">
-                          Atendimentos
-                        </TableHead>
+                        <TableHead className="text-right">Atendimentos</TableHead>
                         <TableHead className="text-right">Bruto</TableHead>
                         <TableHead className="text-right">Repasse</TableHead>
                         <TableHead>Status</TableHead>
@@ -407,88 +302,45 @@ export default function RepassesPage() {
                       {g.list.map((r) => {
                         const atrasado = isAtrasado(r, hoje);
                         const prof = r.profissional;
-                        const profCompleto = profissionais.find(
-                          (p) => p.id === prof.id,
-                        );
+                        const profCompleto = profissionais.find((p) => p.id === prof.id);
                         return (
-                          <TableRow
-                            key={r.id}
-                            className={atrasado ? "bg-destructive/5" : undefined}
-                          >
+                          <TableRow key={r.id} className={atrasado ? 'bg-destructive/5' : undefined}>
                             <TableCell>
-                              <Link
-                                href={`/financeiro/repasses/${r.id}`}
-                                className="block hover:text-primary"
-                              >
+                              <Link href={`/financeiro/repasses/${r.id}`} className="block hover:text-primary">
                                 <div className="flex items-center gap-3">
                                   <Avatar className="size-9 bg-primary/10 text-primary">
-                                    <AvatarFallback>
-                                      {initials(prof.nome)}
-                                    </AvatarFallback>
+                                    <AvatarFallback>{initials(prof.nome)}</AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <p className="text-sm font-medium">
-                                      {prof.nome}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {prof.especialidade}
-                                    </p>
+                                    <p className="text-sm font-medium">{prof.nome}</p>
+                                    <p className="text-xs text-muted-foreground">{prof.especialidade}</p>
                                   </div>
                                 </div>
                               </Link>
                             </TableCell>
                             <TableCell>
-                              {prof.modalidadeContrato === "percentual" ? (
-                                <span className="text-sm">
-                                  {formatPercent(
-                                    Number(profCompleto?.percentualRepasse ?? 0),
-                                  )}{" "}
-                                  sobre bruto
-                                </span>
+                              {prof.modalidadeContrato === 'percentual' ? (
+                                <span className="text-sm">{formatPercent(Number(profCompleto?.percentualRepasse ?? 0))} sobre bruto</span>
                               ) : (
-                                <span className="text-sm">
-                                  {formatBRL(
-                                    Number(
-                                      profCompleto?.valorAluguelPorTurno ?? 0,
-                                    ),
-                                  )}{" "}
-                                  por turno
-                                </span>
+                                <span className="text-sm">{formatBRL(Number(profCompleto?.valorAluguelPorTurno ?? 0))} por turno</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {r.atendimentos.length}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {formatBRL(Number(r.receitaBruta))}
-                            </TableCell>
-                            <TableCell className="text-right font-semibold tabular-nums">
-                              {formatBRL(Number(r.valorRepasse))}
-                            </TableCell>
+                            <TableCell className="text-right tabular-nums">{r.atendimentos.length}</TableCell>
+                            <TableCell className="text-right tabular-nums">{formatBRL(Number(r.receitaBruta))}</TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums">{formatBRL(Number(r.valorRepasse))}</TableCell>
                             <TableCell>
                               <div className="flex flex-col items-start">
-                                <RepasseStatusBadge
-                                  status={r.status}
-                                  atrasado={atrasado}
-                                />
-                                {r.dataPagamento && (
-                                  <span className="mt-1 text-xs text-muted-foreground">
-                                    {formatDate(r.dataPagamento, "dd/MM/yyyy")}
-                                  </span>
-                                )}
+                                <RepasseStatusBadge status={r.status} atrasado={atrasado} />
+                                {r.dataPagamento && <span className="mt-1 text-xs text-muted-foreground">{formatDate(r.dataPagamento, 'dd/MM/yyyy')}</span>}
                               </div>
                             </TableCell>
                             <TableCell>
-                              {r.status === "aberto" && podeGerenciar ? (
-                                <Button
-                                  size="sm"
-                                  variant={atrasado ? "destructive" : "outline"}
-                                  onClick={() => setPendingPayId(r.id)}
-                                >
+                              {r.status === 'aberto' && podeGerenciar ? (
+                                <Button size="sm" variant={atrasado ? 'destructive' : 'outline'} onClick={() => setPendingPayId(r.id)}>
                                   <Send size={14} />
                                   Pagar
                                 </Button>
-                              ) : r.status === "pago" ? (
+                              ) : r.status === 'pago' ? (
                                 <span className="flex items-center gap-1 text-xs text-success">
                                   <CheckCircle2 size={14} /> Pago
                                 </span>
@@ -506,11 +358,7 @@ export default function RepassesPage() {
 
           {semanasOcultas > 0 && (
             <div className="flex justify-center pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setLimite((l) => l + SEMANAS_INCREMENTO)}
-              >
+              <Button type="button" variant="outline" onClick={() => setLimite((l) => l + SEMANAS_INCREMENTO)}>
                 <ChevronDown size={14} />
                 Carregar semanas anteriores ({semanasOcultas} restantes)
               </Button>
@@ -519,63 +367,30 @@ export default function RepassesPage() {
         </div>
       )}
 
-      {repasseEmConfirmacao && (
-        <ConfirmarPagamentoDialog
-          repasse={repasseEmConfirmacao}
-          atrasado={isAtrasado(repasseEmConfirmacao, hoje)}
-          onClose={() => setPendingPayId(null)}
-          onConfirm={() => confirmarPagamento(repasseEmConfirmacao.id)}
-        />
-      )}
+      {repasseEmConfirmacao && <ConfirmarPagamentoDialog repasse={repasseEmConfirmacao} atrasado={isAtrasado(repasseEmConfirmacao, hoje)} onClose={() => setPendingPayId(null)} onConfirm={() => confirmarPagamento(repasseEmConfirmacao.id)} />}
     </>
   );
 }
 
-function ConfirmarPagamentoDialog({
-  repasse,
-  atrasado,
-  onClose,
-  onConfirm,
-}: {
-  repasse: RepasseListItem;
-  atrasado: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
+function ConfirmarPagamentoDialog({ repasse, atrasado, onClose, onConfirm }: { repasse: RepasseListItem; atrasado: boolean; onClose: () => void; onConfirm: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
-      <button
-        type="button"
-        aria-label="Fechar"
-        onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
-      />
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button type="button" aria-label="Fechar" onClick={onClose} className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" />
       <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">Confirmar pagamento</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Esta ação fica registrada na auditoria e não pode ser desfeita.
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Esta ação fica registrada na auditoria e não pode ser desfeita.</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X size={16} />
           </button>
         </div>
@@ -583,64 +398,42 @@ function ConfirmarPagamentoDialog({
         <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4 text-sm">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 bg-primary/10 text-primary">
-              <AvatarFallback>
-                {initials(repasse.profissional.nome)}
-              </AvatarFallback>
+              <AvatarFallback>{initials(repasse.profissional.nome)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <p className="font-medium">{repasse.profissional.nome}</p>
-              <p className="text-xs text-muted-foreground">
-                {repasse.profissional.especialidade}
-              </p>
+              <p className="text-xs text-muted-foreground">{repasse.profissional.especialidade}</p>
             </div>
           </div>
           <div className="border-t border-border pt-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Período</span>
               <span className="tabular-nums">
-                {formatDate(repasse.periodoInicio, "dd/MM")} –{" "}
-                {formatDate(repasse.periodoFim, "dd/MM")}
+                {formatDate(repasse.periodoInicio, 'dd/MM')} – {formatDate(repasse.periodoFim, 'dd/MM')}
               </span>
             </div>
             <div className="mt-1 flex justify-between">
               <span className="text-muted-foreground">Receita bruta</span>
-              <span className="tabular-nums">
-                {formatBRL(Number(repasse.receitaBruta))}
-              </span>
+              <span className="tabular-nums">{formatBRL(Number(repasse.receitaBruta))}</span>
             </div>
             <div className="mt-1 flex justify-between text-base font-semibold">
               <span>Valor a pagar</span>
-              <span className="tabular-nums">
-                {formatBRL(Number(repasse.valorRepasse))}
-              </span>
+              <span className="tabular-nums">{formatBRL(Number(repasse.valorRepasse))}</span>
             </div>
           </div>
           {atrasado && (
             <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-              <span>
-                Este repasse está atrasado — período encerrou em{" "}
-                {formatDate(repasse.periodoFim, "dd/MM/yyyy")}.
-              </span>
+              <span>Este repasse está atrasado — período encerrou em {formatDate(repasse.periodoFim, 'dd/MM/yyyy')}.</span>
             </div>
           )}
         </div>
 
         <div className="mt-4 flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1"
-            onClick={onClose}
-          >
+          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Cancelar
           </Button>
-          <Button
-            type="button"
-            variant={atrasado ? "destructive" : "default"}
-            className="flex-1"
-            onClick={onConfirm}
-          >
+          <Button type="button" variant={atrasado ? 'destructive' : 'default'} className="flex-1" onClick={onConfirm}>
             <CheckCircle2 size={14} />
             Confirmar pagamento
           </Button>
