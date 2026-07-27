@@ -36,13 +36,13 @@ export const CONTAS = {
   profissional: {
     email: "prof1@clinicashare.local",
     senha: SENHA_DEMO,
-    destino: "**/dashboard",
+    destino: "**/minha-agenda",
   },
   /** Dra. Helena Braga — Psicologia, aluguel fixo R$250/turno, 45min */
   profissionalAluguel: {
     email: "prof3@clinicashare.local",
     senha: SENHA_DEMO,
-    destino: "**/dashboard",
+    destino: "**/minha-agenda",
   },
   paciente: {
     email: "paciente1@example.com",

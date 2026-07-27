@@ -158,12 +158,15 @@ test("12 — Controle de acesso por perfil: o que cada um enxerga", async ({
   await entrarComo(page, jornada, "psicologa");
 
   await jornada.passo(
-    "[RF-022] A profissional entra e o sistema a leva ao painel",
+    "[RF-022] A profissional entra e o sistema a leva direto para a agenda DELA",
     async () => {
-      await expect(page).toHaveURL(/\/dashboard$/);
+      // Cada perfil cai na primeira tela a que tem acesso. A profissional não
+      // passa pelo painel da clínica: ele depende de dados que ela não pode
+      // ver, e o login terminava num aviso de acesso negado.
+      await expect(page).toHaveURL(/\/minha-agenda$/);
       await jornada.validar(
-        page.getByRole("heading", { name: "Dashboard", exact: true }),
-        "Perfil PROFISSIONAL: o login termina no painel — mas o menu dela, ao lado, é outro",
+        page.getByRole("heading", { name: /Minha agenda/i }),
+        "Perfil PROFISSIONAL: o login termina na agenda dela, não no painel da clínica",
       );
     },
   );

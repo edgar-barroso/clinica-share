@@ -40,14 +40,14 @@ export const ELENCO = {
     persona: { papel: "PROFISSIONAL", nome: "Dra. Helena Braga" } as Persona,
     email: "prof3@clinicashare.local",
     senha: SENHA_DEMO,
-    destino: "**/dashboard",
+    destino: "**/minha-agenda",
   },
   /** Dra. Nirmala Azalea — Clínica geral, percentual 30%, consulta de 30min */
   clinicaGeral: {
     persona: { papel: "PROFISSIONAL", nome: "Dra. Nirmala Azalea" } as Persona,
     email: "prof1@clinicashare.local",
     senha: SENHA_DEMO,
-    destino: "**/dashboard",
+    destino: "**/minha-agenda",
   },
   paciente: {
     persona: { papel: "PACIENTE", nome: "Maria Silva" } as Persona,
