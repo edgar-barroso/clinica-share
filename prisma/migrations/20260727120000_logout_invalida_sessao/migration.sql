@@ -1,0 +1,15 @@
+-- RF-024: logout passa a invalidar o token de verdade.
+--
+-- Até aqui "sair" apenas apagava o cookie do navegador — o JWT continuava
+-- válido até expirar, então quem tivesse copiado o token seguia autenticado.
+-- Com o sliding expiration isso virou explorável: como o servidor reemitia o
+-- cookie em TODA resposta autenticada, uma requisição em voo no momento do
+-- logout ressuscitava a sessão (o cookie voltava no `Set-Cookie` da resposta
+-- que já estava a caminho).
+--
+-- `sessoesInvalidadasEm` guarda o instante do último logout. Os guards que
+-- consultam o banco recusam qualquer token emitido antes dessa marca, então o
+-- token deixa de valer mesmo se o cookie for reposto.
+--
+-- NULL = usuário nunca deslogou; todo token dele continua válido pelo TTL.
+ALTER TABLE "users" ADD COLUMN "sessoesInvalidadasEm" TIMESTAMP(3);

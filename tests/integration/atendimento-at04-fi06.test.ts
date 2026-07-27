@@ -201,7 +201,7 @@ describe("AT04 — prontuário externo", () => {
 // ===========================================================================
 
 describe("FI06 — desconto parcial com justificativa", () => {
-  it("recusa cobrar abaixo da tabela sem justificativa (422)", async () => {
+  it("recusa cobrar abaixo da tabela sem justificativa (400)", async () => {
     const { at } = await emAtendimento();
     const token = await admin();
 
@@ -213,7 +213,56 @@ describe("FI06 — desconto parcial com justificativa", () => {
       }, token),
       ctxId(at.id),
     );
-    expect(res.status).toBe(422);
+    // A regra vive no usecase, não no Zod: ela depende do valorConsultaBase do
+    // profissional, então responde 400 (RegraNegocio) e não 422.
+    expect(res.status).toBe(400);
+  });
+
+  it("deriva o valor de tabela do cadastro quando o body não informa", async () => {
+    // O ponto: ninguém precisa digitar o preço de tabela. A fixture cadastra
+    // o profissional com valorConsultaBase 250; cobrar 150 já é desconto.
+    const { at } = await emAtendimento();
+    const token = await admin();
+
+    const semMotivo = await finalizarPost(
+      autenticado(`/api/atendimentos/${at.id}/finalizar`, {
+        valorConsulta: 150,
+        statusPagamento: "pago",
+      }, token),
+      ctxId(at.id),
+    );
+    expect(semMotivo.status).toBe(400);
+
+    const comMotivo = await finalizarPost(
+      autenticado(`/api/atendimentos/${at.id}/finalizar`, {
+        valorConsulta: 150,
+        statusPagamento: "pago",
+        motivoDescontoOuGratuidade: "Retorno em 30 dias",
+      }, token),
+      ctxId(at.id),
+    );
+    expect(comMotivo.status).toBe(200);
+
+    const salvo = await prisma.atendimento.findUnique({ where: { id: at.id } });
+    // valorOriginal foi preenchido pelo servidor, não pelo cliente
+    expect(salvo!.valorOriginal!.toString()).toBe("250");
+  });
+
+  it("cobrar o valor cheio não marca desconto nem exige motivo", async () => {
+    const { at } = await emAtendimento();
+    const token = await admin();
+
+    const res = await finalizarPost(
+      autenticado(`/api/atendimentos/${at.id}/finalizar`, {
+        valorConsulta: 250,
+        statusPagamento: "pago",
+      }, token),
+      ctxId(at.id),
+    );
+    expect(res.status).toBe(200);
+
+    const salvo = await prisma.atendimento.findUnique({ where: { id: at.id } });
+    expect(salvo!.valorOriginal).toBeNull();
   });
 
   it("aceita desconto com justificativa e PRESERVA o motivo", async () => {
@@ -264,7 +313,6 @@ describe("FI06 — desconto parcial com justificativa", () => {
     await finalizarPost(
       autenticado(`/api/atendimentos/${at.id}/finalizar`, {
         valorConsulta: 250,
-        valorOriginal: 250,
         statusPagamento: "pago",
         motivoDescontoOuGratuidade: "não deveria persistir",
       }, token),

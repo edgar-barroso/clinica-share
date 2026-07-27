@@ -39,7 +39,13 @@ interface AtendimentoApi {
   referenciaProntuarioExterno: string | null;
   prontuarioInterno: unknown;
   paciente: { id: string; nome: string };
-  profissional: { id: string; nome: string; especialidade: string };
+  profissional: {
+    id: string;
+    nome: string;
+    especialidade: string;
+    /** FI06 — preço de tabela do cadastro; só vem no GET de um atendimento. */
+    valorConsultaBase?: string;
+  };
   consultorio: { id: string; nome: string };
   procedimentos: ProcedimentoApi[];
   /** Só na listagem (FI04) */
@@ -83,6 +89,45 @@ async function obterAtendimento(
   expect(res.status()).toBe(200);
   const body = (await res.json()) as { atendimento: AtendimentoApi };
   return body.atendimento;
+}
+
+/**
+ * FI06 — preço de tabela do profissional do atendimento. Nenhuma tela pede
+ * esse número digitado: ele vem do cadastro, e cobrar abaixo dele exige
+ * justificativa (o servidor recusa com 400 sem ela).
+ */
+async function valorDeTabelaDoAtendimento(
+  page: Page,
+  id: string,
+): Promise<number> {
+  const { profissional } = await obterAtendimento(page, id);
+  const valor = Number(profissional.valorConsultaBase);
+  expect(
+    Number.isFinite(valor) && valor > 0,
+    "GET /api/atendimentos/[id] precisa trazer profissional.valorConsultaBase",
+  ).toBe(true);
+  return valor;
+}
+
+/** Profissionais ativos na mesma ordem do combo da tela (nome asc). */
+async function listarProfissionais(
+  page: Page,
+): Promise<{ id: string; nome: string; valorConsultaBase: string }[]> {
+  const res = await page.request.get("/api/profissionais?ativo=true");
+  expect(res.status()).toBe(200);
+  const body = (await res.json()) as {
+    profissionais: { id: string; nome: string; valorConsultaBase: string }[];
+  };
+  return body.profissionais;
+}
+
+/** Parte numérica de um valor em BRL, como a tela imprime ("1.234,50"). */
+function moeda(valor: number): RegExp {
+  const texto = valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return new RegExp(texto.replace(/\./g, "\\."));
 }
 
 /**
@@ -188,6 +233,9 @@ test.describe("Planilha de custos — Atendimentos", () => {
 
     const data = isoDiasAtras(400);
     const hora = await horaLivre(page, data, referencia.consultorioId);
+    // FI06: cobra exatamente a tabela do cadastro. `valorOriginal` não vai no
+    // body — o servidor deriva a tabela e só a grava quando há desconto.
+    const valorTabela = await valorDeTabelaDoAtendimento(page, referencia.id);
     const res = await page.request.post("/api/atendimentos", {
       data: {
         pacienteId: referencia.pacienteId,
@@ -195,7 +243,7 @@ test.describe("Planilha de custos — Atendimentos", () => {
         consultorioId: referencia.consultorioId,
         data,
         hora,
-        valorConsulta: 250,
+        valorConsulta: valorTabela,
         statusPagamento: "pago",
         observacoes: "Walk-in da comprovação AT01",
       },
@@ -241,8 +289,14 @@ test.describe("Planilha de custos — Atendimentos", () => {
     await expect(page.locator("#profissional")).toBeVisible({
       timeout: 20_000,
     });
-    await page.getByLabel("Valor de tabela (R$)").fill("250");
-    await page.getByLabel("Valor cobrado (R$)").fill("250");
+    // FI06: o valor de tabela NÃO é digitável — a tela mostra o
+    // `valorConsultaBase` do profissional selecionado (o primeiro do combo) e
+    // o valor cobrado nasce igual a ele.
+    const consulta = Number(
+      (await listarProfissionais(page))[0].valorConsultaBase,
+    );
+    await expect(page.getByTestId("valor-tabela")).toHaveText(moeda(consulta));
+    await page.getByLabel("Valor cobrado (R$)").fill(String(consulta));
     const totalProcedimentos = page.getByTestId("total-procedimentos");
     const totalGeral = page.getByTestId("total-geral");
     await expect(totalProcedimentos).toHaveText(/0,00/);
@@ -255,15 +309,15 @@ test.describe("Planilha de custos — Atendimentos", () => {
       .getByLabel("Descrição do procedimento 1")
       .fill("Endoscopia digestiva alta");
     await page.getByLabel("Valor do procedimento 1").fill("350");
-    // Total ao vivo: consulta 250 + procedimento 350.
+    // Total ao vivo: consulta (tabela do cadastro) + procedimento 350.
     await expect(totalProcedimentos).toHaveText(/350,00/);
-    await expect(totalGeral).toHaveText(/600,00/);
+    await expect(totalGeral).toHaveText(moeda(consulta + 350));
 
     await adicionar.click();
     await page.getByLabel("Descrição do procedimento 2").fill("Cauterização");
     await page.getByLabel("Valor do procedimento 2").fill("120.5");
     await expect(totalProcedimentos).toHaveText(/470,50/);
-    await expect(totalGeral).toHaveText(/720,50/);
+    await expect(totalGeral).toHaveText(moeda(consulta + 470.5));
     await mostrar(page);
 
     // Remover uma linha renumera as restantes e refaz o total na hora.
@@ -275,7 +329,7 @@ test.describe("Planilha de custos — Atendimentos", () => {
     );
     await expect(page.getByLabel("Descrição do procedimento 2")).toHaveCount(0);
     await expect(totalProcedimentos).toHaveText(/120,50/);
-    await expect(totalGeral).toHaveText(/370,50/);
+    await expect(totalGeral).toHaveText(moeda(consulta + 120.5));
     await mostrar(page);
 
     // (2) Gravação PELA TELA. O atendimento-base é criado por API (a data
@@ -288,6 +342,9 @@ test.describe("Planilha de custos — Atendimentos", () => {
 
     const data = isoDiasAtras(401);
     const hora = await horaLivre(page, data, base.consultorioId);
+    // FI06: cobra a tabela do cadastro. Abaixo dela, tanto o POST quanto a
+    // tela de edição (mais abaixo) passariam a exigir justificativa.
+    const valorTabela = await valorDeTabelaDoAtendimento(page, base.id);
 
     const res = await page.request.post("/api/atendimentos", {
       data: {
@@ -296,7 +353,7 @@ test.describe("Planilha de custos — Atendimentos", () => {
         consultorioId: base.consultorioId,
         data,
         hora,
-        valorConsulta: 250,
+        valorConsulta: valorTabela,
         statusPagamento: "pago",
         observacoes: "Walk-in da comprovação AT02",
       },
@@ -332,7 +389,9 @@ test.describe("Planilha de custos — Atendimentos", () => {
     await expect(page.getByTestId("total-procedimentos")).toHaveText(
       /430,25/,
     );
-    await expect(page.getByTestId("total-geral")).toHaveText(/680,25/);
+    await expect(page.getByTestId("total-geral")).toHaveText(
+      moeda(valorTabela + 430.25),
+    );
     await page
       .getByLabel("Motivo da edição")
       .fill("Lançamento dos procedimentos realizados (comprovação AT02)");
@@ -357,7 +416,7 @@ test.describe("Planilha de custos — Atendimentos", () => {
     const naListagem = doDia.find((a) => a.id === criado.id);
     expect(naListagem).toBeTruthy();
     expect(Number(naListagem!.valorProcedimentos)).toBeCloseTo(430.25, 2);
-    expect(Number(naListagem!.valorTotal)).toBeCloseTo(680.25, 2);
+    expect(Number(naListagem!.valorTotal)).toBeCloseTo(valorTabela + 430.25, 2);
 
     // (4) E a tela de detalhe lista os dois procedimentos separadamente, cada
     // um com o seu valor.
@@ -471,7 +530,9 @@ test.describe("Planilha de custos — Atendimentos", () => {
       consultorioId: base.consultorioId,
       data,
       hora,
-      valorConsulta: 250,
+      // FI06: a tabela do cadastro, para o foco ficar no AT04 — cobrar abaixo
+      // dela exigiria justificativa e mudaria o assunto do vídeo.
+      valorConsulta: await valorDeTabelaDoAtendimento(page, base.id),
       statusPagamento: "pago",
     };
 

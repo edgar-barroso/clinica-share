@@ -16,6 +16,12 @@ const EXPIRES_IN = SESSION_IDLE_SECONDS;
 export interface AuthTokenPayload {
   userId: string;
   role: Role;
+  /**
+   * Emissão do token, em segundos (padrão JWT). Usado para recusar tokens
+   * anteriores ao último logout do usuário — ver `sessoesInvalidadasEm`.
+   * Ausente só em tokens montados à mão em teste.
+   */
+  iat?: number;
 }
 
 export function signAuthToken(payload: AuthTokenPayload): string {
@@ -26,9 +32,9 @@ export function verifyAuthToken(token: string): AuthTokenPayload {
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
     if (typeof decoded !== "object" || !decoded) throw new TokenInvalido();
-    const { userId, role } = decoded as Partial<AuthTokenPayload>;
+    const { userId, role, iat } = decoded as Partial<AuthTokenPayload>;
     if (!userId || !role) throw new TokenInvalido();
-    return { userId, role };
+    return { userId, role, iat };
   } catch {
     throw new TokenInvalido();
   }

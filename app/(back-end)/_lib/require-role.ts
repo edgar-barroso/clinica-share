@@ -4,7 +4,11 @@ import { prisma } from "@/lib/db";
 import { readAuthCookie } from "./auth-cookie";
 import { verifyAuthToken, type AuthTokenPayload } from "./jwt";
 import { NaoAutenticado, NaoAutorizado } from "./errors";
-import { isSessionIdle, touchUltimoAcesso } from "./session-activity";
+import {
+  isSessionIdle,
+  isSessionRevoked,
+  touchUltimoAcesso,
+} from "./session-activity";
 
 /**
  * Validação de autorização **rápida** — em runtime, lê os headers
@@ -33,7 +37,14 @@ export function requireRole(
   let payload: AuthTokenPayload;
 
   if (headerUserId && headerRole) {
-    payload = { userId: headerUserId, role: headerRole as Role };
+    // `x-token-iat` vem do proxy; `requireUser` usa para recusar token
+    // anterior ao último logout (RF-024).
+    const headerIat = req.headers.get("x-token-iat");
+    payload = {
+      userId: headerUserId,
+      role: headerRole as Role,
+      iat: headerIat ? Number(headerIat) : undefined,
+    };
   } else {
     // Fallback: testes que chamam handlers direto (sem proxy)
     const token = readAuthCookie(req);
@@ -83,6 +94,12 @@ export async function requireUser(
   });
 
   if (!user || !user.ativo) {
+    throw new NaoAutenticado();
+  }
+
+  // RF-024: token emitido antes do último logout não vale mais, mesmo que o
+  // cookie tenha voltado por uma resposta em voo.
+  if (isSessionRevoked(user.sessoesInvalidadasEm, payload.iat)) {
     throw new NaoAutenticado();
   }
 

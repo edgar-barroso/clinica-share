@@ -39,6 +39,10 @@ model User {
   ativo        Boolean   @default(true)
   ultimoAcesso DateTime?
 
+  // RF-024: instante do último logout. Tokens emitidos ANTES desta marca são
+  // recusados pelos guards que consultam o banco — é o que faz "sair"
+  // invalidar o token de verdade, e não só apagar o cookie do navegador.
+  sessoesInvalidadasEm DateTime?
   passwordResetToken          String?
   passwordResetTokenExpiresAt DateTime?
 

@@ -19,6 +19,7 @@ import {
   entrarComo,
   isoHoje,
   lerJson,
+  moedaBR,
   porExtenso,
   type AtendimentoApi,
 } from "./_support";
@@ -150,7 +151,11 @@ test("08 — Profissional preenche o prontuário do atendimento", async ({
       await page
         .getByRole("button", { name: /Finalizar e registrar/i })
         .click();
-      await page.getByLabel("Valor de tabela (R$)").fill(String(valorConsulta));
+      // FI06: o valor de tabela vem do cadastro (não é digitado) — a tela só
+      // presta contas de onde o número saiu.
+      await expect(page.getByTestId("valor-tabela")).toHaveText(
+        moedaBR(valorConsulta),
+      );
       await page.getByLabel("Valor cobrado (R$)").fill(String(valorConsulta));
 
       const registro = page.getByRole("radiogroup", {

@@ -88,10 +88,6 @@ export function authErrorMessage(err: unknown): string {
   return "Erro inesperado";
 }
 
-export const ROLE_REDIRECT: Record<Role, string> = {
-  admin: "/dashboard",
-  auxiliar: "/dashboard",
-  profissional: "/dashboard",
-  atendente: "/agenda",
-  paciente: "/p",
-};
+// Destino pós-login: derivado do menu do perfil em `lib/nav.ts`, para o
+// login nunca cair numa tela que o usuário não pode abrir.
+export { ROLE_REDIRECT } from "./nav";

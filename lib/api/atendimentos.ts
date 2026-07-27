@@ -37,7 +37,11 @@ export interface AtendimentoListItem extends AgendamentoListItem {
 
 export interface AtendimentoDetail extends AtendimentoListItem {
   paciente: AgendamentoListItem["paciente"] & { email?: string };
-  profissional: AgendamentoListItem["profissional"] & { conselho?: string };
+  profissional: AgendamentoListItem["profissional"] & {
+    conselho?: string;
+    /** FI06 — preço de tabela do cadastro; base para detectar desconto */
+    valorConsultaBase?: string;
+  };
   prontuarioInterno: unknown;
   procedimentos: ProcedimentoAtendimento[];
   /** AT04 — atendimento documentado no prontuário próprio do profissional */

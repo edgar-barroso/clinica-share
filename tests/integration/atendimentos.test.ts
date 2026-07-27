@@ -402,6 +402,11 @@ describe("PATCH /api/atendimentos/[id] — FI11 edição pós-realizado", () => 
       withAuthCookie(
         jsonRequest(`/api/atendimentos/${a.id}`, {
           valorConsulta: 180,
+          // FI06: 180 está abaixo do valor de tabela do profissional (200),
+          // então a edição é um desconto e precisa da justificativa que vai
+          // para o relatório. `motivo` é a razão da EDIÇÃO (FI11), coisa
+          // diferente da justificativa do abatimento.
+          motivoDescontoOuGratuidade: "Cobrança duplicada reconhecida",
           motivo: "Cliente alegou cobrança duplicada",
         }),
         token,

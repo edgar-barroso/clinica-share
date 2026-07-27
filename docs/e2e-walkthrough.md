@@ -27,7 +27,7 @@ o vídeo abre e fecha com um cartão dizendo o objetivo e o resultado.
 | 10 | ADMINISTRADOR · Roberto Lima | 10 — Administrador fecha a semana financeira ✅ | `FI07` `FI03` `FI04` | Roberto vai fechar a semana: conferir quanto cada profissional tem a receber e provar de onde saiu cada número. | As semanas anteriores já foram calculadas pelo servidor, toda segunda de manhã; Os contratos são diferentes: uns pagam percentual sobre o bruto, outros aluguel fixo por turno; Alguns atendimentos tiveram procedimentos extras além da consulta | [assistir](videos/10-admin-fecha-semana-financeira.mp4) | [trace](traces/10-admin-fecha-semana-financeira.zip) |
 | 11 | ADMINISTRADOR · Roberto Lima | 11 — Administrador analisa os relatórios do período ✅ | `RE01` `CO04` `RE03` `RE02` `RE04` `RE05` | Roberto quer o retrato do período: quanto entrou, para onde foi, quais salas se pagam e o que a clínica deixou de faturar. | A clínica já tem semanas de atendimentos registrados, com repasses pagos e em aberto; Houve cancelamentos, faltas, cortesias e descontos — todos com motivo registrado | [assistir](videos/11-admin-analisa-relatorios.mp4) | [trace](traces/11-admin-analisa-relatorios.zip) |
 | 12 | ADMINISTRADOR · Roberto Lima | 12 — Controle de acesso por perfil: o que cada um enxerga ✅ | `RF-022` | Mostrar, perfil por perfil, o que a clínica abre e o que ela fecha para cada tipo de usuário. | A clínica tem um usuário para cada perfil: administrador, auxiliar, profissional, atendente e paciente; Todos usam a mesma tela de login — quem decide o que aparece é o sistema, não o usuário | [assistir](videos/12-controle-de-acesso-por-perfil.mp4) | [trace](traces/12-controle-de-acesso-por-perfil.zip) |
-| 13 | PROFISSIONAL · Dra. Nirmala Azalea | 13 — Profissional não alcança a agenda de outra profissional ✅ | `RF-023` | Dra. Nirmala vai tentar alcançar a agenda e o atendimento de outra profissional da clínica. O sistema deve recusar — é isso que este vídeo comprova. | Várias profissionais atendem na mesma clínica, na mesma base de dados; Dr. Ricardo Ipê (Pediatria) já tem atendimentos registrados; Dra. Nirmala tem login próprio, com perfil PROFISSIONAL | [assistir](videos/13-profissional-tenta-agenda-de-outro.mp4) | [trace](traces/13-profissional-tenta-agenda-de-outro.zip) |
+| 13 | PROFISSIONAL · Dra. Nirmala Azalea | 13 — Profissional não alcança a agenda de outra profissional ✅ | `RF-023` | Dra. Nirmala vai tentar alcançar a agenda e o atendimento de outra profissional da clínica. O sistema deve recusar — é isso que este vídeo comprova. | Várias profissionais atendem na mesma clínica, na mesma base de dados; Dra. Renata Jacarandá (Ginecologia) já tem atendimentos registrados; Dra. Nirmala tem login próprio, com perfil PROFISSIONAL | [assistir](videos/13-profissional-tenta-agenda-de-outro.mp4) | [trace](traces/13-profissional-tenta-agenda-de-outro.zip) |
 | 14 | PACIENTE · Maria Silva | 14 — Paciente recupera a senha esquecida ✅ | `RF-026` | Maria criou a conta dela no portal, esqueceu a senha e quer voltar a entrar sem depender de ninguém da clínica. | Maria é paciente e tem conta no portal, com este e-mail; A clínica não guarda a senha em texto: nem o suporte consegue lê-la para ela; A recuperação exige provar o acesso ao e-mail cadastrado | [assistir](videos/14-paciente-recupera-senha.mp4) | [trace](traces/14-paciente-recupera-senha.zip) |
 | 15 | AUXILIAR · Carla Nogueira | 15 — Sessão encerrada: por decisão de Carla e por inatividade ✅ | `RF-024` | Mostrar que a sessão de Carla acaba de duas formas: quando ela clica em Sair e quando o computador dela fica sozinho tempo demais. | Carla é auxiliar financeira e trabalha num computador compartilhado da recepção; O painel dela mostra atendimento, valor cobrado e repasse de toda a clínica; A janela de inatividade configurada no sistema é de 30 minutos | [assistir](videos/15-sessao-expira-por-inatividade.mp4) | [trace](traces/15-sessao-expira-por-inatividade.zip) |
 | 16 | AUXILIAR · Carla Nogueira | 16 — Auxiliar paga um repasse e a auditoria mostra quem fez ✅ | `RF-025` | Carla vai dar baixa num repasse — e o sistema tem que registrar que foi ela, com o valor antes e depois. | Existem repasses de semanas já fechadas aguardando pagamento; Carla é auxiliar administrativa: pode dar baixa em repasse e ler a trilha de auditoria | [assistir](videos/16-auxiliar-audita-alteracao-financeira.mp4) | [trace](traces/16-auxiliar-audita-alteracao-financeira.zip) |
@@ -165,15 +165,15 @@ Pré-condições:
 Passos narrados:
 1. [RF-021] Júlia Nunes entra no sistema com e-mail e senha
 2. [AG02] Júlia atende o telefone e abre um novo agendamento na agenda da clínica
-3. [AG02] Júlia procura o paciente que está na linha: Carolina Lima
+3. [AG02] Júlia procura o paciente que está na linha: Diego Ribeiro
 4. [AG02] Júlia escolhe a profissional pedida: Dra. Helena Braga (Psicologia)
 5. [AG02] Júlia escolhe o dia 03/08/2026 — o calendário só libera os dias em que Dra. Helena Braga atende
 6. [AG02] Júlia lê para o paciente os horários vagos — intervalos de 45 minutos, a duração da consulta dela
 7. [AG02] A sala não é escolhida pela atendente: o sistema resolve pelo turno fixo da profissional
-8. [AG02] Júlia confirma a consulta de 03/08/2026 às 13:45
-9. [AG02] Júlia confere na ficha de Carolina Lima: a consulta está lá
+8. [AG02] Júlia confirma a consulta de 03/08/2026 às 14:30
+9. [AG02] Júlia confere na ficha de Diego Ribeiro: a consulta está lá
 
-**Resultado:** Consulta marcada por telefone: Carolina Lima em 03/08/2026 às 13:45 com Dra. Helena Braga (Psicologia), no Consultório 04 — Psicologia — sala definida pelo turno fixo, não pela atendente
+**Resultado:** Consulta marcada por telefone: Diego Ribeiro em 03/08/2026 às 14:30 com Dra. Helena Braga (Psicologia), no Consultório 04 — Psicologia — sala definida pelo turno fixo, não pela atendente
 
 ---
 
@@ -191,11 +191,11 @@ Pré-condições:
 Passos narrados:
 1. [RF-021] Júlia Nunes entra no sistema com e-mail e senha
 2. [AG05] Júlia começa um agendamento para Aline Vieira com Dra. Helena Braga em 03/08/2026
-3. Pré-condição: enquanto Júlia digitava, Ana Santos fechou por outro canal exatamente 03/08/2026 às 14:30 no Consultório 04 — Psicologia
-4. [AG05] O sistema DEVE recusar: o Consultório 04 — Psicologia já tem consulta às 14:30 em 03/08/2026
+3. Pré-condição: enquanto Júlia digitava, Ana Santos fechou por outro canal exatamente 03/08/2026 às 15:15 no Consultório 04 — Psicologia
+4. [AG05] O sistema DEVE recusar: o Consultório 04 — Psicologia já tem consulta às 15:15 em 03/08/2026
 5. [AG03] O sistema DEVE recusar: Consultório 01 — Clínica geral não é o turno fixo de Dra. Helena Braga nesse dia
 
-**Resultado:** Os dois bloqueios são o resultado esperado: HTTP 409 para segunda consulta no Consultório 04 — Psicologia em 03/08/2026 às 14:30 (AG05) e HTTP 400 para consulta no Consultório 01 — Clínica geral, que não é o turno fixo de Dra. Helena Braga (AG03). Só a reserva legítima de Ana Santos ficou de pé — nenhuma duplicidade foi criada.
+**Resultado:** Os dois bloqueios são o resultado esperado: HTTP 409 para segunda consulta no Consultório 04 — Psicologia em 03/08/2026 às 15:15 (AG05) e HTTP 400 para consulta no Consultório 01 — Clínica geral, que não é o turno fixo de Dra. Helena Braga (AG03). Só a reserva legítima de Ana Santos ficou de pé — nenhuma duplicidade foi criada.
 
 ---
 
@@ -212,11 +212,11 @@ Pré-condições:
 
 Passos narrados:
 1. [RF-021] Júlia Nunes entra no sistema com e-mail e senha
-2. [AG07] A agenda de amanhã, 27/07/2026: são estas as pessoas que a rotina vai avisar
+2. [AG07] A agenda de amanhã, 28/07/2026: são estas as pessoas que a rotina vai avisar
 3. [AG07] Sem a chave secreta do agendador, o sistema recusa o disparo — ninguém dispara lembrete de fora
 4. [AG07] Nenhum e-mail é enviado neste vídeo — o disparo de verdade acontece no servidor de produção
 
-**Resultado:** Comprovado: a rotina automática de lembrete existe em /api/cron/lembretes-amanha, é protegida por chave secreta (401 sem ela) e as 5 consulta(s) de 27/07/2026 são as que ela avisaria. Nenhum e-mail foi enviado neste vídeo.
+**Resultado:** Comprovado: a rotina automática de lembrete existe em /api/cron/lembretes-amanha, é protegida por chave secreta (401 sem ela) e as 3 consulta(s) de 28/07/2026 são as que ela avisaria. Nenhum e-mail foi enviado neste vídeo.
 
 ---
 
@@ -233,13 +233,13 @@ Pré-condições:
 Passos narrados:
 1. [RF-021] Maria Silva entra no sistema com e-mail e senha
 2. [AG06] Maria abre a lista das próprias consultas no portal
-3. [AG06] Maria abre os detalhes da consulta de 31/07/2026 às 18:00
+3. [AG06] Maria abre os detalhes da consulta de 03/08/2026 às 13:00
 4. [AG06] Maria pede para cancelar e o sistema abre a confirmação pedindo o motivo
 5. [AG06] Sem motivo, o cancelamento é recusado — a consulta continua de pé
 6. [AG06] Maria escreve a justificativa real — "Vou viajar a trabalho nessa semana" — e confirma
 7. [AG06] A consulta fica cancelada e o motivo fica registrado na ficha
 
-**Resultado:** Consulta de 31/07/2026 às 18:00 com Dra. Helena Braga cancelada pela própria paciente — status "Cancelado" e motivo "Vou viajar a trabalho nessa semana" gravados; o horário volta a ficar livre na agenda
+**Resultado:** Consulta de 03/08/2026 às 13:00 com Dra. Helena Braga cancelada pela própria paciente — status "Cancelado" e motivo "Vou viajar a trabalho nessa semana" gravados; o horário volta a ficar livre na agenda
 
 ---
 
@@ -257,7 +257,7 @@ Pré-condições:
 Passos narrados:
 1. [RF-021] Dra. Helena Braga entra no sistema com e-mail e senha
 2. [AT01] Dra. Helena abre a própria agenda e vê os atendimentos que ainda precisa fazer
-3. [AT01] Ela abre o atendimento de Aline Vieira das 11:30 direto da agenda
+3. [AT01] Ela abre o atendimento de Henrique Macedo das 08:00 direto da agenda
 4. [AT01] Dra. Helena inicia o atendimento — a consulta sai de Agendado e entra Em atendimento
 5. [AT02] Terminada a sessão, ela abre a tela de finalização e confirma o valor da consulta: R$ 300,00
 6. [AT02] Ela lança o 1º procedimento extra: Aplicação de escala de ansiedade — R$ 80,00
@@ -267,7 +267,7 @@ Passos narrados:
 10. [AT04] A ficha passa a mostrar que o prontuário é externo, com a referência salva
 11. [AT02] Os dois procedimentos ficam individualizados no valor do atendimento
 
-**Resultado:** Atendimento de Aline Vieira (27/07/2026, 11:30) finalizado: consulta R$ 300,00 + Aplicação de escala de ansiedade R$ 80,00 + Relatório psicológico R$ 150,00 = R$ 530,00 na base do repasse da Dra. Helena, com prontuário externo em "Sistema próprio da Dra. Helena Braga — ficha 4821"
+**Resultado:** Atendimento de Henrique Macedo (27/07/2026, 08:00) finalizado: consulta R$ 300,00 + Aplicação de escala de ansiedade R$ 80,00 + Relatório psicológico R$ 150,00 = R$ 530,00 na base do repasse da Dra. Helena, com prontuário externo em "Sistema próprio da Dra. Helena Braga — ficha 4821"
 
 ---
 
@@ -284,7 +284,7 @@ Pré-condições:
 
 Passos narrados:
 1. [RF-021] Dra. Nirmala Azalea entra no sistema com e-mail e senha
-2. [AT03] Dra. Nirmala abre a própria agenda e localiza Beatriz Costa, das 10:00
+2. [AT03] Dra. Nirmala abre a própria agenda e localiza Gabriel Ferreira, das 17:00
 3. [AT03] Ela inicia o atendimento — sem consulta iniciada não existe prontuário para escrever
 4. [AT03] Terminada a consulta, ela abre a finalização e confirma o prontuário interno (valor da consulta: R$ 220,00)
 5. [AT03] Escopo de hoje, dito na cara: o prontuário são estes quatro campos livres — a estrutura definitiva fica para a R2
@@ -293,7 +293,7 @@ Passos narrados:
 8. [AT03] Ela confirma a finalização e o prontuário é gravado
 9. [AT03] O card “Prontuário registrado” relê o que foi escrito — o registro clínico ficou na ficha da paciente
 
-**Resultado:** Atendimento de Beatriz Costa (27/07/2026, 10:00, R$ 220,00) finalizado com os 4 campos do prontuário interno gravados e relidos na tela: anamnese, evolução, conduta e retorno em 30 dias. A estrutura definitiva do prontuário será desenhada na R2.
+**Resultado:** Atendimento de Gabriel Ferreira (27/07/2026, 17:00, R$ 220,00) finalizado com os 4 campos do prontuário interno gravados e relidos na tela: anamnese, evolução, conduta e retorno em 30 dias. A estrutura definitiva do prontuário será desenhada na R2.
 
 ---
 
@@ -313,18 +313,18 @@ Passos narrados:
 2. [FI05] Carla abre a lista de atendimentos da clínica
 3. [FI05] Existem exatamente três situações de pagamento — e nenhuma delas é cobrança online
 4. [FI05] Carla filtra só os gratuitos para conferir — o status é um filtro de verdade, não um enfeite
-5. [FI05] Carla abre o atendimento de Beatriz Costa para lançar a cobrança
-6. [FI05] Ela registra R$ 220,00 recebido na recepção e marca o atendimento como PAGO
-7. [FI06] Agora o atendimento de Renata Pinto, que sai com desconto
-8. [FI06] Carla lança valor de tabela R$ 250,00 e valor cobrado R$ 150,00
+5. [FI05] Carla abre o atendimento de Gustavo Moreira para lançar a cobrança
+6. [FI05] Ela registra R$ 300,00 recebido na recepção e marca o atendimento como PAGO
+7. [FI06] Agora o atendimento de Daniela Castro, que sai com desconto
+8. [FI06] A tabela do cadastro é R$ 240,00; Carla lança R$ 150,00 de valor cobrado
 9. [FI06] Sem justificativa, o sistema não deixa concluir — desconto sem motivo não entra
 10. [FI06] Com a justificativa "Desconto de retorno em 30 dias", a cobrança com desconto é aceita
 11. [FI06] A ficha guarda os três dados juntos: valor de tabela, valor cobrado e o motivo do desconto
-12. [FI06] Por último, o atendimento de Pedro Oliveira, que a clínica não vai cobrar
-13. [FI06] Carla marca GRATUITO: tabela R$ 250,00, cobrado R$ 0,00 — e o campo de justificativa troca de nome
+12. [FI06] Por último, o atendimento de Aline Vieira, que a clínica não vai cobrar
+13. [FI06] Carla marca GRATUITO: tabela R$ 280,00, cobrado R$ 0,00 — e o campo de justificativa troca de nome
 14. [FI06] Ela escreve o motivo da cortesia e conclui o atendimento gratuito
 
-**Resultado:** Três cobranças fechadas à mão pela auxiliar: R$ 220,00 pago integralmente; R$ 150,00 cobrados sobre tabela de R$ 250,00 (desconto de R$ 100,00 justificado como "Desconto de retorno em 30 dias"); e 1 atendimento gratuito justificado. Nenhum valor entra sozinho — a clínica registra o que recebeu.
+**Resultado:** Três cobranças fechadas à mão pela auxiliar: R$ 300,00 pago integralmente; R$ 150,00 cobrados sobre tabela de R$ 240,00 (desconto de R$ 90,00 justificado como "Desconto de retorno em 30 dias"); e 1 atendimento gratuito justificado. Nenhum valor entra sozinho — a clínica registra o que recebeu.
 
 ---
 
@@ -341,13 +341,13 @@ Pré-condições:
 
 Passos narrados:
 1. [RF-021] Roberto Lima entra no sistema com e-mail e senha
-2. [FI07] Roberto abre o fechamento semanal: 20 repasses agrupados em 4 semanas, de segunda a domingo
+2. [FI07] Roberto abre o fechamento semanal: 19 repasses agrupados em 4 semanas, de segunda a domingo
 3. [FI03] A prestação de contas de Dra. Nirmala Azalea: receita bruta × 30% = valor do repasse
 4. [FI04] O que entra na base: consulta + procedimentos extras — detalhamento de Dra. Sofia Pitanga
 5. [FI03] O mesmo fechamento com outro contrato: Dra. Helena Braga paga aluguel fixo de R$ 250,00 por turno usado
 6. [FI03] Roberto confere: o valor da tela é exatamente o que o servidor recalcula agora
 
-**Resultado:** 20 repasses em 4 semanas · percentual: R$ 200,00 × 30% = R$ 60,00 · aluguel fixo: 8 turnos × R$ 250,00 = R$ 2.000,00 — todos conferidos contra o recálculo do servidor
+**Resultado:** 19 repasses em 4 semanas · percentual: R$ 400,00 × 30% = R$ 120,00 · aluguel fixo: 5 turnos × R$ 250,00 = R$ 1.250,00 — todos conferidos contra o recálculo do servidor
 
 ---
 
@@ -370,7 +370,7 @@ Passos narrados:
 6. [RE04] Gratuidades e descontos: quanto a clínica deixou de faturar, e por quê
 7. [RE05] Cancelamentos e não comparecimentos: quantos foram e o motivo de cada um
 
-**Resultado:** R$ 35.730,00 de receita em 153 atendimentos · R$ 4.531,00 de repasse em aberto e R$ 6.044,50 pagos · sala líder Consultório 06 — Cardiologia com R$ 4.800,00 · R$ 740,00 concedidos em 7 cortesias e 15 descontos · 37 cancelamentos e faltas
+**Resultado:** R$ 34.280,00 de receita em 147 atendimentos · R$ 5.513,50 de repasse em aberto e R$ 4.266,00 pagos · sala líder Consultório 06 — Cardiologia com R$ 4.550,00 · R$ 740,00 concedidos em 7 cortesias e 15 descontos · 37 cancelamentos e faltas
 
 ---
 
@@ -394,7 +394,7 @@ Passos narrados:
 7. [RF-022] O menu da auxiliar tem Financeiro, Relatórios e Auditoria — e não tem os cadastros da clínica
 8. Encerra a sessão pelo menu do topo
 9. [RF-021] Dra. Helena Braga entra no sistema com e-mail e senha
-10. [RF-022] A profissional entra e o sistema a leva ao painel
+10. [RF-022] A profissional entra e o sistema a leva direto para a agenda DELA
 11. [RF-022] O menu da profissional abre só a agenda dela, os atendimentos dela e o perfil dela
 12. [RF-022] Dra. Helena tenta abrir a trilha de auditoria da clínica
 13. [RF-022] O servidor recusa em bom português: 403, acesso negado para este perfil
@@ -422,18 +422,18 @@ IDs: `RF-023`
 
 Pré-condições:
 - Várias profissionais atendem na mesma clínica, na mesma base de dados
-- Dr. Ricardo Ipê (Pediatria) já tem atendimentos registrados
+- Dra. Renata Jacarandá (Ginecologia) já tem atendimentos registrados
 - Dra. Nirmala tem login próprio, com perfil PROFISSIONAL
 
 Passos narrados:
 1. [RF-021] Dra. Nirmala Azalea entra no sistema com e-mail e senha
 2. [RF-023] Dra. Nirmala abre a agenda dela, em Minha agenda
-3. [RF-023] O sistema DEVE devolver só a agenda dela, mesmo ela pedindo a de Dr. Ricardo Ipê
-4. [RF-023] O sistema DEVE recusar a abertura de um atendimento de Dr. Ricardo Ipê
+3. [RF-023] O sistema DEVE devolver só a agenda dela, mesmo ela pedindo a de Dra. Renata Jacarandá
+4. [RF-023] O sistema DEVE recusar a abertura de um atendimento de Dra. Renata Jacarandá
 5. [RF-023] O mesmo pedido, num atendimento dela, é liberado na hora
 6. [RF-023] E a tela dela continua exatamente como estava: a agenda dela
 
-**Resultado:** Os dois "nãos" são a proteção funcionando, não erro. Pedindo a agenda de Dr. Ricardo Ipê, Dra. Nirmala recebeu apenas os próprios atendimentos; abrindo um atendimento de Dr. Ricardo Ipê, recebeu 403. Na mesma sessão, o atendimento dela abriu normalmente (200). Cada profissional só alcança o próprio paciente, o próprio prontuário e o próprio dinheiro.
+**Resultado:** Os dois "nãos" são a proteção funcionando, não erro. Pedindo a agenda de Dra. Renata Jacarandá, Dra. Nirmala recebeu apenas os próprios atendimentos; abrindo um atendimento de Dra. Renata Jacarandá, recebeu 403. Na mesma sessão, o atendimento dela abriu normalmente (200). Cada profissional só alcança o próprio paciente, o próprio prontuário e o próprio dinheiro.
 
 ---
 
@@ -506,5 +506,5 @@ Passos narrados:
 4. [RF-025] Pelo dado: o registro guarda o usuário que agiu, não um autor anônimo
 5. [RF-025] Ressalva honesta: o fechamento automático das segundas ainda não deixa rastro na auditoria
 
-**Resultado:** Repasse de Dra. Nirmala Azalea baixado: R$ 60,00 · a auditoria registra Carla Nogueira mudando o campo "status" de "aberto" para "pago", com data, hora e motivo
+**Resultado:** Repasse de Dra. Nirmala Azalea baixado: R$ 120,00 · a auditoria registra Carla Nogueira mudando o campo "status" de "aberto" para "pago", com data, hora e motivo
 

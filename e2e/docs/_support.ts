@@ -40,14 +40,14 @@ export const ELENCO = {
     persona: { papel: "PROFISSIONAL", nome: "Dra. Helena Braga" } as Persona,
     email: "prof3@clinicashare.local",
     senha: SENHA_DEMO,
-    destino: "**/dashboard",
+    destino: "**/minha-agenda",
   },
   /** Dra. Nirmala Azalea — Clínica geral, percentual 30%, consulta de 30min */
   clinicaGeral: {
     persona: { papel: "PROFISSIONAL", nome: "Dra. Nirmala Azalea" } as Persona,
     email: "prof1@clinicashare.local",
     senha: SENHA_DEMO,
-    destino: "**/dashboard",
+    destino: "**/minha-agenda",
   },
   paciente: {
     persona: { papel: "PACIENTE", nome: "Maria Silva" } as Persona,
@@ -192,7 +192,13 @@ export interface AtendimentoApi {
   valorTotal?: string;
   observacoes: string | null;
   paciente: { id: string; nome: string; telefone: string };
-  profissional: { id: string; nome: string; especialidade: string };
+  profissional: {
+    id: string;
+    nome: string;
+    especialidade: string;
+    /** FI06 — preço de tabela do cadastro; só vem no GET de um atendimento. */
+    valorConsultaBase?: string;
+  };
   consultorio: { id: string; nome: string };
 }
 
@@ -248,6 +254,18 @@ const BRL = new Intl.NumberFormat("pt-BR", {
 /** Mesmo formato do `formatBRL` da aplicação: 1234.5 → "R$ 1.234,50". */
 export function brl(valor: number): string {
   return BRL.format(valor);
+}
+
+/**
+ * Só a parte numérica do `brl()`, como regex: casa com o texto da tela sem
+ * depender do espaço estreito que o Intl coloca depois do "R$".
+ */
+export function moedaBR(valor: number): RegExp {
+  const texto = valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return new RegExp(texto.replace(/\./g, "\\."));
 }
 
 /** Caminho inverso: "R$ 1.234,50" → 1234.5 · "17" → 17. */

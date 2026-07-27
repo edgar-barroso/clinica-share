@@ -44,6 +44,20 @@ export async function createWalkInAtendimento(
 
   const procedimentos = input.procedimentos ?? [];
 
+  // FI06: o valor de tabela é o do cadastro do profissional — nenhuma tela
+  // precisa pedir isso digitado. `valorOriginal` no body só serve para o caso
+  // em que o preço combinado foge da tabela.
+  const valorTabela = Number(
+    input.valorOriginal ?? profissional.valorConsultaBase,
+  );
+  const houveDesconto = input.valorConsulta < valorTabela;
+
+  if (houveDesconto && (input.motivoDescontoOuGratuidade?.trim().length ?? 0) < 3) {
+    throw new RegraNegocio(
+      `Cobrança de ${input.valorConsulta} abaixo do valor de tabela (${valorTabela}) exige justificativa (FI06)`,
+    );
+  }
+
   try {
     return await prisma.$transaction(async (tx) => {
       const created = await tx.atendimento.create({
@@ -56,16 +70,11 @@ export async function createWalkInAtendimento(
           valorConsulta: new Prisma.Decimal(input.valorConsulta),
           status: "realizado",
           statusPagamento: input.statusPagamento,
-          // FI06: preço de tabela + justificativa preservada no desconto
-          // parcial, não só na gratuidade total.
-          valorOriginal:
-            input.valorOriginal === undefined
-              ? null
-              : new Prisma.Decimal(input.valorOriginal),
+          // FI06: tabela derivada do cadastro do profissional (ver `valorTabela`
+          // acima); registrada só quando houve desconto.
+          valorOriginal: houveDesconto ? new Prisma.Decimal(valorTabela) : null,
           motivoDescontoOuGratuidade:
-            input.statusPagamento === "gratuito" ||
-            (input.valorOriginal !== undefined &&
-              input.valorConsulta < input.valorOriginal)
+            input.statusPagamento === "gratuito" || houveDesconto
               ? input.motivoDescontoOuGratuidade ?? null
               : null,
           // AT04: era `false` fixo, o que tornava o campo inalcançável.

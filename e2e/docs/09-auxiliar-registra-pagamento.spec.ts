@@ -21,24 +21,20 @@ import {
   brl,
   entrarComo,
   lerJson,
+  moedaBR,
   type AtendimentoApi,
 } from "./_support";
 
-const VALOR_TABELA = 250;
+/**
+ * FI06 — o valor de tabela NÃO é digitado pela auxiliar: vem do cadastro do
+ * profissional (`Profissional.valorConsultaBase`) e a tela só o exibe. Cada
+ * atendimento tem o seu, então a jornada lê o número real de cada um em vez
+ * de chumbar um valor aqui.
+ */
 const VALOR_COM_DESCONTO = 150;
-const DESCONTO_CONCEDIDO = VALOR_TABELA - VALOR_COM_DESCONTO;
 const JUSTIFICATIVA_DESCONTO = "Desconto de retorno em 30 dias";
 const JUSTIFICATIVA_GRATUIDADE =
   "Cortesia institucional — paciente encaminhado pela ONG parceira";
-
-/** Só a parte numérica do `formatBRL`, para casar com o texto da tela. */
-function moeda(valor: number): RegExp {
-  const texto = valor.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return new RegExp(texto.replace(/\./g, "\\."));
-}
 
 test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
   page,
@@ -86,14 +82,15 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
     "a seed precisa de 3 atendimentos agendados de pacientes diferentes",
   ).toBe(3);
 
-  const valorCheio = Number(escolhidos[0].valorConsulta) || VALOR_TABELA;
-
   /**
    * Abre um atendimento AGENDADO pela busca da lista e devolve o id que a
    * navegação realmente alcançou — a jornada nunca "adivinha" a tela em que
-   * está, ela lê da URL e confere pelo dado.
+   * está, ela lê da URL e confere pelo dado. Devolve também o valor de tabela
+   * do profissional (FI06), que a jornada não digita em lugar nenhum.
    */
-  async function abrirAgendadoPelaBusca(nome: string): Promise<string> {
+  async function abrirAgendadoPelaBusca(
+    nome: string,
+  ): Promise<{ id: string; tabela: number }> {
     await page.getByLabel("Buscar atendimentos").fill(nome);
     const linha = page
       .getByRole("link", { name: `Ver atendimento de ${nome}` })
@@ -115,7 +112,12 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
     expect(atendimento.status, "a jornada precisa abrir um agendado").toBe(
       "agendado",
     );
-    return id;
+    const tabela = Number(atendimento.profissional.valorConsultaBase);
+    expect(
+      Number.isFinite(tabela) && tabela > VALOR_COM_DESCONTO,
+      "o cadastro do profissional precisa ter valor de consulta acima do desconto encenado",
+    ).toBe(true);
+    return { id, tabela };
   }
 
   /** Agendado → em atendimento → tela de finalização, do jeito da clínica. */
@@ -170,10 +172,13 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
   // --- FI05: cobrança normal, marcada como paga ----------------------------
 
   let idPago = "";
+  let valorCheio = 0;
   await jornada.passo(
     `[FI05] Carla abre o atendimento de ${escolhidos[0].paciente.nome} para lançar a cobrança`,
     async () => {
-      idPago = await abrirAgendadoPelaBusca(escolhidos[0].paciente.nome);
+      const aberto = await abrirAgendadoPelaBusca(escolhidos[0].paciente.nome);
+      idPago = aberto.id;
+      valorCheio = aberto.tabela;
     },
   );
 
@@ -181,7 +186,10 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
     `[FI05] Ela registra ${brl(valorCheio)} recebido na recepção e marca o atendimento como PAGO`,
     async () => {
       await abrirFinalizacao();
-      await page.getByLabel("Valor de tabela (R$)").fill(String(valorCheio));
+      // O valor de tabela não é digitado: a tela mostra o preço do cadastro.
+      await expect(page.getByTestId("valor-tabela")).toHaveText(
+        moedaBR(valorCheio),
+      );
       await page.getByLabel("Valor cobrado (R$)").fill(String(valorCheio));
       // O sistema não recebe dinheiro: quem marca "pago" é a clínica, à mão.
       await page.getByRole("button", { name: /^pago$/i }).click();
@@ -204,29 +212,38 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
   // --- FI06: desconto parcial com justificativa obrigatória ----------------
 
   let idDesconto = "";
+  let tabelaDesconto = 0;
+  let descontoConcedido = 0;
   await jornada.passo(
     `[FI06] Agora o atendimento de ${escolhidos[1].paciente.nome}, que sai com desconto`,
     async () => {
       await page.getByRole("link", { name: /Voltar para atendimentos/i }).click();
       await page.waitForURL("**/atendimentos", { timeout: 20_000 });
-      idDesconto = await abrirAgendadoPelaBusca(escolhidos[1].paciente.nome);
+      const aberto = await abrirAgendadoPelaBusca(escolhidos[1].paciente.nome);
+      idDesconto = aberto.id;
+      tabelaDesconto = aberto.tabela;
+      descontoConcedido = tabelaDesconto - VALOR_COM_DESCONTO;
     },
   );
 
   await jornada.passo(
-    `[FI06] Carla lança valor de tabela ${brl(VALOR_TABELA)} e valor cobrado ${brl(VALOR_COM_DESCONTO)}`,
+    `[FI06] A tabela do cadastro é ${brl(tabelaDesconto)}; Carla lança ${brl(VALOR_COM_DESCONTO)} de valor cobrado`,
     async () => {
       await abrirFinalizacao();
-      await page.getByLabel("Valor de tabela (R$)").fill(String(VALOR_TABELA));
+      // Só o valor cobrado é digitado. A tabela vem do cadastro do
+      // profissional — é o que impede erro de digitação no preço cheio.
+      await expect(page.getByTestId("valor-tabela")).toHaveText(
+        moedaBR(tabelaDesconto),
+      );
       await page
         .getByLabel("Valor cobrado (R$)")
         .fill(String(VALOR_COM_DESCONTO));
       await expect(page.getByTestId("desconto-concedido")).toHaveText(
-        moeda(DESCONTO_CONCEDIDO),
+        moedaBR(descontoConcedido),
       );
       await jornada.validar(
         page.getByTestId("desconto-concedido"),
-        `O sistema calcula sozinho: ${brl(DESCONTO_CONCEDIDO)} de desconto sobre a tabela`,
+        `O sistema calcula sozinho: ${brl(descontoConcedido)} de desconto sobre a tabela`,
       );
     },
   );
@@ -256,13 +273,14 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
         "Recusado de novo: a justificativa precisa ter no mínimo 3 caracteres",
       );
 
-      // A regra é do servidor, não só da tela: pular o formulário dá 422.
+      // A regra é do servidor, não só da tela: pular o formulário dá 400
+      // (RegraNegocio) — o usecase compara o cobrado com o valor de tabela do
+      // cadastro, sem depender de nada que o cliente mande.
       const recusaDoServidor = await page.request.post(
         `/api/atendimentos/${idDesconto}/finalizar`,
         {
           data: {
             valorConsulta: VALOR_COM_DESCONTO,
-            valorOriginal: VALOR_TABELA,
             statusPagamento: "pago",
           },
         },
@@ -270,7 +288,10 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
       expect(
         recusaDoServidor.status(),
         "servidor recusa desconto sem justificativa (FI06)",
-      ).toBe(422);
+      ).toBe(400);
+      expect(
+        ((await recusaDoServidor.json()) as { error: string }).error,
+      ).toMatch(/exige justificativa/i);
     },
   );
 
@@ -298,7 +319,7 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
     async () => {
       await jornada.validar(
         page.getByText("Desconto concedido"),
-        `Tabela ${brl(VALOR_TABELA)} · cobrado ${brl(VALOR_COM_DESCONTO)} · desconto ${brl(DESCONTO_CONCEDIDO)}`,
+        `Tabela ${brl(tabelaDesconto)} · cobrado ${brl(VALOR_COM_DESCONTO)} · desconto ${brl(descontoConcedido)}`,
       );
       await jornada.validar(
         page.getByText(JUSTIFICATIVA_DESCONTO),
@@ -312,7 +333,8 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
       );
       expect(atendimento.status).toBe("realizado");
       expect(atendimento.statusPagamento).toBe("pago");
-      expect(Number(atendimento.valorOriginal)).toBe(VALOR_TABELA);
+      // Derivado pelo servidor a partir do cadastro — a tela não mandou.
+      expect(Number(atendimento.valorOriginal)).toBe(tabelaDesconto);
       expect(Number(atendimento.valorConsulta)).toBe(VALOR_COM_DESCONTO);
       expect(atendimento.motivoDescontoOuGratuidade).toBe(
         JUSTIFICATIVA_DESCONTO,
@@ -323,20 +345,25 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
   // --- FI06: gratuidade, também com justificativa obrigatória --------------
 
   let idGratuito = "";
+  let tabelaGratuito = 0;
   await jornada.passo(
     `[FI06] Por último, o atendimento de ${escolhidos[2].paciente.nome}, que a clínica não vai cobrar`,
     async () => {
       await page.getByRole("link", { name: /Voltar para atendimentos/i }).click();
       await page.waitForURL("**/atendimentos", { timeout: 20_000 });
-      idGratuito = await abrirAgendadoPelaBusca(escolhidos[2].paciente.nome);
+      const aberto = await abrirAgendadoPelaBusca(escolhidos[2].paciente.nome);
+      idGratuito = aberto.id;
+      tabelaGratuito = aberto.tabela;
     },
   );
 
   await jornada.passo(
-    `[FI06] Carla marca GRATUITO: tabela ${brl(VALOR_TABELA)}, cobrado ${brl(0)} — e o campo de justificativa troca de nome`,
+    `[FI06] Carla marca GRATUITO: tabela ${brl(tabelaGratuito)}, cobrado ${brl(0)} — e o campo de justificativa troca de nome`,
     async () => {
       await abrirFinalizacao();
-      await page.getByLabel("Valor de tabela (R$)").fill(String(VALOR_TABELA));
+      await expect(page.getByTestId("valor-tabela")).toHaveText(
+        moedaBR(tabelaGratuito),
+      );
       await page.getByLabel("Valor cobrado (R$)").fill("0");
       await expect(page.getByLabel("Justificativa do desconto")).toBeVisible();
       await page.getByRole("button", { name: /^gratuito$/i }).click();
@@ -381,8 +408,8 @@ test("09 — Auxiliar registra pagamento, desconto e gratuidade", async ({
 
   await jornada.encerrar(
     `Três cobranças fechadas à mão pela auxiliar: ${brl(valorCheio)} pago integralmente; ` +
-      `${brl(VALOR_COM_DESCONTO)} cobrados sobre tabela de ${brl(VALOR_TABELA)} ` +
-      `(desconto de ${brl(DESCONTO_CONCEDIDO)} justificado como "${JUSTIFICATIVA_DESCONTO}"); ` +
+      `${brl(VALOR_COM_DESCONTO)} cobrados sobre tabela de ${brl(tabelaDesconto)} ` +
+      `(desconto de ${brl(descontoConcedido)} justificado como "${JUSTIFICATIVA_DESCONTO}"); ` +
       `e 1 atendimento gratuito justificado. Nenhum valor entra sozinho — ` +
       `a clínica registra o que recebeu.`,
   );

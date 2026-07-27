@@ -2,28 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  CalendarHeart,
-  CalendarPlus,
-  Calendar,
-  ClipboardList,
-  DoorOpen,
-  FileBarChart,
-  FileSearch,
-  Headset,
-  Heart,
-  Home,
-  Settings,
-  Stethoscope,
-  User,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 import { isNavItemActive } from "@/lib/nav-active";
 import { useRole } from "@/lib/role";
+import { navDoPapel } from "@/lib/nav";
 
 function semanaAtualLabel(): string {
   const hoje = new Date();
@@ -38,61 +22,11 @@ function semanaAtualLabel(): string {
   return `${fmt(segunda)}–${fmt(domingo)}`;
 }
 
-type NavItem = { href: string; label: string; icon: typeof BarChart3 };
-
-const navAll: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  { href: "/agenda", label: "Agenda", icon: Calendar },
-  { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
-  { href: "/pacientes", label: "Pacientes", icon: Heart },
-  { href: "/consultorios", label: "Consultórios", icon: DoorOpen },
-  { href: "/profissionais", label: "Profissionais", icon: Users },
-  { href: "/equipe", label: "Equipe", icon: Headset },
-  { href: "/financeiro/repasses", label: "Financeiro", icon: Wallet },
-  { href: "/relatorios", label: "Relatórios", icon: FileBarChart },
-  { href: "/auditoria", label: "Auditoria", icon: FileSearch },
-  { href: "/configuracoes", label: "Configurações", icon: Settings },
-];
-
-const navPaciente: NavItem[] = [
-  { href: "/p", label: "Início", icon: Home },
-  { href: "/p/consultas", label: "Minhas consultas", icon: CalendarHeart },
-  { href: "/p/agendar", label: "Agendar consulta", icon: CalendarPlus },
-  { href: "/p/perfil", label: "Meu perfil", icon: User },
-];
-
-const navProfissional: NavItem[] = [
-  { href: "/minha-agenda", label: "Minha agenda", icon: Calendar },
-  { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList },
-];
-
-const navByRole: Record<string, string[]> = {
-  admin: navAll.map((n) => n.href),
-  auxiliar: ["/dashboard", "/atendimentos", "/pacientes", "/financeiro/repasses", "/relatorios", "/auditoria"],
-  atendente: ["/agenda", "/atendimentos", "/pacientes"],
-};
-
 export function Sidebar() {
   const pathname = usePathname();
   const { role } = useRole();
   const { profissionalId } = useCurrentUser();
-  const items =
-    role === "paciente"
-      ? navPaciente
-      : role === "profissional"
-        ? [
-            ...navProfissional,
-            ...(profissionalId
-              ? [
-                  {
-                    href: `/profissionais/${profissionalId}/editar`,
-                    label: "Meu perfil",
-                    icon: User,
-                  },
-                ]
-              : []),
-          ]
-        : navAll.filter((n) => (navByRole[role] ?? []).includes(n.href));
+  const items = navDoPapel(role, { profissionalId });
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">

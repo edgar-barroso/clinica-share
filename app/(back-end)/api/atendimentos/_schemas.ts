@@ -69,8 +69,9 @@ const ERRO_REFERENCIA_EXTERNA = {
 };
 
 /**
- * FI06 — desconto parcial. `valorOriginal` é o preço de tabela; cobrar abaixo
- * dele é um desconto e exige justificativa, do mesmo jeito que a gratuidade.
+ * FI06 — valor de tabela. OPCIONAL: por padrão o servidor usa o
+ * `valorConsultaBase` do profissional, então nenhuma tela precisa pedir isso.
+ * Só se informa aqui quando o preço combinado foge do cadastro.
  */
 const valorOriginalSchema = z
   .number()
@@ -78,27 +79,10 @@ const valorOriginalSchema = z
   .max(99999999.99)
   .optional();
 
-function exigeMotivoDesconto(v: {
-  valorConsulta?: number;
-  valorOriginal?: number;
-  motivoDescontoOuGratuidade?: string | null;
-}) {
-  const houveDesconto =
-    v.valorOriginal !== undefined &&
-    v.valorConsulta !== undefined &&
-    v.valorConsulta < v.valorOriginal;
-  return (
-    !houveDesconto ||
-    (typeof v.motivoDescontoOuGratuidade === "string" &&
-      v.motivoDescontoOuGratuidade.trim().length >= 3)
-  );
-}
-
-const ERRO_MOTIVO_DESCONTO = {
-  message:
-    "Motivo é obrigatório quando o valor cobrado é menor que o valor de tabela (FI06)",
-  path: ["motivoDescontoOuGratuidade"],
-};
+// A exigência de justificativa no desconto NÃO vive aqui: o valor de tabela vem
+// de `Profissional.valorConsultaBase`, que só o usecase conhece. Uma cópia da
+// regra no Zod faria a mesma violação responder 422 quando o cliente informa a
+// tabela e 400 quando o servidor a deriva.
 
 /** Valor de tabela não pode ser menor que o cobrado — seria desconto negativo. */
 const ERRO_VALOR_ORIGINAL = {
@@ -148,8 +132,7 @@ export const createWalkInSchema = z
     },
   )
   .refine(exigeReferenciaExterna, ERRO_REFERENCIA_EXTERNA)
-  .refine(valorOriginalCoerente, ERRO_VALOR_ORIGINAL)
-  .refine(exigeMotivoDesconto, ERRO_MOTIVO_DESCONTO);
+  .refine(valorOriginalCoerente, ERRO_VALOR_ORIGINAL);
 
 /**
  * AT06: finaliza um atendimento que está `em_atendimento`. Body inclui
@@ -178,8 +161,7 @@ export const finalizarAtendimentoSchema = z
     },
   )
   .refine(exigeReferenciaExterna, ERRO_REFERENCIA_EXTERNA)
-  .refine(valorOriginalCoerente, ERRO_VALOR_ORIGINAL)
-  .refine(exigeMotivoDesconto, ERRO_MOTIVO_DESCONTO);
+  .refine(valorOriginalCoerente, ERRO_VALOR_ORIGINAL);
 
 /**
  * FI11: edição pós-realizado (somente admin/auxiliar — PEND-031).
@@ -212,8 +194,7 @@ export const updateAtendimentoSchema = z
     },
   )
   .refine(exigeReferenciaExterna, ERRO_REFERENCIA_EXTERNA)
-  .refine(valorOriginalCoerente, ERRO_VALOR_ORIGINAL)
-  .refine(exigeMotivoDesconto, ERRO_MOTIVO_DESCONTO);
+  .refine(valorOriginalCoerente, ERRO_VALOR_ORIGINAL);
 
 export const listAtendimentosQuerySchema = z.object({
   data: z.string().date().optional(),

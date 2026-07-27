@@ -399,7 +399,7 @@ test.describe("Smoke — telas admin/aux/atendente", () => {
 
 test.describe("Smoke — telas profissional", () => {
   test("minha-agenda renderiza para profissional logado", async ({ page }) => {
-    await loginAs(page, PROF_EMAIL, PROF_PASSWORD, "/dashboard");
+    await loginAs(page, PROF_EMAIL, PROF_PASSWORD, "/minha-agenda");
     await page.goto("/minha-agenda");
     await expect(
       page.getByRole("heading", { name: /Minha agenda/i }),
