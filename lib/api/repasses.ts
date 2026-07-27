@@ -24,12 +24,23 @@ export interface RepasseListItem {
   updatedAt: string;
 }
 
+/** FI04: procedimento extra cobrado dentro de um atendimento. */
+export interface RepasseProcedimento {
+  descricao: string;
+  valor: string;
+}
+
 export interface RepasseBreakdownItem {
   atendimentoId: string;
   data: string;
   hora: string;
   turno: Turno;
   valorConsulta: string;
+  /** FI04: soma dos procedimentos extras deste atendimento. */
+  valorProcedimentos: string;
+  /** valorConsulta + valorProcedimentos — o que de fato entra na base. */
+  valorTotal: string;
+  procedimentos: RepasseProcedimento[];
   statusPagamento: "pago" | "pendente" | "gratuito";
 }
 

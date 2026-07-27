@@ -171,7 +171,11 @@ test.describe("Repasses — Fase 5", () => {
     await page.getByText("Dr. Repasse E2E").first().click();
     await page.waitForURL("**/financeiro/repasses/**");
 
-    await expect(page.getByText("Receita bruta")).toBeVisible();
-    await expect(page.getByText("Valor do repasse")).toBeVisible();
+    // `exact`: a nota do card ("A receita bruta soma consulta + procedimentos
+    // extras…") também contém o termo.
+    await expect(page.getByText("Receita bruta", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Valor do repasse", { exact: true }),
+    ).toBeVisible();
   });
 });

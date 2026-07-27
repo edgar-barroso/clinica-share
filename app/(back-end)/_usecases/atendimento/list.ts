@@ -1,5 +1,9 @@
-import type { Prisma, Role } from "@prisma/client";
+import { Prisma, type Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import {
+  procedimentoSelect,
+  somaProcedimentos,
+} from "@/app/(back-end)/_lib/procedimentos";
 import type { ListAtendimentosFilter } from "@/app/(back-end)/api/atendimentos/_schemas";
 
 export interface ListAtendimentosViewer {
@@ -16,6 +20,10 @@ export interface ListAtendimentosViewer {
  *
  * Sem filtro de status, retorna todos. Pages costumam filtrar por
  * `status=realizado` para a visão de "atendimentos realizados".
+ *
+ * AT02/FI04: cada item traz `procedimentos` e as somas derivadas
+ * `valorProcedimentos` e `valorTotal` (= valorConsulta + procedimentos),
+ * sempre em Decimal (RNF-101 / DEC-A03).
  */
 export async function listAtendimentos(
   filter: ListAtendimentosFilter,
@@ -42,14 +50,29 @@ export async function listAtendimentos(
     where.pacienteId = viewer.pacienteId;
   }
 
-  return prisma.atendimento.findMany({
+  const atendimentos = await prisma.atendimento.findMany({
     where,
     orderBy: [{ data: "desc" }, { hora: "desc" }],
     include: {
       paciente: { select: { id: true, nome: true, telefone: true } },
       profissional: { select: { id: true, nome: true, especialidade: true } },
       consultorio: { select: { id: true, nome: true } },
+      procedimentos: {
+        select: procedimentoSelect,
+        orderBy: { createdAt: "asc" },
+      },
     },
     take: 200,
+  });
+
+  return atendimentos.map((a) => {
+    const valorProcedimentos = somaProcedimentos(a.procedimentos);
+    return {
+      ...a,
+      valorProcedimentos,
+      valorTotal: a.valorConsulta
+        .plus(valorProcedimentos)
+        .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP),
+    };
   });
 }

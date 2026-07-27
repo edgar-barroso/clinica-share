@@ -200,8 +200,46 @@ async function seedConsultorios() {
       equipamentos: ["Maca", "Lupa dermatológica", "Cautério"],
       especialidadesCompativeis: ["Dermatologia"],
     },
+    // CO01 exige os 12 consultórios da clínica. Os índices 0-4 acima são
+    // referenciados por seedTurnosFixos, então salas novas entram a partir daqui.
     {
-      nome: "Sala 6 — Sala desativada (reforma)",
+      nome: "Sala 6 — Cardiologia",
+      tipo: "Clínico",
+      equipamentos: ["Maca", "Eletrocardiógrafo", "Esfigmomanômetro"],
+      especialidadesCompativeis: ["Cardiologia", "Clínica geral"],
+    },
+    {
+      nome: "Sala 7 — Clínica geral (apoio)",
+      tipo: "Clínico",
+      equipamentos: ["Maca", "Mesa de exame", "Otoscópio"],
+      especialidadesCompativeis: ["Clínica geral"],
+    },
+    {
+      nome: "Sala 8 — Pediatria (apoio)",
+      tipo: "Pediátrico",
+      equipamentos: ["Maca infantil", "Balança pediátrica", "Régua antropométrica"],
+      especialidadesCompativeis: ["Pediatria"],
+    },
+    {
+      nome: "Sala 9 — Psicologia (apoio)",
+      tipo: "Psicoterapia",
+      equipamentos: ["Poltrona", "Sofá", "Isolamento acústico"],
+      especialidadesCompativeis: ["Psicologia"],
+    },
+    {
+      nome: "Sala 10 — Pequenos procedimentos",
+      tipo: "Procedimentos",
+      equipamentos: ["Maca cirúrgica", "Foco cirúrgico", "Autoclave"],
+      especialidadesCompativeis: ["Dermatologia", "Clínica geral"],
+    },
+    {
+      nome: "Sala 11 — Ginecologia (apoio)",
+      tipo: "Ginecológico",
+      equipamentos: ["Mesa ginecológica", "Foco", "Colposcópio"],
+      especialidadesCompativeis: ["Ginecologia"],
+    },
+    {
+      nome: "Sala 12 — Sala desativada (reforma)",
       tipo: "Indisponível",
       equipamentos: [],
       especialidadesCompativeis: [],
@@ -211,7 +249,10 @@ async function seedConsultorios() {
   const consultorios = await Promise.all(
     data.map((c) => prisma.consultorio.create({ data: c })),
   );
-  console.log(`✓ Consultórios: ${consultorios.length} (1 desativado)`);
+  const ativos = consultorios.filter((c) => c.ativo).length;
+  console.log(
+    `✓ Consultórios: ${consultorios.length} (${ativos} ativos + ${consultorios.length - ativos} desativado) — CO01`,
+  );
   return consultorios;
 }
 
@@ -436,6 +477,11 @@ interface AtendimentoSeed {
   motivoCancelamento?: string | null;
   motivoDescontoOuGratuidade?: string | null;
   prontuarioInterno?: Prisma.InputJsonValue;
+  /** FI06 — preço de tabela quando houve desconto parcial */
+  valorOriginal?: Prisma.Decimal | null;
+  /** AT04 — atendimento documentado no prontuário próprio do profissional */
+  usaProntuarioExterno?: boolean;
+  referenciaProntuarioExterno?: string | null;
 }
 
 async function seedAtendimentos(
@@ -454,6 +500,13 @@ async function seedAtendimentos(
     "Paciente fora da cidade",
     "Conflito com horário de trabalho",
     "Sem justificativa registrada",
+  ];
+  const MOTIVOS_DESCONTO = [
+    "Desconto de retorno dentro de 30 dias",
+    "Paciente encaminhado por convênio parceiro",
+    "Desconto combinado com o profissional",
+    "Ajuste por pacote de sessões",
+    "Desconto social avaliado pela recepção",
   ];
   const motivosGratuidade = [
     "Cortesia para filho de funcionário",
@@ -597,21 +650,42 @@ async function seedAtendimentos(
         } else {
           // Realizado pago ou pendente
           const pagamento = r < 0.85 ? "pago" : "pendente";
+          // FI06: ~12% saem com desconto parcial sobre o valor de tabela,
+          // sempre com justificativa — sem isso o relatório RE04 fica vazio.
+          const comDesconto = rand() < 0.12;
+          const desconto = pick([20, 30, 50, 80], Math.floor(rand() * 100));
+          const valorCobrado = comDesconto
+            ? valor.minus(desconto)
+            : valor;
+          // AT04: os dois profissionais de aluguel fixo mantêm prontuário
+          // próprio; ~40% dos atendimentos deles são registrados fora.
+          const externo =
+            prof.modalidadeContrato === "aluguel_fixo" && rand() < 0.4;
           seeds.push({
             data,
             hora,
             pacienteId: paciente.id,
             profissionalId: prof.id,
             consultorioId: cons.id,
-            valorConsulta: valor,
+            valorConsulta: valorCobrado,
+            valorOriginal: comDesconto ? valor : null,
             status: "realizado",
             statusPagamento: pagamento,
-            prontuarioInterno: {
-              anamnese: "Sem queixas relevantes.",
-              evolucao: "Exame físico sem alterações.",
-              conduta: "Acompanhamento de rotina.",
-              retorno: "30 dias",
-            },
+            motivoDescontoOuGratuidade: comDesconto
+              ? pick(MOTIVOS_DESCONTO, Math.floor(rand() * 100))
+              : null,
+            usaProntuarioExterno: externo,
+            referenciaProntuarioExterno: externo
+              ? `${prof.nome} — sistema próprio, ficha ${1000 + Math.floor(rand() * 9000)}`
+              : null,
+            prontuarioInterno: externo
+              ? undefined
+              : {
+                  anamnese: "Sem queixas relevantes.",
+                  evolucao: "Exame físico sem alterações.",
+                  conduta: "Acompanhamento de rotina.",
+                  retorno: "30 dias",
+                },
           });
         }
       }
@@ -631,6 +705,9 @@ async function seedAtendimentos(
       statusPagamento: s.statusPagamento,
       motivoCancelamento: s.motivoCancelamento ?? null,
       motivoDescontoOuGratuidade: s.motivoDescontoOuGratuidade ?? null,
+      valorOriginal: s.valorOriginal ?? null,
+      usaProntuarioExterno: s.usaProntuarioExterno ?? false,
+      referenciaProntuarioExterno: s.referenciaProntuarioExterno ?? null,
       prontuarioInterno: (s.prontuarioInterno ??
         Prisma.JsonNull) as Prisma.InputJsonValue,
     })),
@@ -642,12 +719,84 @@ async function seedAtendimentos(
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
+  const nDesconto = seeds.filter((s) => s.valorOriginal).length;
+  const nExterno = seeds.filter((s) => s.usaProntuarioExterno).length;
   console.log(`✓ Atendimentos: ${seeds.length}`);
+  console.log(`    com desconto parcial (FI06): ${nDesconto}`);
+  console.log(`    com prontuário externo (AT04): ${nExterno}`);
   for (const [k, v] of Object.entries(stats).sort()) {
     console.log(`    ${k}: ${v}`);
   }
 
   return seeds.length;
+}
+
+// ============================================================
+// PROCEDIMENTOS EXTRAS (AT02 / FI04)
+// ============================================================
+
+/** Descrições realistas de procedimentos ambulatoriais de clínica. */
+const PROCEDIMENTOS_CATALOGO = [
+  "Cauterização",
+  "Curativo especial",
+  "Biópsia de pele",
+  "Aplicação de medicação intramuscular",
+  "Ultrassom diagnóstico",
+  "Crioterapia",
+  "Retirada de pontos",
+  "Drenagem de abscesso",
+  "Infiltração articular",
+  "Teste alérgico de contato",
+];
+
+/**
+ * AT02: procedimentos extras registrados individualmente por atendimento.
+ * Aplica a ~25% dos atendimentos `realizado` + `pago` — a fatia que entra na
+ * base do repasse (FI04), onde o valor extra realmente muda o cálculo.
+ *
+ * Usa o `rand()` determinístico para manter a seed reproduzível. Valores
+ * sempre em `Prisma.Decimal` (RNF-101 / DEC-A03).
+ */
+async function seedProcedimentos() {
+  const elegiveis = await prisma.atendimento.findMany({
+    where: { status: "realizado", statusPagamento: "pago" },
+    select: { id: true },
+    // Ordem estável: (data, hora, consultorioId) é unique (AG05)
+    orderBy: [{ data: "asc" }, { hora: "asc" }, { consultorioId: "asc" }],
+  });
+
+  const rows: {
+    atendimentoId: string;
+    descricao: string;
+    valor: Prisma.Decimal;
+  }[] = [];
+  let atendimentosComProcedimento = 0;
+
+  for (const a of elegiveis) {
+    if (rand() >= 0.25) continue;
+    atendimentosComProcedimento++;
+
+    // 1 procedimento (75%) ou 2 (25%)
+    const qtd = rand() < 0.75 ? 1 : 2;
+    const usados = new Set<string>();
+    for (let i = 0; i < qtd; i++) {
+      const descricao =
+        PROCEDIMENTOS_CATALOGO[
+          Math.floor(rand() * PROCEDIMENTOS_CATALOGO.length)
+        ];
+      if (usados.has(descricao)) continue; // não repete o mesmo procedimento
+      usados.add(descricao);
+      // R$ 30,00 a R$ 150,00 em passos de R$ 5,00
+      const valor = new Prisma.Decimal(30 + Math.floor(rand() * 25) * 5);
+      rows.push({ atendimentoId: a.id, descricao, valor });
+    }
+  }
+
+  await prisma.procedimentoAtendimento.createMany({ data: rows });
+  console.log(
+    `✓ Procedimentos extras: ${rows.length} em ${atendimentosComProcedimento} de ${elegiveis.length} atendimentos realizados+pagos`,
+  );
+  return rows.length;
 }
 
 // ============================================================
@@ -685,6 +834,7 @@ async function seedRepasses(
                 statusPagamento: "pago",
                 data: { gte: inicio, lte: fim },
               },
+              include: { procedimentos: { select: { valor: true } } },
             })
           : await prisma.atendimento.findMany({
               where: {
@@ -692,13 +842,27 @@ async function seedRepasses(
                 status: "realizado",
                 data: { gte: inicio, lte: fim },
               },
+              include: { procedimentos: { select: { valor: true } } },
             });
 
       if (elegiveis.length === 0) continue;
 
+      // FI04: a base é valorConsulta + procedimentos extras (mesma regra de
+      // calculate.ts) — sem isso o repasse seedado divergiria do recálculo.
       const receitaBruta = elegiveis
         .filter((a) => a.statusPagamento === "pago")
-        .reduce((s, a) => s.plus(a.valorConsulta), new Prisma.Decimal(0));
+        .reduce(
+          (s, a) =>
+            s
+              .plus(a.valorConsulta)
+              .plus(
+                a.procedimentos.reduce(
+                  (t, p) => t.plus(p.valor),
+                  new Prisma.Decimal(0),
+                ),
+              ),
+          new Prisma.Decimal(0),
+        );
 
       let valorRepasse: Prisma.Decimal;
       if (prof.modalidadeContrato === "percentual" && prof.percentualRepasse) {
@@ -800,6 +964,8 @@ async function main() {
   await seedTurnosFixos(profs, consultorios);
   const pacientes = await seedPacientes();
   await seedAtendimentos(profs, consultorios, pacientes);
+  // AT02 antes dos repasses: FI04 soma procedimentos na base do repasse
+  const procedimentos = await seedProcedimentos();
   await seedRepasses(profs, admin);
   await seedAuditLogs(admin);
 
@@ -808,9 +974,12 @@ async function main() {
     `  - 1 admin (${env.ADMIN_EMAIL}) + 2 staff + 5 profissionais + 30 pacientes`,
   );
   console.log(
-    `  - 6 consultórios (5 ativos) + 10 alocações de turno fixo`,
+    `  - 12 consultórios (11 ativos) + 10 alocações de turno fixo`,
   );
   console.log(`  - ~200 atendimentos cobrindo todos os status`);
+  console.log(
+    `  - ${procedimentos} procedimentos extras (AT02) em ~25% dos realizados+pagos`,
+  );
   console.log(`  - 4 semanas de repasses (2 pagas, 2 em aberto)`);
   console.log(
     `  - Senha de demo: "${SENHA_DEMO}" (admin usa ADMIN_PASSWORD do .env)\n`,

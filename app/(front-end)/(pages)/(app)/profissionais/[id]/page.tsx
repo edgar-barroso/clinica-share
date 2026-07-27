@@ -195,7 +195,7 @@ export default function ProfissionalDetailPage({
           <p className="mt-1 text-xs text-muted-foreground">
             {prof.modalidadeContrato === "aluguel_fixo"
               ? `${formatBRL(Number(prof.valorAluguelPorTurno ?? 0))} por turno`
-              : "sobre receita bruta"}
+              : "da receita bruta vai ao profissional"}
           </p>
         </Card>
 

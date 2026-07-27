@@ -221,6 +221,10 @@ model Atendimento {
   consultorioId  String
   // Valor cobrado nesta consulta. RNF-101 / DEC-A03: nunca float
   valorConsulta  Decimal           @db.Decimal(10, 2)
+  // FI06: valor de tabela antes de qualquer desconto. Sem ele um atendimento
+  // cobrado abaixo do preço é indistinguível de um atendimento normal, e o
+  // desconto nunca chega ao relatório (RE04). Null = cobrado sem desconto.
+  valorOriginal  Decimal?          @db.Decimal(10, 2)
   status         StatusAgendamento @default(agendado)
   // Independente de status — pode estar agendado e já pago, ou realizado e pendente
   statusPagamento StatusPagamento  @default(pendente)
@@ -228,7 +232,14 @@ model Atendimento {
   motivoCancelamento         String?
   // Obrigatório quando statusPagamento=gratuito (FI06)
   motivoDescontoOuGratuidade String?
+  // AT04: o profissional declara que documentou este atendimento no prontuário
+  // dele, fora do sistema. Campo real e consultável (o marcador antigo vivia
+  // dentro do Json de `prontuarioInterno`, o que impedia filtrar por SQL).
   usaProntuarioExterno       Boolean @default(false)
+  // AT04: a ocorrência em si — onde o registro externo está (sistema, número
+  // do prontuário, observação). Obrigatória quando `usaProntuarioExterno`,
+  // senão a marcação seria uma caixinha sem rastro auditável.
+  referenciaProntuarioExterno String?
   // Estrutura aberta até PEND-017 — DEC-E01 dados clínicos fora do MVP no schema relacional
   prontuarioInterno          Json?
   observacoes                String?
@@ -244,6 +255,9 @@ model Atendimento {
   profissional Profissional @relation(fields: [profissionalId], references: [id])
   consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
   repasse      Repasse?     @relation(fields: [repasseId], references: [id], onDelete: SetNull)
+  // AT02: procedimentos extras realizados neste atendimento, cada um com
+  // seu próprio valor. FI04 soma estes valores na base do repasse.
+  procedimentos ProcedimentoAtendimento[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -255,7 +269,32 @@ model Atendimento {
   @@index([status])
   @@index([statusPagamento])
   @@index([repasseId])
+  // AT04: permite relatório de atendimentos documentados fora do sistema
+  @@index([usaProntuarioExterno])
   @@map("appointments")
+}
+
+// AT02: cada procedimento extra realizado num atendimento é registrado
+// individualmente, com valor próprio. FI04: estes valores entram na base
+// de cálculo do repasse junto com o `valorConsulta`.
+//
+// Modelado como tabela separada (e não Json em Atendimento) porque o valor
+// precisa ser somável em SQL/Decimal para o cálculo financeiro — um blob
+// Json não é agregável e violaria RNF-101/DEC-A03.
+model ProcedimentoAtendimento {
+  id            String  @id @default(uuid())
+  atendimentoId String
+  descricao     String
+  // RNF-101 / DEC-A03: nunca float
+  valor         Decimal @db.Decimal(10, 2)
+
+  atendimento Atendimento @relation(fields: [atendimentoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([atendimentoId])
+  @@map("appointment_procedures")
 }
 
 model Repasse {

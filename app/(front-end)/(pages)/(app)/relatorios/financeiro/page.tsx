@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -26,6 +27,14 @@ import {
   apiRelatorioFinanceiro,
   type RelatorioFinanceiroResponse,
 } from "@/lib/api/relatorios";
+import {
+  apiListProfissionais,
+  type Profissional,
+} from "@/lib/api/profissionais";
+import {
+  apiListConsultorios,
+  type Consultorio,
+} from "@/lib/api/consultorios";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL } from "@/lib/format";
 
@@ -44,25 +53,57 @@ export default function RelatorioFinanceiroPage() {
   const padrao = useMemo(() => mesAtualISO(), []);
   const [dataInicio, setDataInicio] = useState(padrao.inicio);
   const [dataFim, setDataFim] = useState(padrao.fim);
+  const [profissionalId, setProfissionalId] = useState("");
+  const [consultorioId, setConsultorioId] = useState("");
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [consultorios, setConsultorios] = useState<Consultorio[]>([]);
   const [data, setData] = useState<RelatorioFinanceiroResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Catálogos dos filtros: inclui inativos porque o relatório é histórico —
+  // um profissional desativado hoje pode ter receita no período consultado.
+  useEffect(() => {
+    let cancelado = false;
+    void Promise.all([
+      apiListProfissionais({ ativo: "all" }),
+      apiListConsultorios({ ativo: "all" }),
+    ])
+      .then(([p, c]) => {
+        if (cancelado) return;
+        setProfissionais(p.profissionais);
+        setConsultorios(c.consultorios);
+      })
+      .catch((err) => {
+        if (!cancelado) toast.error(apiErrorMessage(err));
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!dataInicio || !dataFim) return; // usuário ainda editando
     setLoading(true);
     try {
-      const res = await apiRelatorioFinanceiro({ dataInicio, dataFim });
+      const res = await apiRelatorioFinanceiro({
+        dataInicio,
+        dataFim,
+        profissionalId: profissionalId || undefined,
+        consultorioId: consultorioId || undefined,
+      });
       setData(res);
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [dataInicio, dataFim]);
+  }, [dataInicio, dataFim, profissionalId, consultorioId]);
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const filtrosAtivos = profissionalId !== "" || consultorioId !== "";
 
   return (
     <>
@@ -80,25 +121,73 @@ export default function RelatorioFinanceiroPage() {
       />
 
       <Card className="mb-6">
-        <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="ini">Início</Label>
-            <Input
-              id="ini"
-              type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
-            />
+        <CardContent className="space-y-3 p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="ini">Início</Label>
+              <Input
+                id="ini"
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fim">Fim</Label>
+              <Input
+                id="fim"
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="profissional">Profissional</Label>
+              <Select
+                id="profissional"
+                value={profissionalId}
+                onChange={(e) => setProfissionalId(e.target.value)}
+              >
+                <option value="">Todos os profissionais</option>
+                {profissionais.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.ativo ? p.nome : `${p.nome} (inativo)`}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="consultorio">Consultório</Label>
+              <Select
+                id="consultorio"
+                value={consultorioId}
+                onChange={(e) => setConsultorioId(e.target.value)}
+              >
+                <option value="">Todos os consultórios</option>
+                {consultorios.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.ativo ? c.nome : `${c.nome} (inativo)`}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="fim">Fim</Label>
-            <Input
-              id="fim"
-              type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
-            />
-          </div>
+
+          {filtrosAtivos && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setProfissionalId("");
+                  setConsultorioId("");
+                }}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              >
+                <X size={12} />
+                Limpar filtros
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -153,7 +242,9 @@ export default function RelatorioFinanceiroPage() {
             </Table>
           ) : data.linhas.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              Sem atendimentos pagos no período.
+              {filtrosAtivos
+                ? "Sem atendimentos pagos no período com os filtros atuais."
+                : "Sem atendimentos pagos no período."}
             </p>
           ) : (
             <Table>

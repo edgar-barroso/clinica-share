@@ -1,8 +1,13 @@
 import type { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
+import { SESSION_IDLE_SECONDS } from "@/lib/session-idle";
 
 export const AUTH_COOKIE = "auth-token";
-const MAX_AGE = 60 * 60 * 24 * 7; // 7 dias
+/**
+ * [RF-024] O cookie expira junto com o JWT — janela de inatividade, não
+ * TTL absoluto. Renovado a cada requisição autenticada pelo `proxy.ts`.
+ */
+const MAX_AGE = SESSION_IDLE_SECONDS;
 
 export function setAuthCookie(res: NextResponse, token: string) {
   res.cookies.set(AUTH_COOKIE, token, {

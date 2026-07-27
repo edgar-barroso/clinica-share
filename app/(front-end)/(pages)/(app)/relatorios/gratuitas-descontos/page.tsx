@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Gift } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -25,7 +26,7 @@ import {
 import { PageHeader } from "@/components/layouts/page-header";
 import {
   apiRelatorioGratuitas,
-  type RelatorioGratuitasLinha,
+  type RelatorioGratuitasResponse,
 } from "@/lib/api/relatorios";
 import { apiErrorMessage } from "@/lib/api-client";
 import { formatBRL, formatDate } from "@/lib/format";
@@ -41,19 +42,37 @@ function mesAtualISO() {
   return { inicio: fmt(inicio), fim: fmt(fim) };
 }
 
+/** Mesma ordem no skeleton e na tabela real — evita "pulo" de layout. */
+function ColunasHeader() {
+  return (
+    <TableHeader>
+      <TableRow>
+        <TableHead>Data</TableHead>
+        <TableHead>Tipo</TableHead>
+        <TableHead>Profissional</TableHead>
+        <TableHead>Paciente</TableHead>
+        <TableHead>Motivo</TableHead>
+        <TableHead className="text-right">Valor de tabela</TableHead>
+        <TableHead className="text-right">Valor cobrado</TableHead>
+        <TableHead className="text-right">Desconto</TableHead>
+      </TableRow>
+    </TableHeader>
+  );
+}
+
 export default function RelatorioGratuitasPage() {
   const padrao = useMemo(() => mesAtualISO(), []);
   const [dataInicio, setDataInicio] = useState(padrao.inicio);
   const [dataFim, setDataFim] = useState(padrao.fim);
-  const [linhas, setLinhas] = useState<RelatorioGratuitasLinha[]>([]);
+  const [data, setData] = useState<RelatorioGratuitasResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!dataInicio || !dataFim) return; // usuário ainda editando
     setLoading(true);
     try {
-      const { linhas } = await apiRelatorioGratuitas({ dataInicio, dataFim });
-      setLinhas(linhas);
+      const res = await apiRelatorioGratuitas({ dataInicio, dataFim });
+      setData(res);
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -76,8 +95,8 @@ export default function RelatorioGratuitasPage() {
       </Link>
 
       <PageHeader
-        title="Gratuidades & cortesias"
-        description="Atendimentos com desconto ou gratuidade concedidos no período"
+        title="Gratuidades & descontos"
+        description="Cortesias integrais e descontos parciais concedidos no período, com o valor que a clínica deixou de faturar"
       />
 
       <Card className="mb-6">
@@ -103,28 +122,72 @@ export default function RelatorioGratuitasPage() {
         </CardContent>
       </Card>
 
+      {loading || !data ? (
+        <div
+          aria-hidden="true"
+          className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3"
+        >
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="p-5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="mt-2 h-8 w-20" />
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">Gratuidades</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-info">
+              {data.totalGratuidades}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Atendimentos sem cobrança
+            </p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">Descontos</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-warning">
+              {data.totalDescontos}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Atendimentos cobrados abaixo da tabela
+            </p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">
+              Valor total concedido
+            </p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-destructive">
+              {formatBRL(Number(data.valorTotalConcedido))}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Receita que deixou de ser faturada
+            </p>
+          </Card>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>{linhas.length} atendimentos no período</CardTitle>
+          <CardTitle>
+            {data?.totalAtendimentos ?? 0} atendimentos com gratuidade ou
+            desconto
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? (
+          {loading || !data ? (
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Profissional</TableHead>
-                  <TableHead>Paciente</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead className="text-right">Valor original</TableHead>
-                </TableRow>
-              </TableHeader>
+              <ColunasHeader />
               <TableBody aria-hidden="true">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
                       <Skeleton className="h-4 w-12" />
                       <Skeleton className="mt-1 h-3 w-10" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-24 rounded-full" />
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-4 w-36" />
@@ -134,7 +197,13 @@ export default function RelatorioGratuitasPage() {
                       <Skeleton className="h-4 w-32" />
                     </TableCell>
                     <TableCell>
-                      <Skeleton className="h-3 w-48" />
+                      <Skeleton className="h-3 w-40" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-20" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-20" />
                     </TableCell>
                     <TableCell className="text-right">
                       <Skeleton className="ml-auto h-4 w-20" />
@@ -143,25 +212,17 @@ export default function RelatorioGratuitasPage() {
                 ))}
               </TableBody>
             </Table>
-          ) : linhas.length === 0 ? (
+          ) : data.linhas.length === 0 ? (
             <EmptyState
               icon={Gift}
-              title="Nenhuma gratuidade no período"
-              description="Ótimo — todos os atendimentos foram cobrados normalmente."
+              title="Nenhuma gratuidade ou desconto no período"
+              description="Todos os atendimentos foram cobrados pelo valor de tabela."
             />
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Profissional</TableHead>
-                  <TableHead>Paciente</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead className="text-right">Valor original</TableHead>
-                </TableRow>
-              </TableHeader>
+              <ColunasHeader />
               <TableBody>
-                {linhas.map((l) => (
+                {data.linhas.map((l) => (
                   <TableRow key={l.id}>
                     <TableCell className="whitespace-nowrap">
                       <div className="text-sm">{formatDate(l.data, "dd/MM")}</div>
@@ -170,15 +231,29 @@ export default function RelatorioGratuitasPage() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <Badge
+                        variant={l.tipo === "gratuidade" ? "info" : "warning"}
+                        className="text-xs"
+                      >
+                        {l.tipo === "gratuidade" ? "Gratuidade" : "Desconto"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <p className="text-sm font-medium">{l.profissional}</p>
                       <p className="text-xs text-muted-foreground">
                         {l.especialidade}
                       </p>
                     </TableCell>
                     <TableCell>{l.paciente}</TableCell>
-                    <TableCell className="max-w-md text-sm">{l.motivo}</TableCell>
+                    <TableCell className="max-w-xs text-sm">{l.motivo}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatBRL(Number(l.valorOriginal))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBRL(Number(l.valorCobrado))}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums text-destructive">
+                      {formatBRL(Number(l.valorDesconto))}
                     </TableCell>
                   </TableRow>
                 ))}

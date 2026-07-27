@@ -320,7 +320,7 @@ export default function RepassesPage() {
                             </TableCell>
                             <TableCell>
                               {prof.modalidadeContrato === 'percentual' ? (
-                                <span className="text-sm">{formatPercent(Number(profCompleto?.percentualRepasse ?? 0))} sobre bruto</span>
+                                <span className="text-sm">{formatPercent(Number(profCompleto?.percentualRepasse ?? 0))} do bruto ao profissional</span>
                               ) : (
                                 <span className="text-sm">{formatBRL(Number(profCompleto?.valorAluguelPorTurno ?? 0))} por turno</span>
                               )}

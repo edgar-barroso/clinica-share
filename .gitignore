@@ -46,3 +46,7 @@ next-env.d.ts
 
 # schema temporário gerado por scripts/gen-erd.ts
 prisma/.schema.erd.tmp.prisma
+test-results/
+.reports/
+videos/
+Entrega-ClinicaShare/

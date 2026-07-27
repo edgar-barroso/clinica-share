@@ -248,8 +248,12 @@ test.describe("Smoke — telas admin/aux/atendente", () => {
   test("repasse detalhe renderiza com cálculo", async ({ page }) => {
     await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "/dashboard");
     await page.goto(`/financeiro/repasses/${repasseId}`);
-    await expect(page.getByText("Receita bruta")).toBeVisible();
-    await expect(page.getByText("Valor do repasse")).toBeVisible();
+    // `exact`: a nota do card ("A receita bruta soma consulta + procedimentos
+    // extras…") também contém o termo.
+    await expect(page.getByText("Receita bruta", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Valor do repasse", { exact: true }),
+    ).toBeVisible();
   });
 
   test("/financeiro redireciona para /financeiro/repasses", async ({ page }) => {

@@ -11,6 +11,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "videos:local": "tsx prisma/seed.ts && E2E_ENV=local playwright test e2e/planilha --reporter=json > .reports/local.json; node scripts/organizar-videos.mjs .reports/local.json videos/local",
+    "videos:producao": "tsx prisma/seed.ts && E2E_ENV=producao playwright test e2e/planilha --reporter=json > .reports/producao.json; node scripts/organizar-videos.mjs .reports/producao.json videos/producao",
+    "videos:pdf": "node scripts/gerar-pdf-comprovacao.mjs .reports/local.json .reports/producao.json 'videos/ClinicaShare — Comprovacao de Requisitos.pdf'",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev",
@@ -19,7 +22,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:heal-roles": "tsx prisma/heal-roles.ts",
     "db:erd": "tsx scripts/gen-erd.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "entrega": "node scripts/montar-entrega.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

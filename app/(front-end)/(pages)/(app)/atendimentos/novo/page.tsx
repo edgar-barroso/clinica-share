@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CheckCircle2, DoorOpen, ShieldAlert } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  DoorOpen,
+  Plus,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -30,9 +37,11 @@ import {
   apiCreateWalkIn,
   apiListAtendimentos,
   type FinalizarAtendimentoInput,
+  type ProcedimentoInput,
 } from "@/lib/api/atendimentos";
 import { apiGetTurnos } from "@/lib/api/configuracoes";
 import { apiErrorMessage } from "@/lib/api-client";
+import { formatBRL } from "@/lib/format";
 import {
   BLOCOS_PADRAO,
   gerarSlots,
@@ -72,6 +81,32 @@ const NOME_DOW = [
   "sábado",
 ];
 
+/** AT02 — mesmo teto do `procedimentosSchema` no back-end. */
+const MAX_PROCEDIMENTOS = 20;
+
+/**
+ * AT02 — linha do editor de procedimentos extras. `valor` fica como string
+ * porque é o que o `<input type="number">` entrega; a conversão só acontece
+ * no submit. `key` é local (React), nunca vai para o payload.
+ */
+interface ProcedimentoLinha {
+  key: string;
+  descricao: string;
+  valor: string;
+}
+
+/** Número do input → `null` quando vazio ou inválido (não vira 0 silencioso). */
+function parseValor(v: string): number | null {
+  if (v.trim() === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Evita ruído de ponto flutuante ao somar centavos (0.1 + 0.2). */
+function arredonda2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export default function NovoAtendimentoPage() {
   const router = useRouter();
 
@@ -80,10 +115,16 @@ export default function NovoAtendimentoPage() {
   const [data, setData] = useState(hojeISO);
   const [horario, setHorario] = useState<string | null>(null);
   const [valorConsulta, setValorConsulta] = useState("250");
+  // FI06 — preço de tabela do profissional. Cobrar abaixo dele é desconto
+  // e passa a exigir justificativa, igual à gratuidade.
+  const [valorTabela, setValorTabela] = useState("250");
   const [statusPagamento, setStatusPagamento] =
     useState<FinalizarAtendimentoInput["statusPagamento"]>("pago");
   const [motivo, setMotivo] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  // AT02 — procedimentos extras cobrados junto da consulta (ex: endoscopia).
+  const [procedimentos, setProcedimentos] = useState<ProcedimentoLinha[]>([]);
+  const proximaKey = useRef(0);
   const [tipoProntuario, setTipoProntuario] = useState<"interno" | "externo">(
     "interno",
   );
@@ -93,8 +134,9 @@ export default function NovoAtendimentoPage() {
     conduta: "",
     retorno: "",
   });
-  // Onde o prontuário é mantido quando 'externo' (ex: sistema próprio
-  // do profissional, papel arquivado na sala). Texto livre, opcional.
+  // AT04 — onde o prontuário é mantido quando 'externo' (sistema próprio do
+  // profissional, pasta arquivada na sala). Obrigatório nesse modo: vai para
+  // a coluna `referenciaProntuarioExterno`, não mais escondido no Json.
   const [prontuarioExternoRef, setProntuarioExternoRef] = useState("");
 
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
@@ -109,7 +151,9 @@ export default function NovoAtendimentoPage() {
         if (res.profissionais.length > 0) {
           const primeiro = res.profissionais[0];
           setProfissionalId(primeiro.id);
-          setValorConsulta(String(Number(primeiro.valorConsultaBase)));
+          const base = String(Number(primeiro.valorConsultaBase));
+          setValorConsulta(base);
+          setValorTabela(base);
         }
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
@@ -210,6 +254,98 @@ export default function NovoAtendimentoPage() {
     return turnosPorDow.get(dowDaData)?.get(turnoDoHorario) ?? null;
   }, [dowDaData, turnoDoHorario, turnosPorDow]);
 
+  const valorCobradoNum = parseValor(valorConsulta);
+  const valorTabelaNum = parseValor(valorTabela);
+
+  // FI06 — desconto parcial: cobrado abaixo do preço de tabela.
+  const desconto =
+    valorTabelaNum !== null &&
+    valorCobradoNum !== null &&
+    valorCobradoNum < valorTabelaNum
+      ? arredonda2(valorTabelaNum - valorCobradoNum)
+      : 0;
+  const houveDesconto = desconto > 0;
+  const ehGratuito = statusPagamento === "gratuito";
+  // Mesmo campo (`motivoDescontoOuGratuidade`) para as duas situações.
+  const exigeMotivo = ehGratuito || houveDesconto;
+  const motivoLabel = ehGratuito
+    ? "Justificativa da gratuidade"
+    : "Justificativa do desconto";
+
+  // AT02/FI04 — total ao vivo; a soma entra na base do repasse.
+  const totalProcedimentos = useMemo(
+    () =>
+      arredonda2(
+        procedimentos.reduce((acc, p) => acc + (parseValor(p.valor) ?? 0), 0),
+      ),
+    [procedimentos],
+  );
+  const totalGeral = arredonda2((valorCobradoNum ?? 0) + totalProcedimentos);
+
+  const ehExterno = tipoProntuario === "externo";
+
+  function adicionarProcedimento() {
+    setProcedimentos((atual) => {
+      if (atual.length >= MAX_PROCEDIMENTOS) return atual;
+      proximaKey.current += 1;
+      return [
+        ...atual,
+        { key: `proc-${proximaKey.current}`, descricao: "", valor: "" },
+      ];
+    });
+  }
+
+  function atualizarProcedimento(
+    key: string,
+    campo: "descricao" | "valor",
+    valor: string,
+  ) {
+    setProcedimentos((atual) =>
+      atual.map((p) => (p.key === key ? { ...p, [campo]: valor } : p)),
+    );
+  }
+
+  function removerProcedimento(key: string) {
+    setProcedimentos((atual) => atual.filter((p) => p.key !== key));
+  }
+
+  /**
+   * Espelha as regras do `procedimentoSchema` (2–120 chars, valor >= 0,
+   * máx. 20) para o usuário ver o erro sem ir até o 422 do servidor.
+   * Linhas totalmente em branco (clicou em "Adicionar" e desistiu) são
+   * descartadas em silêncio.
+   */
+  function montarProcedimentos(): ProcedimentoInput[] | "invalido" {
+    const saida: ProcedimentoInput[] = [];
+    for (let i = 0; i < procedimentos.length; i++) {
+      const linha = procedimentos[i];
+      const descricao = linha.descricao.trim();
+      const valorTexto = linha.valor.trim();
+      if (descricao === "" && valorTexto === "") continue;
+
+      const numero = i + 1;
+      if (descricao.length < 2 || descricao.length > 120) {
+        toast.error(
+          `Procedimento ${numero}: descrição deve ter entre 2 e 120 caracteres`,
+        );
+        return "invalido";
+      }
+      const valor = parseValor(valorTexto);
+      if (valor === null || valor < 0) {
+        toast.error(`Procedimento ${numero}: informe um valor válido em R$`);
+        return "invalido";
+      }
+      saida.push({ descricao, valor });
+    }
+    if (saida.length > MAX_PROCEDIMENTOS) {
+      toast.error(
+        `Máximo de ${MAX_PROCEDIMENTOS} procedimentos por atendimento`,
+      );
+      return "invalido";
+    }
+    return saida;
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!pacienteId) {
@@ -224,21 +360,43 @@ export default function NovoAtendimentoPage() {
       toast.error("Profissional não atende neste dia/horário");
       return;
     }
-    if (statusPagamento === "gratuito" && motivo.trim().length < 3) {
-      toast.warning("Motivo é obrigatório para atendimento gratuito");
+    if (valorCobradoNum === null || valorCobradoNum < 0) {
+      toast.error("Informe um valor cobrado válido");
+      return;
+    }
+    // FI06 — tabela abaixo do cobrado seria desconto negativo (422 no servidor).
+    if (valorTabelaNum !== null && valorTabelaNum < valorCobradoNum) {
+      toast.error("Valor de tabela não pode ser menor que o valor cobrado");
+      return;
+    }
+    if (ehGratuito && motivo.trim().length < 3) {
+      toast.error("Motivo é obrigatório para atendimento gratuito");
+      return;
+    }
+    if (houveDesconto && motivo.trim().length < 3) {
+      toast.error(
+        "Justificativa é obrigatória quando o valor cobrado é menor que o de tabela",
+      );
+      return;
+    }
+    // AT04 — marcar "externo" sem dizer onde deixaria a ocorrência sem rastro.
+    if (ehExterno && prontuarioExternoRef.trim().length < 3) {
+      toast.error(
+        "Informe a referência do prontuário externo (mínimo 3 caracteres)",
+      );
       return;
     }
 
+    const procedimentosPayload = montarProcedimentos();
+    if (procedimentosPayload === "invalido") return;
+
     setSubmitting(true);
     try {
-      // Monta o payload do prontuário conforme o tipo escolhido.
+      // Prontuário interno só existe no modo interno — no externo o registro
+      // vai para os campos estruturados (`usaProntuarioExterno` +
+      // `referenciaProntuarioExterno`), não para dentro do Json.
       let prontuarioPayload: Record<string, unknown> | undefined;
-      if (tipoProntuario === "externo") {
-        prontuarioPayload = {
-          tipo: "externo",
-          referencia: prontuarioExternoRef.trim() || undefined,
-        };
-      } else {
+      if (!ehExterno) {
         const algum = Object.values(prontuario).some(
           (v) => v.trim().length > 0,
         );
@@ -259,12 +417,20 @@ export default function NovoAtendimentoPage() {
         consultorioId: turnoFixoDoSlot.consultorioId,
         data,
         hora: horario,
-        valorConsulta: Number(valorConsulta) || 0,
+        valorConsulta: valorCobradoNum,
+        // Só viaja quando de fato houve desconto — sem desconto o campo fica
+        // null no banco ("cobrado cheio").
+        valorOriginal: houveDesconto ? valorTabelaNum ?? undefined : undefined,
         statusPagamento,
-        motivoDescontoOuGratuidade:
-          statusPagamento === "gratuito" ? motivo.trim() : undefined,
+        motivoDescontoOuGratuidade: exigeMotivo ? motivo.trim() : undefined,
         observacoes: observacoes.trim() || undefined,
         prontuarioInterno: prontuarioPayload,
+        procedimentos:
+          procedimentosPayload.length > 0 ? procedimentosPayload : undefined,
+        usaProntuarioExterno: ehExterno,
+        referenciaProntuarioExterno: ehExterno
+          ? prontuarioExternoRef.trim()
+          : undefined,
       });
       toast.success("Atendimento registrado");
       router.push("/atendimentos");
@@ -332,7 +498,9 @@ export default function NovoAtendimentoPage() {
                       setHorario(null);
                       const prof = profissionais.find((p) => p.id === novoId);
                       if (prof) {
-                        setValorConsulta(String(Number(prof.valorConsultaBase)));
+                        const base = String(Number(prof.valorConsultaBase));
+                        setValorConsulta(base);
+                        setValorTabela(base);
                       }
                     }}
                     required
@@ -456,18 +624,55 @@ export default function NovoAtendimentoPage() {
               <CardTitle>Pagamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="valor">Valor da consulta (R$)</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={valorConsulta}
-                  onChange={(e) => setValorConsulta(e.target.value)}
-                  required
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="valorTabela">Valor de tabela (R$)</Label>
+                  <Input
+                    id="valorTabela"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={valorTabela}
+                    onChange={(e) => setValorTabela(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Preço cheio do profissional. Deixe em branco se não houver
+                    tabela.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="valor">Valor cobrado (R$)</Label>
+                  <Input
+                    id="valor"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={valorConsulta}
+                    onChange={(e) => setValorConsulta(e.target.value)}
+                    aria-required="true"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O que o paciente paga por esta consulta.
+                  </p>
+                </div>
               </div>
+
+              {houveDesconto && (
+                <div className="flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                  <span>
+                    Desconto de{" "}
+                    <strong
+                      data-testid="desconto-concedido"
+                      className="tabular-nums"
+                    >
+                      {formatBRL(desconto)}
+                    </strong>{" "}
+                    sobre o valor de tabela. Justificativa obrigatória.
+                  </span>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-3">
                 {(["pago", "pendente", "gratuito"] as const).map((s) => (
                   <button
@@ -484,18 +689,167 @@ export default function NovoAtendimentoPage() {
                   </button>
                 ))}
               </div>
-              {statusPagamento === "gratuito" && (
+              {exigeMotivo && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="motivo">Justificativa da gratuidade</Label>
+                  <Label htmlFor="motivo">{motivoLabel}</Label>
                   <Input
                     id="motivo"
                     value={motivo}
                     onChange={(e) => setMotivo(e.target.value)}
-                    placeholder="Ex: Cortesia para filho de funcionário"
-                    required
+                    placeholder={
+                      ehGratuito
+                        ? "Ex: Cortesia para filho de funcionário"
+                        : "Ex: Paciente encaminhado por convênio parceiro"
+                    }
+                    aria-required="true"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatória (mínimo 3 caracteres) e registrada no histórico
+                    financeiro.
+                  </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Procedimentos extras</CardTitle>
+              <CardDescription>
+                Cobranças além da consulta (ex: endoscopia, cauterização). O
+                total entra na base do repasse do profissional.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {procedimentos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum procedimento extra registrado.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="hidden gap-3 sm:grid sm:grid-cols-[1fr_9rem_2.5rem]">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Descrição
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Valor (R$)
+                    </span>
+                    <span className="sr-only">Ações</span>
+                  </div>
+                  {procedimentos.map((p, i) => {
+                    const numero = i + 1;
+                    const descricaoLabel = `Descrição do procedimento ${numero}`;
+                    const valorLabel = `Valor do procedimento ${numero}`;
+                    return (
+                      <div
+                        key={p.key}
+                        className="grid gap-3 sm:grid-cols-[1fr_9rem_2.5rem] sm:items-start"
+                      >
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor={`procedimento-descricao-${numero}`}
+                            className="sr-only"
+                          >
+                            {descricaoLabel}
+                          </Label>
+                          <Input
+                            id={`procedimento-descricao-${numero}`}
+                            aria-label={descricaoLabel}
+                            value={p.descricao}
+                            onChange={(e) =>
+                              atualizarProcedimento(
+                                p.key,
+                                "descricao",
+                                e.target.value,
+                              )
+                            }
+                            maxLength={120}
+                            placeholder="Ex: Endoscopia digestiva alta"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor={`procedimento-valor-${numero}`}
+                            className="sr-only"
+                          >
+                            {valorLabel}
+                          </Label>
+                          <Input
+                            id={`procedimento-valor-${numero}`}
+                            aria-label={valorLabel}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            value={p.valor}
+                            onChange={(e) =>
+                              atualizarProcedimento(
+                                p.key,
+                                "valor",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="0,00"
+                            className="tabular-nums"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Remover procedimento ${numero}`}
+                          onClick={() => removerProcedimento(p.key)}
+                          className="justify-self-start text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={adicionarProcedimento}
+                disabled={procedimentos.length >= MAX_PROCEDIMENTOS}
+              >
+                <Plus size={16} />
+                Adicionar procedimento
+              </Button>
+              {procedimentos.length >= MAX_PROCEDIMENTOS && (
+                <p className="text-xs text-warning">
+                  Limite de {MAX_PROCEDIMENTOS} procedimentos por atendimento
+                  atingido.
+                </p>
+              )}
+
+              <div className="space-y-2 border-t border-border pt-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">
+                    Total dos procedimentos
+                  </span>
+                  <span
+                    data-testid="total-procedimentos"
+                    className="font-medium tabular-nums"
+                  >
+                    {formatBRL(totalProcedimentos)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">
+                    Total geral (consulta + procedimentos)
+                  </span>
+                  <span
+                    data-testid="total-geral"
+                    className="text-base font-semibold tabular-nums text-primary"
+                  >
+                    {formatBRL(totalGeral)}
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -541,7 +895,7 @@ export default function NovoAtendimentoPage() {
                 </button>
               </div>
 
-              {tipoProntuario === "interno" ? (
+              {!ehExterno ? (
                 <div className="space-y-4 border-t border-border pt-4">
                   <ProntuarioField
                     id="anamnese"
@@ -583,17 +937,19 @@ export default function NovoAtendimentoPage() {
               ) : (
                 <div className="space-y-1.5 border-t border-border pt-4">
                   <Label htmlFor="prontuarioRef">
-                    Referência do prontuário externo (opcional)
+                    Referência do prontuário externo
                   </Label>
                   <Input
                     id="prontuarioRef"
                     value={prontuarioExternoRef}
                     onChange={(e) => setProntuarioExternoRef(e.target.value)}
                     placeholder="Ex: Pasta nº 42 · Doctoralia · sistema próprio"
+                    maxLength={200}
+                    aria-required="true"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Apenas para localização. O conteúdo clínico não é gravado
-                    no ClinicaShare.
+                    Obrigatória (mínimo 3 caracteres): diz onde encontrar o
+                    registro. O conteúdo clínico não é gravado no ClinicaShare.
                   </p>
                 </div>
               )}

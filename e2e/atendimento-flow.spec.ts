@@ -147,7 +147,7 @@ test.describe("Atendimentos — fluxo completo (Fase 4)", () => {
       .fill("Paciente AT E2E");
     await page.getByRole("option", { name: /Paciente AT E2E/i }).click();
 
-    await page.getByLabel("Valor da consulta (R$)").fill("180");
+    await page.getByLabel("Valor cobrado (R$)").fill("180");
 
     await Promise.all([
       page.waitForURL("**/atendimentos", { timeout: 15_000 }),

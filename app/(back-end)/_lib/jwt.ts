@@ -1,9 +1,17 @@
 import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { env } from "@/lib/env";
+import { SESSION_IDLE_SECONDS } from "@/lib/session-idle";
 import { TokenInvalido } from "./errors";
 
-const EXPIRES_IN = "7d";
+/**
+ * [RF-024] O TTL do token É a janela de inatividade (não um TTL absoluto).
+ * O `proxy.ts` reassina o token a cada requisição autenticada
+ * (sliding expiration), então um usuário ativo nunca é deslogado; um
+ * usuário parado por `SESSION_IDLE_MINUTES` tem o token expirado pelo
+ * próprio `jwt.verify` — sem depender de nada no cliente.
+ */
+const EXPIRES_IN = SESSION_IDLE_SECONDS;
 
 export interface AuthTokenPayload {
   userId: string;
