@@ -6,7 +6,11 @@ import type { UpdateProfissionalInput } from "@/app/(back-end)/api/profissionais
 
 type UserSnapshot = Parameters<typeof audit>[0]["user"];
 
-const CONTRACT_FIELDS = [
+/**
+ * Campos de contrato/repasse (FI01/FI02). Toda alteração aqui exige `motivo`
+ * e gera audit log — e, na rota, só o admin pode enviá-los.
+ */
+export const CONTRACT_FIELDS = [
   "modalidadeContrato",
   "percentualRepasse",
   "valorAluguelPorTurno",

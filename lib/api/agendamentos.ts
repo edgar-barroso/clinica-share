@@ -26,6 +26,22 @@ export interface AgendamentoListItem {
   consultorio: { id: string; nome: string };
 }
 
+/**
+ * Status que tiram o agendamento da fila de trabalho do profissional: o
+ * atendimento já foi realizado, o paciente faltou, ou o agendamento foi
+ * cancelado. Nenhum dos três pede mais nenhuma ação na agenda.
+ */
+export const STATUS_ENCERRADOS: StatusAgendamento[] = [
+  "realizado",
+  "nao_compareceu",
+  "cancelado",
+];
+
+/** True quando o agendamento ainda pede ação (`agendado` ou `em_atendimento`). */
+export function agendamentoEmAberto(a: { status: StatusAgendamento }): boolean {
+  return !STATUS_ENCERRADOS.includes(a.status);
+}
+
 export interface CreateAgendamentoInput {
   pacienteId: string;
   profissionalId: string;

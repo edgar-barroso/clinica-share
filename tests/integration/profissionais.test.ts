@@ -241,6 +241,103 @@ describe("PATCH /api/profissionais/[id] — audit em contrato", () => {
   });
 });
 
+describe("PATCH /api/profissionais/[id] — contrato é só do admin (FI01/FI02)", () => {
+  /** Profissional com User vinculado — é o que `requireUser` usa no gate. */
+  async function profComLogin(
+    dados: typeof validProfPercentual | typeof validProfAluguel = validProfPercentual,
+    email = "prof-login@example.com",
+  ) {
+    const prof = await prisma.profissional.create({
+      data: { ...dados, percentualRepasse: 0.3 },
+    });
+    const { user, token } = await createUserWithRole("profissional", email);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { profissionalId: prof.id },
+    });
+    return { prof, token };
+  }
+
+  it("profissional atualiza os próprios dados de cadastro (200)", async () => {
+    const { prof, token } = await profComLogin();
+
+    const res = await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/profissionais/${prof.id}`, {
+          telefone: "11955554444",
+          duracaoConsultaMinutos: 45,
+        }),
+        token,
+      ),
+      ctxId(prof.id),
+    );
+    expect(res.status).toBe(200);
+
+    const persisted = await prisma.profissional.findUnique({ where: { id: prof.id } });
+    expect(persisted?.telefone).toBe("11955554444");
+    expect(persisted?.duracaoConsultaMinutos).toBe(45);
+  });
+
+  it.each([
+    ["percentualRepasse", { percentualRepasse: 0.9, motivo: "quero mais" }],
+    ["modalidadeContrato", { modalidadeContrato: "aluguel_fixo", motivo: "quero mais" }],
+    ["valorAluguelPorTurno", { valorAluguelPorTurno: 1, motivo: "quero mais" }],
+    ["valorConsultaBase", { valorConsultaBase: 999, motivo: "quero mais" }],
+    ["ativo", { ativo: false }],
+  ])("profissional não altera o próprio %s (403)", async (_campo, payload) => {
+    const { prof, token } = await profComLogin();
+
+    const res = await itemPatch(
+      withAuthCookie(jsonRequest(`/api/profissionais/${prof.id}`, payload), token),
+      ctxId(prof.id),
+    );
+    expect(res.status).toBe(403);
+
+    // Nada mudou e nada foi auditado — o 403 acontece antes do usecase.
+    const persisted = await prisma.profissional.findUnique({ where: { id: prof.id } });
+    expect(Number(persisted?.percentualRepasse)).toBe(0.3);
+    expect(persisted?.modalidadeContrato).toBe("percentual");
+    expect(Number(persisted?.valorConsultaBase)).toBe(200);
+    expect(persisted?.ativo).toBe(true);
+    expect(await prisma.auditLog.findMany()).toHaveLength(0);
+  });
+
+  it("profissional não edita o cadastro de outro profissional (403)", async () => {
+    const { token } = await profComLogin();
+    const outro = await prisma.profissional.create({
+      data: { ...validProfAluguel, valorAluguelPorTurno: 200 },
+    });
+
+    const res = await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/profissionais/${outro.id}`, { telefone: "11900000000" }),
+        token,
+      ),
+      ctxId(outro.id),
+    );
+    expect(res.status).toBe(403);
+
+    const persisted = await prisma.profissional.findUnique({ where: { id: outro.id } });
+    expect(persisted?.telefone).toBe(validProfAluguel.telefone);
+  });
+
+  it("auxiliar é negado (403)", async () => {
+    const { token } = await createUserWithRole("auxiliar");
+    const prof = await prisma.profissional.create({
+      data: { ...validProfPercentual, percentualRepasse: 0.3 },
+    });
+
+    const res = await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/profissionais/${prof.id}`, { telefone: "11900000000" }),
+        token,
+      ),
+      ctxId(prof.id),
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
 describe("Turno fixo (POST/DELETE)", () => {
   async function createProfAndConsultorio() {
     const prof = await prisma.profissional.create({
