@@ -74,6 +74,27 @@ export const apiListAgendamentos = (filter?: {
   );
 };
 
+/**
+ * Horários tomados na agenda de um profissional. É o que a tela de agendamento
+ * deve usar para montar slots livres: `apiListAgendamentos` é filtrada por RBAC
+ * e, para o paciente, devolve só as consultas dele — a agenda parecia vazia e o
+ * conflito só aparecia no confirmar (409/AG05).
+ */
+export const apiListOcupados = (filter: {
+  profissionalId: string;
+  data?: string;
+  dataInicio?: string;
+  dataFim?: string;
+}) => {
+  const params = new URLSearchParams({ profissionalId: filter.profissionalId });
+  if (filter.data) params.set("data", filter.data);
+  if (filter.dataInicio) params.set("dataInicio", filter.dataInicio);
+  if (filter.dataFim) params.set("dataFim", filter.dataFim);
+  return apiGet<{ ocupados: { data: string; hora: string }[] }>(
+    `/api/agendamentos/ocupados?${params.toString()}`,
+  );
+};
+
 export const apiGetAgendamento = (id: string) =>
   apiGet<{ agendamento: AgendamentoListItem }>(`/api/agendamentos/${id}`);
 

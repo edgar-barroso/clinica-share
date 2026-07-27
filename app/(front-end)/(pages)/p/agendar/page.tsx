@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/layouts/page-header';
 import { MonthlyCalendar } from '@/components/agenda/monthly-calendar';
-import { apiCancelarAgendamento, apiCreateAgendamento, apiGetAgendamento, apiListAgendamentos, type AgendamentoListItem } from '@/lib/api/agendamentos';
+import { apiCancelarAgendamento, apiCreateAgendamento, apiGetAgendamento, apiListOcupados, type AgendamentoListItem } from '@/lib/api/agendamentos';
 import { apiListProfissionais, type Profissional, type Turno, type TurnoFixo } from '@/lib/api/profissionais';
 import { apiListConsultorios, type Consultorio } from '@/lib/api/consultorios';
 import { apiGetTurnos } from '@/lib/api/configuracoes';
@@ -185,20 +185,18 @@ function AgendarPageInner() {
     });
   }, [horariosBlocos]);
 
-  // Carrega ocupados quando (data, profId) mudam
+  // Carrega ocupados quando (data, profId) mudam.
+  // Via `/ocupados`, não `/agendamentos`: a segunda é filtrada por RBAC e, para
+  // o paciente, devolve só as consultas dele — a agenda do profissional parecia
+  // vazia, o slot de outro paciente era oferecido como livre e o conflito
+  // estourava só no confirmar (409/AG05).
   useEffect(() => {
     if (!data || !profId) {
       setOcupados(new Set());
       return;
     }
-    apiListAgendamentos({ data, profissionalId: profId })
-      .then((res) => {
-        const set = new Set<string>();
-        for (const a of res.agendamentos) {
-          if (a.status !== 'cancelado') set.add(a.hora);
-        }
-        setOcupados(set);
-      })
+    apiListOcupados({ data, profissionalId: profId })
+      .then((res) => setOcupados(new Set(res.ocupados.map((o) => o.hora))))
       .catch((err) => toast.error(apiErrorMessage(err)));
   }, [data, profId]);
 
@@ -217,15 +215,13 @@ function AgendarPageInner() {
     const dataInicio = isoDate(new Date(ano, mes, 1));
     const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
     const dataFim = isoDate(new Date(ano, mes, ultimoDiaMes));
-    apiListAgendamentos({ dataInicio, dataFim, profissionalId: profId })
+    apiListOcupados({ dataInicio, dataFim, profissionalId: profId })
       .then((res) => {
         const horasPorDia = new Map<string, string[]>();
-        for (const a of res.agendamentos) {
-          if (a.status === 'cancelado') continue;
-          const iso = a.data.slice(0, 10);
-          const arr = horasPorDia.get(iso) ?? [];
-          arr.push(a.hora);
-          horasPorDia.set(iso, arr);
+        for (const o of res.ocupados) {
+          const arr = horasPorDia.get(o.data) ?? [];
+          arr.push(o.hora);
+          horasPorDia.set(o.data, arr);
         }
         const lotados = new Set<string>();
         for (const [iso, horas] of horasPorDia) {
