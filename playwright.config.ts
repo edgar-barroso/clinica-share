@@ -29,7 +29,13 @@ export default defineConfig({
   // tabelas — paralelismo causaria race entre workers
   workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Local sem retry (falha tem que doer). `E2E_RETRIES` existe para as
+  // gravações de vídeo: rodadas contra `npm run dev` sofrem flake de ambiente
+  // que não é defeito do sistema — rota compilando sob demanda estoura o
+  // timeout do primeiro acesso, e o keepalive de sessão pode reescrever
+  // `ultimoAcesso` no meio do teste de inatividade. O organizador de vídeos usa
+  // sempre a última tentativa, então o vídeo publicado é o da execução válida.
+  retries: process.env.CI ? 2 : Number(process.env.E2E_RETRIES ?? 0),
   reporter: process.env.CI ? "github" : "list",
   // Cada projeto grava na SUA pasta. Compartilhar `outputDir` fazia a suíte
   // rodada depois apagar os vídeos da anterior — o Playwright limpa o
