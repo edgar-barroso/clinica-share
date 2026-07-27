@@ -1,45 +1,79 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Ambiente-alvo dos vídeos de comprovação da planilha de custos.
-// `E2E_ENV` só rotula a pasta de saída (local | producao) — o banco que a app
-// usa vem do DATABASE_URL do processo, então quem chama é responsável por
-// apontar para o Postgres do Docker ou para o Neon.
+/**
+ * Três suítes com objetivos diferentes, por isso três projetos:
+ *
+ * - `chromium`   — suíte de regressão (CI). Sem vídeo e sem slowMo: velocidade
+ *                  é o que importa aqui.
+ * - `planilha`   — comprovação por requisito da planilha de custos. Grava vídeo
+ *                  de cada requisito nos dois ambientes.
+ * - `docs-e2e`   — documentação funcional narrada. Vídeo pensado para alguém
+ *                  que nunca viu o sistema assistir sem áudio: mais devagar,
+ *                  trace sempre retido.
+ *
+ * Rodar isolado: `npx playwright test --project=docs-e2e`
+ */
 const ENV_LABEL = process.env.E2E_ENV ?? "local";
-const OUT_DIR = process.env.E2E_OUT_DIR ?? `test-results/${ENV_LABEL}`;
+const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const CHROME = devices["Desktop Chrome"];
+
+/** Viewport igual ao tamanho do vídeo — evita reescala e texto borrado. */
+const TELA = { width: 1280, height: 720 };
 
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
   timeout: 60_000,
   fullyParallel: false,
-  // Specs compartilham o mesmo Postgres e cada uma faz beforeAll que limpa
+  // Specs compartilham o mesmo Postgres e várias fazem beforeAll que limpa
   // tabelas — paralelismo causaria race entre workers
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
-  // Um subdiretório por ambiente, para que rodar local e produção não
-  // sobrescreva os vídeos um do outro.
-  outputDir: OUT_DIR,
+  outputDir: process.env.E2E_OUT_DIR ?? `test-results/${ENV_LABEL}`,
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
-    // Comprovação exigida: todo teste grava vídeo, inclusive os que passam.
-    // 1280x720 (e não os 800x450 padrão) para que texto de tabela financeira
-    // e rótulo de formulário fiquem legíveis para quem assiste.
-    video: { mode: "on", size: { width: 1280, height: 720 } },
-    viewport: { width: 1280, height: 720 },
-    launchOptions: {
-      // Sem isto o Playwright dispara as ações em milissegundos e o vídeo
-      // fica impossível de acompanhar. Só afeta a gravação de comprovação;
-      // `E2E_SLOWMO=0` devolve a velocidade normal para rodar em CI.
-      slowMo: Number(process.env.E2E_SLOWMO ?? 250),
-    },
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+
+  projects: [
+    {
+      name: "chromium",
+      testDir: "./e2e",
+      // As duas suítes de vídeo têm projeto próprio; fora daqui elas só
+      // deixariam o CI lento.
+      testIgnore: ["**/planilha/**", "**/docs/**"],
+      use: { ...CHROME },
+    },
+    {
+      name: "planilha",
+      testDir: "./e2e/planilha",
+      use: {
+        ...CHROME,
+        viewport: TELA,
+        video: { mode: "on", size: TELA },
+        launchOptions: { slowMo: Number(process.env.E2E_SLOWMO ?? 250) },
+      },
+    },
+    {
+      name: "docs-e2e",
+      testDir: "./e2e/docs",
+      use: {
+        ...CHROME,
+        viewport: TELA,
+        video: { mode: "on", size: TELA },
+        // Mais devagar que a suíte de comprovação: aqui o espectador precisa
+        // ler legenda e acompanhar cada interação.
+        launchOptions: { slowMo: Number(process.env.E2E_SLOWMO ?? 300) },
+        trace: "on",
+      },
+    },
+  ],
+
   webServer: {
     command: "npm run dev",
-    url: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

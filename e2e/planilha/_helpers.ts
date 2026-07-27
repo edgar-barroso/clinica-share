@@ -32,13 +32,13 @@ export const CONTAS = {
     senha: SENHA_DEMO,
     destino: "**/agenda",
   },
-  /** Dra. Nirmala Azalea — percentual 30%, base R$220, consulta de 30min */
+  /** Dra. Nirmala Azalea — Clínica geral, percentual 30%, base R$220, 30min */
   profissional: {
     email: "prof1@clinicashare.local",
     senha: SENHA_DEMO,
     destino: "**/dashboard",
   },
-  /** Dra. Helena Jacarandá — aluguel fixo R$250/turno, consulta de 45min */
+  /** Dra. Helena Braga — Psicologia, aluguel fixo R$250/turno, 45min */
   profissionalAluguel: {
     email: "prof3@clinicashare.local",
     senha: SENHA_DEMO,

@@ -1,7 +1,10 @@
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { NaoAutorizado, NaoEncontrado } from "@/app/(back-end)/_lib/errors";
-import { procedimentoSelect } from "@/app/(back-end)/_lib/procedimentos";
+import {
+  procedimentoSelect,
+  somaProcedimentos,
+} from "@/app/(back-end)/_lib/procedimentos";
 
 interface Viewer {
   role: Role;
@@ -47,5 +50,14 @@ export async function getAtendimento(id: string, viewer: Viewer) {
     );
   }
 
-  return atendimento;
+  // FI04: as somas acompanham o atendimento. Sem isto a tela de detalhe
+  // exibia "Procedimentos R$ 0,00" e um total só com a consulta, mesmo
+  // listando os procedimentos logo abaixo — os campos só existiam na rota
+  // de listagem.
+  const valorProcedimentos = somaProcedimentos(atendimento.procedimentos);
+  return {
+    ...atendimento,
+    valorProcedimentos,
+    valorTotal: atendimento.valorConsulta.plus(valorProcedimentos),
+  };
 }

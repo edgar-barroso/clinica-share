@@ -726,7 +726,7 @@ test("FI07 — fechamento semanal com prestação de contas", async ({ page }) =
 test("FI08 — aluguel fixo cobrado por turno utilizado", async ({ page }) => {
   await login(page, "admin");
 
-  // Dra. Helena Jacarandá (prof3): aluguel fixo de R$ 250,00 por turno.
+  // Dra. Helena Braga (prof3): aluguel fixo de R$ 250,00 por turno.
   const prof3 = porEmail(
     await listarProfissionais(page),
     CONTAS.profissionalAluguel.email,

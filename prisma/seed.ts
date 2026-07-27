@@ -31,7 +31,7 @@ const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL ?? "admin@clinicashare.local",
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "change-me-on-first-login",
-  ADMIN_NOME: process.env.ADMIN_NOME ?? "Dr. Edson Andrade",
+  ADMIN_NOME: process.env.ADMIN_NOME ?? "Roberto Lima",
 };
 
 if (!env.DATABASE_URL) {
@@ -130,7 +130,7 @@ async function seedAdmin() {
 async function seedStaff() {
   const aux = await prisma.staff.create({
     data: {
-      nome: "Carla Auxiliar",
+      nome: "Carla Nogueira",
       cargo: "auxiliar",
       email: "aux@clinicashare.local",
       telefone: "11988880001",
@@ -144,7 +144,7 @@ async function seedStaff() {
 
   const atend = await prisma.staff.create({
     data: {
-      nome: "Beatriz Atendente",
+      nome: "Júlia Nunes",
       cargo: "atendente",
       email: "atend@clinicashare.local",
       telefone: "11988880002",
@@ -171,31 +171,31 @@ async function seedStaff() {
 async function seedConsultorios() {
   const data = [
     {
-      nome: "Sala 1 — Clínica geral",
+      nome: "Consultório 01 — Clínica geral",
       tipo: "Clínico",
       equipamentos: ["Maca", "Mesa de exame", "Estetoscópio"],
       especialidadesCompativeis: ["Clínica geral", "Cardiologia"],
     },
     {
-      nome: "Sala 2 — Pediatria",
+      nome: "Consultório 02 — Pediatria",
       tipo: "Pediátrico",
       equipamentos: ["Maca infantil", "Brinquedos", "Balança pediátrica"],
       especialidadesCompativeis: ["Pediatria"],
     },
     {
-      nome: "Sala 3 — Ginecologia",
+      nome: "Consultório 03 — Ginecologia",
       tipo: "Ginecológico",
       equipamentos: ["Mesa ginecológica", "Ultrassom", "Foco"],
       especialidadesCompativeis: ["Ginecologia"],
     },
     {
-      nome: "Sala 4 — Psicologia",
+      nome: "Consultório 04 — Psicologia",
       tipo: "Psicoterapia",
       equipamentos: ["Poltrona", "Sofá", "Mesa lateral"],
       especialidadesCompativeis: ["Psicologia"],
     },
     {
-      nome: "Sala 5 — Dermatologia",
+      nome: "Consultório 05 — Dermatologia",
       tipo: "Procedimentos",
       equipamentos: ["Maca", "Lupa dermatológica", "Cautério"],
       especialidadesCompativeis: ["Dermatologia"],
@@ -203,43 +203,43 @@ async function seedConsultorios() {
     // CO01 exige os 12 consultórios da clínica. Os índices 0-4 acima são
     // referenciados por seedTurnosFixos, então salas novas entram a partir daqui.
     {
-      nome: "Sala 6 — Cardiologia",
+      nome: "Consultório 06 — Cardiologia",
       tipo: "Clínico",
       equipamentos: ["Maca", "Eletrocardiógrafo", "Esfigmomanômetro"],
       especialidadesCompativeis: ["Cardiologia", "Clínica geral"],
     },
     {
-      nome: "Sala 7 — Clínica geral (apoio)",
+      nome: "Consultório 07 — Clínica geral (apoio)",
       tipo: "Clínico",
       equipamentos: ["Maca", "Mesa de exame", "Otoscópio"],
       especialidadesCompativeis: ["Clínica geral"],
     },
     {
-      nome: "Sala 8 — Pediatria (apoio)",
+      nome: "Consultório 08 — Pediatria (apoio)",
       tipo: "Pediátrico",
       equipamentos: ["Maca infantil", "Balança pediátrica", "Régua antropométrica"],
       especialidadesCompativeis: ["Pediatria"],
     },
     {
-      nome: "Sala 9 — Psicologia (apoio)",
+      nome: "Consultório 09 — Psicologia (apoio)",
       tipo: "Psicoterapia",
       equipamentos: ["Poltrona", "Sofá", "Isolamento acústico"],
       especialidadesCompativeis: ["Psicologia"],
     },
     {
-      nome: "Sala 10 — Pequenos procedimentos",
+      nome: "Consultório 10 — Pequenos procedimentos",
       tipo: "Procedimentos",
       equipamentos: ["Maca cirúrgica", "Foco cirúrgico", "Autoclave"],
       especialidadesCompativeis: ["Dermatologia", "Clínica geral"],
     },
     {
-      nome: "Sala 11 — Ginecologia (apoio)",
+      nome: "Consultório 11 — Ginecologia (apoio)",
       tipo: "Ginecológico",
       equipamentos: ["Mesa ginecológica", "Foco", "Colposcópio"],
       especialidadesCompativeis: ["Ginecologia"],
     },
     {
-      nome: "Sala 12 — Sala desativada (reforma)",
+      nome: "Consultório 12 — Sala desativada (reforma)",
       tipo: "Indisponível",
       equipamentos: [],
       especialidadesCompativeis: [],
@@ -287,8 +287,8 @@ async function seedProfissionais() {
       duracaoConsultaMinutos: 30,
     },
     {
-      nome: "Dra. Helena Jacarandá",
-      especialidade: "Ginecologia",
+      nome: "Dra. Helena Braga",
+      especialidade: "Psicologia",
       conselho: "CRM-SP 345678",
       email: "prof3@clinicashare.local",
       telefone: "11977770003",
@@ -298,8 +298,8 @@ async function seedProfissionais() {
       duracaoConsultaMinutos: 45,
     },
     {
-      nome: "Dr. André Manacá",
-      especialidade: "Psicologia",
+      nome: "Dra. Renata Jacarandá",
+      especialidade: "Ginecologia",
       conselho: "CRP-SP 06/12345",
       email: "prof4@clinicashare.local",
       telefone: "11977770004",
@@ -353,10 +353,10 @@ async function seedTurnosFixos(
     { prof: 0, cons: 0, diaSemana: 3, turno: "tarde" as const },
     { prof: 1, cons: 1, diaSemana: 2, turno: "manha" as const },
     { prof: 1, cons: 1, diaSemana: 4, turno: "tarde" as const },
-    { prof: 2, cons: 2, diaSemana: 1, turno: "tarde" as const },
-    { prof: 2, cons: 2, diaSemana: 4, turno: "manha" as const },
-    { prof: 3, cons: 3, diaSemana: 2, turno: "tarde" as const },
-    { prof: 3, cons: 3, diaSemana: 5, turno: "noite" as const },
+    { prof: 2, cons: 3, diaSemana: 1, turno: "tarde" as const },
+    { prof: 2, cons: 3, diaSemana: 4, turno: "manha" as const },
+    { prof: 3, cons: 2, diaSemana: 2, turno: "tarde" as const },
+    { prof: 3, cons: 2, diaSemana: 5, turno: "noite" as const },
     { prof: 4, cons: 4, diaSemana: 3, turno: "manha" as const },
     { prof: 4, cons: 4, diaSemana: 5, turno: "tarde" as const },
   ];
@@ -379,7 +379,7 @@ async function seedTurnosFixos(
 // ============================================================
 
 const NOMES_PACIENTES = [
-  "Mariana Silva",
+  "Maria Silva",
   "João Pereira",
   "Ana Santos",
   "Pedro Oliveira",

@@ -6,11 +6,18 @@
  *
  * Garantia: nenhuma tela quebra silenciosamente em produção.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
+import {
+  escolherDiaNoCalendario,
+  horariosLivres,
+  isoLocal,
+  primeiroDiaUtilDoMesSeguinte,
+  rotuloDiaCalendario,
+} from "./helpers/calendario";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -28,6 +35,8 @@ let staffId = "";
 let agendamentoId = "";
 let atendimentoRealizadoId = "";
 let repasseId = "";
+/** Data (YYYY-MM-DD) do agendamento de 10:00 criado no fixture. */
+let dataOcupadaIso = "";
 
 test.beforeAll(async () => {
   await prisma.repasse.deleteMany();
@@ -101,6 +110,19 @@ test.beforeAll(async () => {
   });
   consultorioId = cons.id;
 
+  // Turnos fixos (seg–sex, manhã) na Sala Smoke.
+  // Sem turno fixo o `<MonthlyCalendar>` do /p/agendar desabilita TODOS os
+  // dias (`diasUteisAtende` fica vazio) e o backend recusa o POST — os dois
+  // testes do wizard dependem disso.
+  await prisma.turnoFixo.createMany({
+    data: [1, 2, 3, 4, 5].map((diaSemana) => ({
+      profissionalId: prof.id,
+      consultorioId: cons.id,
+      diaSemana,
+      turno: "manha" as const,
+    })),
+  });
+
   // Staff
   const staff = await prisma.staff.create({
     data: {
@@ -124,6 +146,7 @@ test.beforeAll(async () => {
   const futuro = dataAt(5);
   if (futuro.getDay() === 0) futuro.setDate(futuro.getDate() + 1);
   if (futuro.getDay() === 6) futuro.setDate(futuro.getDate() + 2);
+  dataOcupadaIso = isoLocal(futuro);
   const ag = await prisma.atendimento.create({
     data: {
       pacienteId: paciente.id,
@@ -175,7 +198,7 @@ test.afterAll(async () => {
 });
 
 async function loginAs(
-  page: import("@playwright/test").Page,
+  page: Page,
   email: string,
   password: string,
   expectedUrl: string,
@@ -277,10 +300,28 @@ test.describe("Smoke — telas admin/aux/atendente", () => {
     await expect(page.getByText("Por profissional", { exact: true })).toBeVisible();
   });
 
-  test("relatório consultórios renderiza ranking", async ({ page }) => {
+  // A rota /relatorios/consultorios foi removida no commit c3effed: o ranking
+  // de consultórios (UC002) passou a viver dentro do /dashboard, na seção
+  // "Ocupação e receita por consultório".
+  test("dashboard renderiza ranking de consultórios (UC002)", async ({
+    page,
+  }) => {
     await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "/dashboard");
-    await page.goto("/relatorios/consultorios");
-    await expect(page.getByRole("heading", { name: /Ranking/i })).toBeVisible();
+
+    await expect(
+      page.getByRole("heading", { name: "Ocupação e receita por consultório" }),
+    ).toBeVisible({ timeout: 20_000 });
+    // O CardTitle do ranking é uma <div>, não um heading — daí o getByText.
+    await expect(page.getByText("Ranking por receita")).toBeVisible();
+    // KPIs e filtro da seção: provam que os dados de ocupação carregaram,
+    // não só que o título estático foi pintado.
+    await expect(page.getByText("Taxa de ocupação média")).toBeVisible();
+    await expect(page.getByText("Receita dos consultórios")).toBeVisible();
+    await expect(page.getByLabel("Modalidade de contrato")).toBeVisible();
+
+    // A rota antiga não existe mais.
+    const resp = await page.request.get("/relatorios/consultorios");
+    expect(resp.status()).toBe(404);
   });
 
   test("relatório gratuitas renderiza", async ({ page }) => {
@@ -349,13 +390,11 @@ test.describe("Smoke — telas admin/aux/atendente", () => {
     expect(log?.motivo).toContain("Configuração de turnos");
   });
 
-  test("configurações integrações renderiza", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "/dashboard");
-    await page.goto("/configuracoes/integracoes");
-    await expect(
-      page.getByRole("heading", { name: /Integrações/i }),
-    ).toBeVisible();
-  });
+  // Não existe smoke de "/configuracoes/integracoes": essa tela nunca foi
+  // construída. O diretório `configuracoes/` tem só `page.tsx` (o hub) e
+  // `turnos/`, e o hub não linka nada além de turnos. O teste que existia
+  // aqui cobria uma rota inexistente — foi removido em vez de virar um
+  // mock de tela que não é produto.
 });
 
 test.describe("Smoke — telas profissional", () => {
@@ -508,31 +547,38 @@ test.describe("Portal paciente — fluxos reais", () => {
     await page.getByRole("button", { name: /Dr\. Smoke/i }).click();
     await page.getByRole("button", { name: /^Continuar$/ }).click();
 
-    // Etapa 3: Data — clica o 8º dia útil disponível
+    // Etapa 3: Data — calendário mensal. Escolhe o primeiro dia útil do mês
+    // SEGUINTE: lá não há nenhum fixture, então nada disputa o slot.
     await expect(page.getByText(/Qual data prefere/i)).toBeVisible();
-    // O wizard renderiza 14 dias úteis. Cada botão tem o nome do dia +
-    // a data por extenso ("Quarta-feira" + "13 de mai..."). Pegamos o 8º
-    // botão dentro do grid de datas.
-    const botoesGrid = page.locator(
-      'button:has-text("de "):has(p:has-text("de "))',
-    );
-    // Fallback simples: pega botões cuja primeira <p> tem dia da semana
-    // (todos os 14 cards). Usa o índice 7 (= 8º botão).
-    const dataBtns = page
-      .locator("button")
-      .filter({ hasText: /-feira|sábado|domingo|segunda|terça|quarta|quinta|sexta/i });
-    await dataBtns.nth(7).click();
+    const dataAlvo = primeiroDiaUtilDoMesSeguinte();
+    await escolherDiaNoCalendario(page, dataAlvo);
+    // O wizard ecoa a data escolhida ("Selecionado: …" e no Resumo).
+    await expect(
+      page.getByText(rotuloDiaCalendario(dataAlvo)).first(),
+    ).toBeVisible();
     await page.getByRole("button", { name: /^Continuar$/ }).click();
 
-    // Etapa 4: Horário
+    // Etapa 4: Horário — a grade sai da duração do profissional cruzada com
+    // os blocos de /configuracoes/turnos, então cravar "09:30" quebra a cada
+    // mudança de faixa. Pega o primeiro slot realmente habilitado.
     await expect(page.getByText(/Escolha o horário/i)).toBeVisible();
-    await page.getByRole("button", { name: "09:30", exact: true }).click();
+    const slots = horariosLivres(page);
+    await expect(slots.first()).toBeVisible();
+    const horaEscolhida = (await slots.first().innerText()).trim();
+    await slots.first().click();
 
     // Resumo na sidebar
     await expect(
       page.getByText("Clínica geral", { exact: true }).first(),
     ).toBeVisible();
     await expect(page.getByText("Dr. Smoke").first()).toBeVisible();
+    await expect(
+      page.locator("aside").getByText(horaEscolhida, { exact: true }),
+    ).toBeVisible();
+
+    const antes = await prisma.atendimento.count({
+      where: { paciente: { email: PACIENTE_EMAIL } },
+    });
 
     // Confirma
     await Promise.all([
@@ -544,12 +590,21 @@ test.describe("Portal paciente — fluxos reais", () => {
     const ag = await prisma.atendimento.findFirst({
       where: {
         profissionalId,
-        hora: "09:30",
+        hora: horaEscolhida,
+        status: "agendado",
         paciente: { email: PACIENTE_EMAIL },
       },
+      orderBy: { createdAt: "desc" },
     });
     expect(ag).not.toBeNull();
     expect(ag?.status).toBe("agendado");
+    // A sala não é escolhida pelo paciente: vem do turno fixo do profissional.
+    expect(ag?.consultorioId).toBe(consultorioId);
+    // E é uma consulta NOVA, não a do fixture.
+    const depois = await prisma.atendimento.count({
+      where: { paciente: { email: PACIENTE_EMAIL } },
+    });
+    expect(depois).toBe(antes + 1);
   });
 
   test("/p/agendar — bloqueia horário ocupado pelo mesmo profissional", async ({
@@ -568,36 +623,20 @@ test.describe("Portal paciente — fluxos reais", () => {
     await page.getByRole("button", { name: /Dr\. Smoke/i }).click();
     await page.getByRole("button", { name: /^Continuar$/ }).click();
 
-    // Calcula índice do dia que tem agendamento (+5 dias úteis do fixture)
-    // — mesma lógica usada no fixture pra criar o agendamento ocupado
-    const dataBtns = page
-      .locator("button")
-      .filter({ hasText: /-feira|sábado|domingo|segunda|terça|quarta|quinta|sexta/i });
-    // 5 dias úteis a frente = índice 4 (0=hoje, 1=+1 útil, ..., 4=+5)
-    // Mas o wizard pula FDS, então o 5º dia útil é index 4.
-    // Para ser consistente com o fixture (dataAt(5) + skip FDS), usamos o
-    // mesmo cálculo que o fixture
-    const ocupada = new Date();
-    ocupada.setHours(0, 0, 0, 0);
-    ocupada.setDate(ocupada.getDate() + 5);
-    if (ocupada.getDay() === 0) ocupada.setDate(ocupada.getDate() + 1);
-    if (ocupada.getDay() === 6) ocupada.setDate(ocupada.getDate() + 2);
-    // O wizard renderiza só dias úteis a partir de hoje. Calcula posição:
-    let posicao = 0;
-    const cur = new Date();
-    cur.setHours(0, 0, 0, 0);
-    while (cur.getTime() < ocupada.getTime()) {
-      const dow = cur.getDay();
-      if (dow !== 0 && dow !== 6) posicao++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    await dataBtns.nth(posicao).click();
+    // Etapa 3: Data — vai no calendário mensal exatamente no dia em que o
+    // fixture já deixou um agendamento às 10:00 para este profissional.
+    await expect(page.getByText(/Qual data prefere/i)).toBeVisible();
+    await escolherDiaNoCalendario(page, dataOcupadaIso);
     await page.getByRole("button", { name: /^Continuar$/ }).click();
 
-    // Aguarda fetch de ocupados
-    await page.waitForTimeout(800);
+    // Etapa 4: o slot ocupado vem desabilitado…
+    await expect(page.getByText(/Escolha o horário/i)).toBeVisible();
     const horario10 = page.getByRole("button", { name: "10:00", exact: true });
-    await expect(horario10).toBeDisabled();
+    await expect(horario10).toBeDisabled({ timeout: 10_000 });
+    // …e o bloqueio é só dele: o resto da grade continua clicável (senão o
+    // teste passaria mesmo se a grade inteira estivesse travada).
+    await expect(horariosLivres(page).first()).toBeVisible();
+    expect(await horariosLivres(page).count()).toBeGreaterThan(0);
   });
 
   test("/p/perfil — paciente vê próprios dados", async ({ page }) => {

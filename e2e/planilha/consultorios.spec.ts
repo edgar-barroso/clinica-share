@@ -5,7 +5,7 @@
  * 1 `test()` = 1 requisito = 1 vídeo (o config já grava tudo com `video: "on"`).
  *
  * IMPORTANTE — estes specs NÃO limpam o banco. Rodam sobre o cenário do
- * `npm run db:seed` (12 consultórios — 11 ativos + "Sala 12" desativada,
+ * `npm run db:seed` (12 consultórios — 11 ativos + "Consultório 12" desativado,
  * 5 profissionais, 10 turnos fixos, 241 atendimentos). Ver `_helpers.ts`.
  *
  * O que não é observável direto na tela é comprovado via `page.request`

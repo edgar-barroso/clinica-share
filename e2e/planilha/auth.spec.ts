@@ -222,7 +222,7 @@ test("RF-023 — profissional não acessa agenda/dados de outro profissional", a
   const atendimentoAlheio = atendimentos[0];
   expect(atendimentoAlheio, `${outro.nome} precisa ter atendimentos`).toBeTruthy();
 
-  // Agora como Dra. Nirmala (prof1).
+  // Agora como a profissional prof1.
   await login(page, "profissional");
   const user = await meuUsuario(page);
   expect(user.profissionalId).toBe(prof1.id);

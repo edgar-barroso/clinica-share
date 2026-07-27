@@ -23,7 +23,9 @@
     "db:heal-roles": "tsx prisma/heal-roles.ts",
     "db:erd": "tsx scripts/gen-erd.ts",
     "postinstall": "prisma generate",
-    "entrega": "node scripts/montar-entrega.mjs"
+    "entrega": "node scripts/montar-entrega.mjs",
+    "docs:e2e": "mkdir -p .reports && tsx prisma/seed.ts && playwright test --project=docs-e2e --reporter=json > .reports/docs-e2e.json",
+    "docs:publicar": "node scripts/publicar-docs-e2e.mjs .reports/docs-e2e.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
