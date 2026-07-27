@@ -674,6 +674,7 @@ export default function NovoAtendimentoPage() {
                     key={s}
                     type="button"
                     onClick={() => setStatusPagamento(s)}
+                    aria-pressed={statusPagamento === s}
                     className={`rounded-xl border px-3 py-2 text-sm font-medium capitalize transition-colors ${
                       statusPagamento === s
                         ? "border-primary bg-primary/5 text-primary"

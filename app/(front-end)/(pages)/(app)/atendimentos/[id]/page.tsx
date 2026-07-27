@@ -104,7 +104,18 @@ export default function AtendimentoDetailPage({
       const { atendimento } = await apiGetAtendimento(id);
       setAtendimento(atendimento);
       setValor(String(atendimento.valorConsulta));
-      setStatusPag(atendimento.statusPagamento);
+      // FI10: pagamento é presencial, no ato do atendimento — a esmagadora
+      // maioria termina em `pago`. O `pendente` gravado no agendamento é só o
+      // default do banco (ninguém escolheu ainda), então o formulário de
+      // finalização já abre em "pago"; pendente e gratuito passam a ser
+      // escolha explícita de quem registra. Atendimento já realizado mantém o
+      // que ficou persistido — ali o valor foi decidido de fato.
+      setStatusPag(
+        atendimento.status !== "realizado" &&
+          atendimento.statusPagamento === "pendente"
+          ? "pago"
+          : atendimento.statusPagamento,
+      );
       setMotivoJustificativa(atendimento.motivoDescontoOuGratuidade ?? "");
       setProcedimentos(
         (atendimento.procedimentos ?? []).map((p) => ({
@@ -424,6 +435,9 @@ export default function AtendimentoDetailPage({
                           key={s}
                           type="button"
                           onClick={() => setStatusPag(s)}
+                          // A seleção não pode existir só na cor — o default
+                          // "pago" precisa chegar também a leitor de tela.
+                          aria-pressed={statusPag === s}
                           className={`rounded-xl border px-3 py-2 text-sm font-medium capitalize transition-colors ${
                             statusPag === s
                               ? "border-primary bg-primary/5 text-primary"

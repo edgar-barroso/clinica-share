@@ -226,6 +226,11 @@ Helper `cleanAuthData()` em `tests/helpers/db.ts` deve evoluir para `cleanDb()` 
 - 3 clientes API tipados em `lib/api/{consultorios,profissionais,staff}.ts`
 - Loading skeletons + EmptyState + toasts
 
+**RBAC de contrato (FI01/FI02 + RF-023)**:
+- `PATCH /api/profissionais/[id]` aceita `admin` e `profissional`. O profissional só o próprio cadastro (403 no de outro) e nunca os campos de admin: `modalidadeContrato`, `percentualRepasse`, `valorAluguelPorTurno`, `valorConsultaBase`, `ativo` → 403 se mencionados
+- `/profissionais/[id]/editar` (é o "Meu perfil" do profissional): contrato/repasse, valor base, status e turnos fixos viram leitura para quem não é admin
+- 8 testes Vitest novos em `tests/integration/profissionais.test.ts`
+
 **Outros ajustes (commit `a0139f8`)**:
 - `<RoleSwitcher>` removido (não faz sentido com auth real — bypass de RBAC)
 - `<PrototypeBanner>` removido do AppShell
@@ -322,7 +327,7 @@ Rotas agendamentos:
 Páginas migradas (mock removido, API real):
 - [x] [/agenda](app/(front-end)/(pages)/(app)/agenda/page.tsx) — date picker + AgendaList
 - [x] [/agenda/novo](app/(front-end)/(pages)/(app)/agenda/novo/page.tsx) — form com PacienteCombobox + Selects
-- [x] [/minha-agenda](app/(front-end)/(pages)/(app)/minha-agenda/page.tsx) — RBAC server-side filtra por profissionalId
+- [x] [/minha-agenda](app/(front-end)/(pages)/(app)/minha-agenda/page.tsx) — RBAC server-side filtra por profissionalId; a tela é fila de trabalho, então `realizado`, `nao_compareceu` e `cancelado` não aparecem (`agendamentoEmAberto` em `lib/api/agendamentos.ts`, coberto em `tests/unit/agenda-status.test.ts`)
 
 Componentes refeitos:
 - [x] [components/paciente/paciente-combobox.tsx](components/paciente/paciente-combobox.tsx) — busca debounced via API
@@ -364,7 +369,7 @@ Rotas:
 Páginas migradas (mock removido):
 - [x] [/atendimentos](app/(front-end)/(pages)/(app)/atendimentos/page.tsx) — tabela com role-aware columns
 - [x] [/atendimentos/novo](app/(front-end)/(pages)/(app)/atendimentos/novo/page.tsx) — walk-in (AT01) com PacienteCombobox + selects
-- [x] [/atendimentos/[id]](app/(front-end)/(pages)/(app)/atendimentos/[id]/page.tsx) — detalhe + ações inline (Iniciar/Finalizar com prontuário expansível) condicionadas por role
+- [x] [/atendimentos/[id]](app/(front-end)/(pages)/(app)/atendimentos/[id]/page.tsx) — detalhe + ações inline (Iniciar/Finalizar com prontuário expansível) condicionadas por role. Finalização abre em `pago` (FI10: pagamento presencial no ato é a regra; `pendente`/`gratuito` são exceção escolhida à mão) — o `pendente` do banco é só default de quem não finalizou
 - [x] [/atendimentos/[id]/editar](app/(front-end)/(pages)/(app)/atendimentos/[id]/editar/page.tsx) — só admin/aux (PEND-031); motivo obrigatório
 
 Componentes:

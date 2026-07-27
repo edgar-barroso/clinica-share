@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layouts/page-header";
 import { AgendaList } from "../agenda/_components/agenda-list";
 import {
+  agendamentoEmAberto,
   apiListAgendamentos,
   type AgendamentoListItem,
 } from "@/lib/api/agendamentos";
@@ -32,8 +33,10 @@ export default function MinhaAgendaPage() {
     try {
       const { agendamentos } = await apiListAgendamentos();
       setAgendamentos(
+        // A tela é a fila de trabalho do profissional: atendimento concluído,
+        // paciente que faltou e cancelamento saem dela.
         agendamentos
-          .filter((a) => a.status !== "cancelado" && a.status !== "realizado")
+          .filter(agendamentoEmAberto)
           .sort((a, b) =>
             `${a.data}T${a.hora}`.localeCompare(`${b.data}T${b.hora}`),
           ),

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Lock, Plus, Trash2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { apiListConsultorios, type Consultorio } from '@/lib/api/consultorios';
 import { apiGetProfissional, apiUpdateProfissional, apiAddTurnoFixo, apiRemoveTurnoFixo, type ModalidadeContrato, type Turno, type TurnoFixo } from '@/lib/api/profissionais';
 import { apiGetTurnos, type TurnosConfig } from '@/lib/api/configuracoes';
 import { apiErrorMessage } from '@/lib/api-client';
+import { useCurrentUser } from '@/lib/current-user';
 import { formatBRL, formatPercent } from '@/lib/format';
 
 const TURNOS_FALLBACK: TurnosConfig = {
@@ -43,6 +44,11 @@ const DIAS_SEMANA = [
 export default function EditarProfissionalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  // Contrato, repasse, status e turnos são da administração da clínica
+  // (FI01/FI02). O profissional abre esta tela como "Meu perfil" e mexe só nos
+  // próprios dados de cadastro — o PATCH devolve 403 se ele tentar o resto.
+  const { role, loading: userLoading } = useCurrentUser();
+  const podeEditarContrato = role === 'admin';
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -122,6 +128,7 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
   const novoAluguel = Number(aluguel);
   const novoValorBase = Number(valorConsultaBase);
   const contratoMudou =
+    podeEditarContrato &&
     originalContract !== null &&
     (modalidade !== originalContract.modalidade ||
       (modalidade === 'percentual' && novoPercentual !== originalContract.percentualRepasse) ||
@@ -143,12 +150,18 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
         email,
         telefone,
         duracaoConsultaMinutos: Number(duracao),
-        ativo,
-        modalidadeContrato: modalidade,
-        percentualRepasse: modalidade === 'percentual' ? novoPercentual : null,
-        valorAluguelPorTurno: modalidade === 'aluguel_fixo' ? novoAluguel : null,
-        valorConsultaBase: novoValorBase,
-        ...(contratoMudou ? { motivo } : {}),
+        // Campos de admin só vão no payload quando o usuário é admin — a rota
+        // recusa (403) se um profissional mencionar qualquer um deles.
+        ...(podeEditarContrato
+          ? {
+              ativo,
+              modalidadeContrato: modalidade,
+              percentualRepasse: modalidade === 'percentual' ? novoPercentual : null,
+              valorAluguelPorTurno: modalidade === 'aluguel_fixo' ? novoAluguel : null,
+              valorConsultaBase: novoValorBase,
+              ...(contratoMudou ? { motivo } : {}),
+            }
+          : {}),
       });
       toast.success('Alterações salvas');
       router.push(`/profissionais/${id}`);
@@ -187,7 +200,10 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
     }
   }
 
-  if (loading) {
+  // Espera o /api/auth/me: sem o role, a tela não sabe se pode mostrar os
+  // campos de contrato — e piscar campos editáveis para o profissional seria
+  // pior do que um skeleton a mais.
+  if (loading || userLoading) {
     return (
       <div aria-hidden="true">
         <Skeleton className="mb-4 h-4 w-24" />
@@ -230,7 +246,11 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
 
       <PageHeader
         title={`Editar ${nome}`}
-        description="Atualize dados, contrato e turnos do profissional"
+        description={
+          podeEditarContrato
+            ? 'Atualize dados, contrato e turnos do profissional'
+            : 'Atualize seus dados de cadastro — contrato e turnos ficam com a administração'
+        }
         actions={
           <Link href={`/profissionais/${id}`} className={buttonVariants({ variant: 'outline' })}>
             Cancelar
@@ -279,62 +299,101 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
                 <Label htmlFor="duracao">Duração da consulta</Label>
                 <Input id="duracao" type="number" min="10" step="5" value={duracao} onChange={(e) => setDuracao(e.target.value)} required />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="valorBase">Valor base da consulta (R$)</Label>
-                <Input id="valorBase" type="number" min="0" step="0.01" value={valorConsultaBase} onChange={(e) => setValorConsultaBase(e.target.value)} required />
-                <p className="text-xs text-muted-foreground">Mudar este valor exige motivo (auditoria).</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="status">Status</Label>
-                <Select id="status" value={ativo ? 'ativo' : 'inativo'} onChange={(e) => setAtivo(e.target.value === 'ativo')}>
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </Select>
-              </div>
+              {podeEditarContrato && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="valorBase">Valor base da consulta (R$)</Label>
+                    <Input id="valorBase" type="number" min="0" step="0.01" value={valorConsultaBase} onChange={(e) => setValorConsultaBase(e.target.value)} required />
+                    <p className="text-xs text-muted-foreground">Mudar este valor exige motivo (auditoria).</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="status">Status</Label>
+                    <Select id="status" value={ativo ? 'ativo' : 'inativo'} onChange={(e) => setAtivo(e.target.value === 'ativo')}>
+                      <option value="ativo">Ativo</option>
+                      <option value="inativo">Inativo</option>
+                    </Select>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Contrato e repasse</CardTitle>
-              <CardDescription>Alteração em contrato exige motivo e gera registro de auditoria.</CardDescription>
+              <CardDescription>
+                {podeEditarContrato
+                  ? 'Alteração em contrato exige motivo e gera registro de auditoria.'
+                  : 'Definido pela administração da clínica — somente o administrador altera.'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setModalidade('percentual')} className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'percentual' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
-                  <p className="text-sm font-semibold">Percentual</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Profissional recebe % da receita dos atendimentos</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalidade('aluguel_fixo')}
-                  className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'aluguel_fixo' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}
-                >
-                  <p className="text-sm font-semibold">Aluguel fixo</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Valor fixo por turno utilizado</p>
-                </button>
-              </div>
-
-              {modalidade === 'percentual' ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="perc">Percentual (%) de repasse ao profissional</Label>
-                  <Input id="perc" type="number" min="0" max="100" step="0.5" value={percentual} onChange={(e) => setPercentual(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Ex: 70 = profissional recebe 70% da receita bruta; o restante fica com a clínica. Atual: {formatPercent(novoPercentual || 0)} ao profissional.</p>
-                </div>
+              {!podeEditarContrato ? (
+                <>
+                  <dl className="space-y-2 rounded-xl bg-muted/50 p-4 text-sm">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <dt className="text-muted-foreground">Modalidade</dt>
+                      <dd className="font-medium">{modalidade === 'percentual' ? 'Percentual' : 'Aluguel fixo'}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <dt className="text-muted-foreground">
+                        {modalidade === 'percentual' ? 'Repasse ao profissional' : 'Aluguel por turno'}
+                      </dt>
+                      <dd className="font-medium tabular-nums">
+                        {modalidade === 'percentual'
+                          ? formatPercent(novoPercentual || 0)
+                          : formatBRL(novoAluguel || 0)}
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <dt className="text-muted-foreground">Valor base da consulta</dt>
+                      <dd className="font-medium tabular-nums">{formatBRL(novoValorBase || 0)}</dd>
+                    </div>
+                  </dl>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Lock size={12} aria-hidden="true" />
+                    Para ajustar contrato ou repasse, fale com a administração da clínica.
+                  </p>
+                </>
               ) : (
-                <div className="space-y-1.5">
-                  <Label htmlFor="aluguel">Aluguel por turno (R$)</Label>
-                  <Input id="aluguel" type="number" min="0" step="0.01" value={aluguel} onChange={(e) => setAluguel(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">{formatBRL(novoAluguel || 0)} a cada turno ocupado.</p>
-                </div>
-              )}
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button type="button" onClick={() => setModalidade('percentual')} className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'percentual' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
+                      <p className="text-sm font-semibold">Percentual</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Profissional recebe % da receita dos atendimentos</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalidade('aluguel_fixo')}
+                      className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'aluguel_fixo' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}
+                    >
+                      <p className="text-sm font-semibold">Aluguel fixo</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Valor fixo por turno utilizado</p>
+                    </button>
+                  </div>
 
-              {contratoMudou && (
-                <div className="space-y-1.5 border-t border-border pt-4">
-                  <Label htmlFor="motivo">Motivo da alteração *</Label>
-                  <Input id="motivo" placeholder="Ex: Renegociação anual" value={motivo} onChange={(e) => setMotivo(e.target.value)} required />
-                  <p className="text-xs text-muted-foreground">Obrigatório quando modalidade ou valor de contrato mudam.</p>
-                </div>
+                  {modalidade === 'percentual' ? (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="perc">Percentual (%) de repasse ao profissional</Label>
+                      <Input id="perc" type="number" min="0" max="100" step="0.5" value={percentual} onChange={(e) => setPercentual(e.target.value)} />
+                      <p className="text-xs text-muted-foreground">Ex: 70 = profissional recebe 70% da receita bruta; o restante fica com a clínica. Atual: {formatPercent(novoPercentual || 0)} ao profissional.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="aluguel">Aluguel por turno (R$)</Label>
+                      <Input id="aluguel" type="number" min="0" step="0.01" value={aluguel} onChange={(e) => setAluguel(e.target.value)} />
+                      <p className="text-xs text-muted-foreground">{formatBRL(novoAluguel || 0)} a cada turno ocupado.</p>
+                    </div>
+                  )}
+
+                  {contratoMudou && (
+                    <div className="space-y-1.5 border-t border-border pt-4">
+                      <Label htmlFor="motivo">Motivo da alteração *</Label>
+                      <Input id="motivo" placeholder="Ex: Renegociação anual" value={motivo} onChange={(e) => setMotivo(e.target.value)} required />
+                      <p className="text-xs text-muted-foreground">Obrigatório quando modalidade ou valor de contrato mudam.</p>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -342,6 +401,11 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
           <Card>
             <CardHeader>
               <CardTitle>Turnos fixos</CardTitle>
+              {!podeEditarContrato && (
+                <CardDescription>
+                  Alocação de consultório por turno é feita pela administração da clínica.
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {turnos.length === 0 ? (
@@ -356,41 +420,45 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
                         </p>
                         <p className="text-xs text-muted-foreground">{t.consultorio.nome}</p>
                       </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removerTurno(t.id)} aria-label="Remover turno">
-                        <Trash2 size={14} />
-                      </Button>
+                      {podeEditarContrato && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removerTurno(t.id)} aria-label="Remover turno">
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
 
-              <div className="grid grid-cols-12 gap-2 rounded-xl border border-dashed border-border p-3">
-                <Select className="col-span-3" value={novoTurnoDia} onChange={(e) => setNovoTurnoDia(Number(e.target.value))}>
-                  {DIAS_SEMANA.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {d.label}
-                    </option>
-                  ))}
-                </Select>
-                <Select className="col-span-3" value={novoTurnoTurno} onChange={(e) => setNovoTurnoTurno(e.target.value as Turno)}>
-                  {TURNOS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </Select>
-                <Select className="col-span-4" value={novoTurnoConsultorioId} onChange={(e) => setNovoTurnoConsultorioId(e.target.value)}>
-                  {consultorios.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </Select>
-                <Button type="button" variant="outline" className="col-span-2" onClick={adicionarTurno}>
-                  <Plus size={14} />
-                  Add
-                </Button>
-              </div>
+              {podeEditarContrato && (
+                <div className="grid grid-cols-12 gap-2 rounded-xl border border-dashed border-border p-3">
+                  <Select className="col-span-3" value={novoTurnoDia} onChange={(e) => setNovoTurnoDia(Number(e.target.value))}>
+                    {DIAS_SEMANA.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select className="col-span-3" value={novoTurnoTurno} onChange={(e) => setNovoTurnoTurno(e.target.value as Turno)}>
+                    {TURNOS.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select className="col-span-4" value={novoTurnoConsultorioId} onChange={(e) => setNovoTurnoConsultorioId(e.target.value)}>
+                    {consultorios.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button type="button" variant="outline" className="col-span-2" onClick={adicionarTurno}>
+                    <Plus size={14} />
+                    Add
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

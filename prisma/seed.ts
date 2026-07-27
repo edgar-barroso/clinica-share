@@ -7,12 +7,22 @@
  *
  * Rodar com: `npm run db:seed`
  *
+ * **Fidelidade às regras do app**: todo atendimento nasce de uma alocação de
+ * turno fixo, com o consultório daquela alocação e horário dentro da grade da
+ * duração do profissional, e com `valorConsulta` vindo de
+ * `Profissional.valorConsultaBase`. É o mesmo que `createAgendamento` e
+ * `finalizarAtendimento` exigem — sem isso a seed enche o banco de estados que
+ * a própria API recusa criar (AG03, CO02, AG05, FI06).
+ *
  * Volume:
  * - 1 admin + 1 auxiliar + 1 atendente + 5 profissionais (com User) + 30 pacientes (5 com User)
- * - 6 consultórios + 8 turnos fixos
- * - ~200 atendimentos distribuídos em 60 dias (passado + futuro)
+ * - 12 consultórios (11 ativos + 1 em reforma) + 10 alocações de turno fixo
+ * - ~300 atendimentos em 60 dias (45 passados + hoje + 14 futuros), ocupando
+ *   35-60% dos slots de cada turno (semanas distantes mais vazias, para a demo
+ *   ter horário livre para agendar)
  *   cobrindo todos os status e modos de pagamento
- * - 4 repasses semanais já gerados (2 pagos, 2 em aberto)
+ * - 4 semanas de repasse fechadas (as 2 mais antigas pagas, as 2 recentes em
+ *   aberto), uma por profissional com atendimento elegível na semana
  * - AuditLogs para mutações financeiras
  *
  * Credenciais (todas ENV-driven com defaults para dev):
@@ -24,14 +34,17 @@
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { Prisma, PrismaClient, type Role } from "@prisma/client";
+import { Prisma, PrismaClient, type Role, type Turno } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL ?? "admin@clinicashare.local",
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "change-me-on-first-login",
-  ADMIN_NOME: process.env.ADMIN_NOME ?? "Roberto Lima",
+  // O cenário é a clínica do Dr. Edson (DEC-P08) — o default do nome do admin
+  // precisa bater com ele, senão o audit log da demo credita as ações a um
+  // nome que não existe em lugar nenhum do sistema.
+  ADMIN_NOME: process.env.ADMIN_NOME ?? "Dr. Edson Andrade",
 };
 
 if (!env.DATABASE_URL) {
@@ -105,6 +118,11 @@ async function cleanAll() {
   await prisma.profissional.deleteMany();
   await prisma.staff.deleteMany();
   await prisma.consultorio.deleteMany();
+  // Overrides de /configuracoes/turnos: sem limpar, um ajuste de sessão
+  // anterior continua valendo e faz o `horaToTurno` do cálculo de repasse
+  // classificar os horários desta seed em turnos diferentes dos previstos.
+  await prisma.configuracao.deleteMany();
+  // ProcedimentoAtendimento sai por cascade junto com Atendimento.
 }
 
 // ============================================================
@@ -342,10 +360,21 @@ async function seedProfissionais() {
 // TURNOS FIXOS
 // ============================================================
 
+type Profissional = Awaited<ReturnType<typeof seedProfissionais>>[number];
+type Consultorio = Awaited<ReturnType<typeof seedConsultorios>>[number];
+
+/** Turno fixo já criado, com prof e consultório resolvidos. */
+interface Alocacao {
+  profissional: Profissional;
+  consultorio: Consultorio;
+  diaSemana: number;
+  turno: Turno;
+}
+
 async function seedTurnosFixos(
   profs: Awaited<ReturnType<typeof seedProfissionais>>,
   consultorios: Awaited<ReturnType<typeof seedConsultorios>>,
-) {
+): Promise<Alocacao[]> {
   // Aloca cada profissional em (dia, turno) específicos respeitando consultório compatível
   // diaSemana: 1=seg ... 5=sex
   const allocations = [
@@ -361,6 +390,7 @@ async function seedTurnosFixos(
     { prof: 4, cons: 4, diaSemana: 5, turno: "tarde" as const },
   ];
 
+  const alocacoes: Alocacao[] = [];
   for (const a of allocations) {
     await prisma.turnoFixo.create({
       data: {
@@ -370,8 +400,15 @@ async function seedTurnosFixos(
         turno: a.turno,
       },
     });
+    alocacoes.push({
+      profissional: profs[a.prof],
+      consultorio: consultorios[a.cons],
+      diaSemana: a.diaSemana,
+      turno: a.turno,
+    });
   }
-  console.log(`✓ Turnos fixos: ${allocations.length} alocações`);
+  console.log(`✓ Turnos fixos: ${alocacoes.length} alocações`);
+  return alocacoes;
 }
 
 // ============================================================
@@ -415,7 +452,9 @@ async function seedPacientes() {
   const pacientes = [];
   for (let i = 0; i < NOMES_PACIENTES.length; i++) {
     const nome = NOMES_PACIENTES[i];
-    const sexo = i % 3 === 0 ? "M" : i % 3 === 1 ? "F" : "outro";
+    // Alterna M/F com um `outro` a cada 15: a distribuição anterior era 1/3 de
+    // `outro`, o que não parece cadastro de clínica nenhum numa demo.
+    const sexo = i % 15 === 7 ? "outro" : i % 2 === 0 ? "F" : "M";
     const dataNasc = new Date(1960 + (i * 7) % 50, i % 12, (i % 27) + 1);
     const paciente = await prisma.paciente.create({
       data: {
@@ -456,14 +495,46 @@ async function seedPacientes() {
 }
 
 // ============================================================
-// ATENDIMENTOS (~200 distribuídos em 60 dias)
+// ATENDIMENTOS — gerados a partir dos turnos fixos (AG03/CO02/AG05/FI06)
 // ============================================================
 
-const HORARIOS_BASE: Record<"manha" | "tarde" | "noite", string[]> = {
-  manha: ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"],
-  tarde: ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"],
-  noite: ["18:00", "18:30", "19:00", "19:30"],
+/**
+ * Blocos de turno — espelham os defaults de `_lib/turnos.ts` e de
+ * `BLOCOS_PADRAO` (`lib/horarios.ts`). `cleanAll` apaga os overrides da tabela
+ * `Configuracao`, então depois da seed estes são de fato os blocos vigentes, e
+ * o `horaToTurno` do cálculo de repasse classifica os horários seedados
+ * exatamente no turno em que foram gerados.
+ */
+const BLOCOS: Record<Turno, { inicio: string; fim: string }> = {
+  manha: { inicio: "07:00", fim: "12:00" },
+  tarde: { inicio: "13:00", fim: "18:00" },
+  noite: { inicio: "18:00", fim: "20:00" },
 };
+
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function toHHMM(minutos: number): string {
+  return `${String(Math.floor(minutos / 60)).padStart(2, "0")}:${String(minutos % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Mesma grade que a tela de agendamento oferece (`gerarSlots` em
+ * `lib/horarios.ts`): passo igual à duração do profissional e só slots que
+ * caibam inteiros no bloco. Horário fora dessa grade viraria um agendamento
+ * que a própria UI não sabe remarcar.
+ */
+function slotsDoTurno(turno: Turno, duracaoMin: number): string[] {
+  const { inicio, fim } = BLOCOS[turno];
+  const limite = toMinutes(fim);
+  const slots: string[] = [];
+  for (let t = toMinutes(inicio); t + duracaoMin <= limite; t += duracaoMin) {
+    slots.push(toHHMM(t));
+  }
+  return slots;
+}
 
 interface AtendimentoSeed {
   data: Date;
@@ -477,23 +548,54 @@ interface AtendimentoSeed {
   motivoCancelamento?: string | null;
   motivoDescontoOuGratuidade?: string | null;
   prontuarioInterno?: Prisma.InputJsonValue;
-  /** FI06 — preço de tabela quando houve desconto parcial */
+  /** FI06 — preço de tabela quando houve desconto parcial ou gratuidade */
   valorOriginal?: Prisma.Decimal | null;
   /** AT04 — atendimento documentado no prontuário próprio do profissional */
   usaProntuarioExterno?: boolean;
   referenciaProntuarioExterno?: string | null;
 }
 
+/**
+ * Escolhe um paciente livre naquele dia/horário. Sem isso, o sorteio coloca o
+ * mesmo paciente em duas salas ao mesmo tempo — a constraint AG05 só protege o
+ * consultório.
+ */
+function escolherPaciente(
+  pacientes: Awaited<ReturnType<typeof seedPacientes>>,
+  dia: string,
+  hora: string,
+  ocupados: Set<string>,
+) {
+  for (let tentativa = 0; tentativa < 10; tentativa++) {
+    const paciente = pacientes[Math.floor(rand() * pacientes.length)];
+    const chave = `${dia}|${hora}|${paciente.id}`;
+    if (ocupados.has(chave)) continue;
+    ocupados.add(chave);
+    return paciente;
+  }
+  return null;
+}
+
+/**
+ * Gera a agenda a partir das alocações de turno fixo — nunca sorteando
+ * (profissional, consultório, turno) livremente. `createAgendamento` exige
+ * turno fixo cobrindo (dia da semana, turno) E o consultório daquela alocação
+ * (AG03/CO02); fora disso a seed produziria agendamentos que a API recusa
+ * criar, com psicóloga em sala de pediatria e profissional atendendo em dia
+ * que não trabalha.
+ *
+ * `valorConsulta` sempre nasce de `Profissional.valorConsultaBase`, como em
+ * produção (FI06): assim a tela de finalização abre com o preço certo, e
+ * cobrança abaixo da tabela só existe onde há `valorOriginal` + justificativa.
+ */
 async function seedAtendimentos(
-  profs: Awaited<ReturnType<typeof seedProfissionais>>,
-  consultorios: Awaited<ReturnType<typeof seedConsultorios>>,
+  alocacoes: Alocacao[],
   pacientes: Awaited<ReturnType<typeof seedPacientes>>,
 ) {
   const hoje = startOfDay();
-  const consAtivos = consultorios.filter((c) => c.ativo);
-  const ocupados = new Set<string>(); // chave: "YYYY-MM-DD|HH:mm|consultorioId"
-
+  const pacienteOcupado = new Set<string>();
   const seeds: AtendimentoSeed[] = [];
+
   const motivosCancel = [
     "Paciente solicitou remarcação",
     "Profissional indisponível por imprevisto",
@@ -514,105 +616,84 @@ async function seedAtendimentos(
     "Retorno gratuito (revisão pós-procedimento)",
     "Cortesia institucional",
   ];
+  const ZERO = new Prisma.Decimal(0);
 
-  // Distribui em 60 dias: 30 dias passados + hoje + 29 dias futuros
+  // 45 dias passados + hoje + 14 futuros
   for (let offset = -45; offset <= 14; offset++) {
     const data = addDays(hoje, offset);
     const dow = data.getDay();
-    if (dow === 0 || dow === 6) continue; // pula fim de semana
+    if (dow === 0 || dow === 6) continue; // clínica não opera sáb/dom (MVP)
 
-    // 4-7 atendimentos por dia útil
-    const qtd = 4 + Math.floor(rand() * 4);
-    for (let i = 0; i < qtd; i++) {
-      const profIdx = Math.floor(rand() * profs.length);
-      const prof = profs[profIdx];
-      const cons = pick(consAtivos, profIdx + (i % consAtivos.length));
+    for (const alo of alocacoes) {
+      if (alo.diaSemana !== dow) continue;
+      const prof = alo.profissional;
+      const tabela = new Prisma.Decimal(prof.valorConsultaBase);
+      const slots = slotsDoTurno(alo.turno, prof.duracaoConsultaMinutos);
+      // Ocupação do turno. Semana futura mais distante fica mais vazia: é como
+      // uma agenda real se enche e deixa horário livre para a demo agendar.
+      const ocupacao = (offset > 7 ? 0.2 : 0.35) + rand() * 0.25;
 
-      // Escolhe turno e horário
-      const turnoIdx = rand();
-      const turno = turnoIdx < 0.5 ? "manha" : turnoIdx < 0.9 ? "tarde" : "noite";
-      const horarios = HORARIOS_BASE[turno];
-      const hora = horarios[Math.floor(rand() * horarios.length)];
+      for (const hora of slots) {
+        if (rand() > ocupacao) continue;
+        const paciente = escolherPaciente(
+          pacientes,
+          isoDate(data),
+          hora,
+          pacienteOcupado,
+        );
+        if (!paciente) continue;
 
-      const key = `${isoDate(data)}|${hora}|${cons.id}`;
-      if (ocupados.has(key)) continue;
-      ocupados.add(key);
-
-      const paciente = pacientes[Math.floor(rand() * pacientes.length)];
-      // Para finalizados/cobranças seed mantém a lógica antiga de
-      // gerar variedade de valores; agendados/cancelados copiam
-      // o `valorConsultaBase` do profissional (mesmo caminho da
-      // criação em produção pós-migration).
-      const valorBase =
-        prof.modalidadeContrato === "percentual" ? 200 + (profIdx * 50) : 200;
-      const valor = new Prisma.Decimal(valorBase);
-      const valorAgendado = new Prisma.Decimal(prof.valorConsultaBase);
-
-      // Status conforme posição temporal
-      if (offset > 0) {
-        // Futuro: agendado (95%) ou cancelado (5%)
+        const comum = {
+          data,
+          hora,
+          pacienteId: paciente.id,
+          profissionalId: prof.id,
+          consultorioId: alo.consultorio.id,
+        };
         const r = rand();
-        if (r < 0.05) {
-          seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: valorAgendado,
-            status: "cancelado",
-            statusPagamento: "pendente",
-            motivoCancelamento: pick(motivosCancel, Math.floor(r * 100)),
-          });
-        } else {
-          seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: valorAgendado,
-            status: "agendado",
-            statusPagamento: "pendente",
-          });
+
+        if (offset > 0) {
+          // Futuro: agendado (95%) ou cancelado (5%).
+          seeds.push(
+            r < 0.05
+              ? {
+                  ...comum,
+                  valorConsulta: tabela,
+                  status: "cancelado",
+                  statusPagamento: "pendente",
+                  motivoCancelamento: pick(motivosCancel, Math.floor(r * 100)),
+                }
+              : {
+                  ...comum,
+                  valorConsulta: tabela,
+                  status: "agendado",
+                  statusPagamento: "pendente",
+                },
+          );
+          continue;
         }
-      } else if (offset === 0) {
-        // Hoje: misto agendado / em_atendimento (mostra fluxo do dia)
-        const r = rand();
-        if (r < 0.3) {
+
+        if (offset === 0) {
+          // Hoje: parte já em atendimento, parte esperando — é o fluxo do dia
+          // que a demo abre para iniciar/finalizar.
           seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: new Prisma.Decimal(0),
-            status: "em_atendimento",
+            ...comum,
+            valorConsulta: tabela,
+            status: r < 0.3 ? "em_atendimento" : "agendado",
             statusPagamento: "pendente",
           });
-        } else {
-          seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: new Prisma.Decimal(0),
-            status: "agendado",
-            statusPagamento: "pendente",
-          });
+          continue;
         }
-      } else {
-        // Passado: realizado (75%), cancelado (10%), nao_compareceu (10%), gratuito (5%)
-        const r = rand();
+
+        // Passado: realizado (75%), cancelado (10%), nao_compareceu (10%),
+        // gratuito (5%).
         if (r < 0.05) {
+          // Gratuidade: nada cobrado, tabela preservada em `valorOriginal` e
+          // justificativa obrigatória — o mesmo que `finalizar` grava (FI06).
           seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: valor,
+            ...comum,
+            valorConsulta: ZERO,
+            valorOriginal: tabela,
             status: "realizado",
             statusPagamento: "gratuito",
             motivoDescontoOuGratuidade: pick(
@@ -626,49 +707,36 @@ async function seedAtendimentos(
           });
         } else if (r < 0.15) {
           seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: new Prisma.Decimal(0),
+            ...comum,
+            valorConsulta: tabela,
             status: "cancelado",
             statusPagamento: "pendente",
             motivoCancelamento: pick(motivosCancel, Math.floor(r * 1000)),
           });
         } else if (r < 0.25) {
+          // `marcarNaoCompareceu` não pede motivo no cadastro — a justificativa
+          // fica no audit log, então aqui também não se inventa um.
           seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
-            valorConsulta: new Prisma.Decimal(0),
+            ...comum,
+            valorConsulta: tabela,
             status: "nao_compareceu",
             statusPagamento: "pendente",
           });
         } else {
-          // Realizado pago ou pendente
           const pagamento = r < 0.85 ? "pago" : "pendente";
-          // FI06: ~12% saem com desconto parcial sobre o valor de tabela,
+          // FI06: ~12% saem com desconto parcial sobre a tabela do cadastro,
           // sempre com justificativa — sem isso o relatório RE04 fica vazio.
           const comDesconto = rand() < 0.12;
           const desconto = pick([20, 30, 50, 80], Math.floor(rand() * 100));
-          const valorCobrado = comDesconto
-            ? valor.minus(desconto)
-            : valor;
+          const valorCobrado = comDesconto ? tabela.minus(desconto) : tabela;
           // AT04: os dois profissionais de aluguel fixo mantêm prontuário
           // próprio; ~40% dos atendimentos deles são registrados fora.
           const externo =
             prof.modalidadeContrato === "aluguel_fixo" && rand() < 0.4;
           seeds.push({
-            data,
-            hora,
-            pacienteId: paciente.id,
-            profissionalId: prof.id,
-            consultorioId: cons.id,
+            ...comum,
             valorConsulta: valorCobrado,
-            valorOriginal: comDesconto ? valor : null,
+            valorOriginal: comDesconto ? tabela : null,
             status: "realizado",
             statusPagamento: pagamento,
             motivoDescontoOuGratuidade: comDesconto
@@ -719,7 +787,7 @@ async function seedAtendimentos(
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
-  const nDesconto = seeds.filter((s) => s.valorOriginal).length;
+  const nDesconto = seeds.filter((s) => s.valorOriginal && !s.valorConsulta.isZero()).length;
   const nExterno = seeds.filter((s) => s.usaProntuarioExterno).length;
   console.log(`✓ Atendimentos: ${seeds.length}`);
   console.log(`    com desconto parcial (FI06): ${nDesconto}`);
@@ -928,9 +996,13 @@ async function seedRepasses(
 // ============================================================
 
 async function seedAuditLogs(admin: { id: string; email: string }) {
-  // Pega 5 atendimentos realizados e simula correções de valor
+  // Pega 5 atendimentos realizados e simula correções de valor.
+  // `orderBy` explícito: sem ele o Postgres não garante ordem e o `take: 5`
+  // cai em atendimentos diferentes a cada run, quebrando a reprodutibilidade
+  // que esta seed promete. (data, hora, consultorioId) é unique (AG05).
   const samples = await prisma.atendimento.findMany({
     where: { status: "realizado", statusPagamento: "pago" },
+    orderBy: [{ data: "asc" }, { hora: "asc" }, { consultorioId: "asc" }],
     take: 5,
   });
   for (const a of samples) {
@@ -961,9 +1033,9 @@ async function main() {
   await seedStaff();
   const consultorios = await seedConsultorios();
   const profs = await seedProfissionais();
-  await seedTurnosFixos(profs, consultorios);
+  const alocacoes = await seedTurnosFixos(profs, consultorios);
   const pacientes = await seedPacientes();
-  await seedAtendimentos(profs, consultorios, pacientes);
+  const atendimentos = await seedAtendimentos(alocacoes, pacientes);
   // AT02 antes dos repasses: FI04 soma procedimentos na base do repasse
   const procedimentos = await seedProcedimentos();
   await seedRepasses(profs, admin);
@@ -976,7 +1048,9 @@ async function main() {
   console.log(
     `  - 12 consultórios (11 ativos) + 10 alocações de turno fixo`,
   );
-  console.log(`  - ~200 atendimentos cobrindo todos os status`);
+  console.log(
+    `  - ${atendimentos} atendimentos nos turnos fixos, cobrindo todos os status`,
+  );
   console.log(
     `  - ${procedimentos} procedimentos extras (AT02) em ~25% dos realizados+pagos`,
   );
