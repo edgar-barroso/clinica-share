@@ -3,6 +3,7 @@ import { GET as listGet, POST as createPost } from "@/app/(back-end)/api/agendam
 import { GET as itemGet } from "@/app/(back-end)/api/agendamentos/[id]/route";
 import { POST as cancelPost } from "@/app/(back-end)/api/agendamentos/[id]/cancelar/route";
 import { POST as chegadaPost } from "@/app/(back-end)/api/agendamentos/[id]/marcar-chegada/route";
+import { GET as ocupadosGet } from "@/app/(back-end)/api/agendamentos/ocupados/route";
 import { prisma } from "@/lib/db";
 import { signAuthToken } from "@/app/(back-end)/_lib/jwt";
 import { cleanDb } from "../helpers/db";
@@ -383,5 +384,160 @@ describe("POST /api/agendamentos/[id]/marcar-chegada — AG08", () => {
       ctxId(a.id),
     );
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/agendamentos/ocupados — disponibilidade", () => {
+  /** Dois agendamentos do mesmo profissional, um deles cancelado. */
+  async function agendaComCancelado() {
+    const { paciente, profissional, consultorio } = await createFixtures();
+    await prisma.atendimento.createMany({
+      data: [
+        {
+          pacienteId: paciente.id,
+          profissionalId: profissional.id,
+          consultorioId: consultorio.id,
+          data: new Date("2026-06-01"),
+          hora: "10:00",
+          valorConsulta: 200,
+        },
+        {
+          pacienteId: paciente.id,
+          profissionalId: profissional.id,
+          consultorioId: consultorio.id,
+          data: new Date("2026-06-01"),
+          hora: "10:30",
+          valorConsulta: 200,
+          status: "cancelado",
+          motivoCancelamento: "Paciente remarcou",
+        },
+      ],
+    });
+    return { paciente, profissional, consultorio };
+  }
+
+  it("paciente vê horário tomado por OUTRO paciente (é o que faltava para montar slots)", async () => {
+    const { profissional } = await agendaComCancelado();
+    // Paciente sem relação com o agendamento — em `GET /api/agendamentos` o
+    // RBAC devolveria lista vazia e a agenda pareceria livre.
+    const outro = await prisma.paciente.create({
+      data: { nome: "Paciente B", email: "pb@e.com", telefone: "11900001111" },
+    });
+    const { user, token } = await createUserWithRole("paciente", "pb-user@e.com");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { pacienteId: outro.id },
+    });
+
+    const res = await ocupadosGet(
+      withAuthCookie(
+        getRequest(
+          `/api/agendamentos/ocupados?profissionalId=${profissional.id}&data=2026-06-01`,
+        ),
+        token,
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // 10:00 ocupa; 10:30 estava cancelado, então volta a ficar livre.
+    expect(body.ocupados).toEqual([{ data: "2026-06-01", hora: "10:00" }]);
+  });
+
+  it("não expõe paciente, valor nem consultório", async () => {
+    const { profissional } = await agendaComCancelado();
+    const { token } = await createUserWithRole("atendente");
+
+    const res = await ocupadosGet(
+      withAuthCookie(
+        getRequest(`/api/agendamentos/ocupados?profissionalId=${profissional.id}`),
+        token,
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Object.keys(body.ocupados[0]).sort()).toEqual(["data", "hora"]);
+  });
+
+  it("filtra por intervalo de datas", async () => {
+    const { paciente, profissional, consultorio } = await createFixtures();
+    await prisma.atendimento.createMany({
+      data: [
+        {
+          pacienteId: paciente.id,
+          profissionalId: profissional.id,
+          consultorioId: consultorio.id,
+          data: new Date("2026-06-01"),
+          hora: "10:00",
+          valorConsulta: 200,
+        },
+        {
+          pacienteId: paciente.id,
+          profissionalId: profissional.id,
+          consultorioId: consultorio.id,
+          data: new Date("2026-07-06"),
+          hora: "11:00",
+          valorConsulta: 200,
+        },
+      ],
+    });
+    const { token } = await createUserWithRole("admin");
+
+    const res = await ocupadosGet(
+      withAuthCookie(
+        getRequest(
+          `/api/agendamentos/ocupados?profissionalId=${profissional.id}&dataInicio=2026-06-01&dataFim=2026-06-30`,
+        ),
+        token,
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).ocupados).toEqual([
+      { data: "2026-06-01", hora: "10:00" },
+    ]);
+  });
+
+  it("profissional não consulta a agenda de outro profissional (403 — RF-023)", async () => {
+    const { profissional } = await createFixtures();
+    const outroProf = await prisma.profissional.create({
+      data: {
+        nome: "Dr. B",
+        especialidade: "Pediatria",
+        conselho: "CRM-SP 2",
+        email: "drb@e.com",
+        telefone: "11977776666",
+        modalidadeContrato: "percentual",
+        valorConsultaBase: 200,
+        percentualRepasse: 0.3,
+        duracaoConsultaMinutos: 30,
+      },
+    });
+    const { user, token } = await createUserWithRole("profissional", "prof-oc@e.com");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { profissionalId: outroProf.id },
+    });
+
+    const res = await ocupadosGet(
+      withAuthCookie(
+        getRequest(`/api/agendamentos/ocupados?profissionalId=${profissional.id}`),
+        token,
+      ),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("exige profissionalId (422)", async () => {
+    const { token } = await createUserWithRole("admin");
+    const res = await ocupadosGet(
+      withAuthCookie(getRequest("/api/agendamentos/ocupados"), token),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it("sem cookie é 401", async () => {
+    const res = await ocupadosGet(
+      getRequest("/api/agendamentos/ocupados?profissionalId=x"),
+    );
+    expect(res.status).toBe(401);
   });
 });

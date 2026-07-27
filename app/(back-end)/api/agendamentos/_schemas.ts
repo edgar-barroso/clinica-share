@@ -27,5 +27,16 @@ export const listAgendamentosQuerySchema = z.object({
     .optional(),
 });
 
+/**
+ * Disponibilidade: `profissionalId` é obrigatório (a rota devolve os horários
+ * tomados de UM profissional — não existe "ocupados de todo mundo").
+ */
+export const listOcupadosQuerySchema = z.object({
+  profissionalId: z.string().min(1),
+  data: z.string().date().optional(),
+  dataInicio: z.string().date().optional(),
+  dataFim: z.string().date().optional(),
+});
+
 export type CreateAgendamentoInput = z.infer<typeof createAgendamentoSchema>;
 export type CancelAgendamentoInput = z.infer<typeof cancelAgendamentoSchema>;
