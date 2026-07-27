@@ -63,3 +63,27 @@ export async function touchUltimoAcesso(
     return ultimoAcesso;
   }
 }
+
+/**
+ * `true` quando o token foi emitido ANTES do último logout do usuário.
+ *
+ * É o que faz "sair" invalidar o token de verdade: apagar o cookie não
+ * invalida nada, e com o sliding expiration uma requisição em voo no instante
+ * do logout reemitia o cookie e ressuscitava a sessão.
+ *
+ * FALHA FECHADA de propósito: se existe marca de invalidação mas o token não
+ * traz `iat`, recusamos. Não dá para provar que o token é posterior ao logout,
+ * e na dúvida a resposta certa é pedir login de novo.
+ *
+ * @param iat emissão do token em SEGUNDOS (padrão JWT)
+ */
+export function isSessionRevoked(
+  sessoesInvalidadasEm: Date | null,
+  iat: number | undefined,
+): boolean {
+  if (!sessoesInvalidadasEm) return false;
+  if (iat === undefined) return true;
+  // `iat` tem resolução de segundos; um token emitido no MESMO segundo do
+  // logout é tratado como anterior (arredonda para o lado seguro).
+  return iat * 1000 <= sessoesInvalidadasEm.getTime();
+}

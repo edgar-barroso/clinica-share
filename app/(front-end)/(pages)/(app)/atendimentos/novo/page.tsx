@@ -115,9 +115,6 @@ export default function NovoAtendimentoPage() {
   const [data, setData] = useState(hojeISO);
   const [horario, setHorario] = useState<string | null>(null);
   const [valorConsulta, setValorConsulta] = useState("250");
-  // FI06 — preço de tabela do profissional. Cobrar abaixo dele é desconto
-  // e passa a exigir justificativa, igual à gratuidade.
-  const [valorTabela, setValorTabela] = useState("250");
   const [statusPagamento, setStatusPagamento] =
     useState<FinalizarAtendimentoInput["statusPagamento"]>("pago");
   const [motivo, setMotivo] = useState("");
@@ -151,9 +148,7 @@ export default function NovoAtendimentoPage() {
         if (res.profissionais.length > 0) {
           const primeiro = res.profissionais[0];
           setProfissionalId(primeiro.id);
-          const base = String(Number(primeiro.valorConsultaBase));
-          setValorConsulta(base);
-          setValorTabela(base);
+          setValorConsulta(String(Number(primeiro.valorConsultaBase)));
         }
       })
       .catch((err) => toast.error(apiErrorMessage(err)));
@@ -255,7 +250,12 @@ export default function NovoAtendimentoPage() {
   }, [dowDaData, turnoDoHorario, turnosPorDow]);
 
   const valorCobradoNum = parseValor(valorConsulta);
-  const valorTabelaNum = parseValor(valorTabela);
+  // FI06 — o preço de tabela é o `valorConsultaBase` do profissional escolhido:
+  // ninguém digita, e é o mesmo número que o servidor usa para decidir se houve
+  // desconto quando `valorOriginal` não vai no body.
+  const valorTabelaNum = profSelecionado
+    ? parseValor(String(profSelecionado.valorConsultaBase))
+    : null;
 
   // FI06 — desconto parcial: cobrado abaixo do preço de tabela.
   const desconto =
@@ -364,11 +364,6 @@ export default function NovoAtendimentoPage() {
       toast.error("Informe um valor cobrado válido");
       return;
     }
-    // FI06 — tabela abaixo do cobrado seria desconto negativo (422 no servidor).
-    if (valorTabelaNum !== null && valorTabelaNum < valorCobradoNum) {
-      toast.error("Valor de tabela não pode ser menor que o valor cobrado");
-      return;
-    }
     if (ehGratuito && motivo.trim().length < 3) {
       toast.error("Motivo é obrigatório para atendimento gratuito");
       return;
@@ -418,9 +413,8 @@ export default function NovoAtendimentoPage() {
         data,
         hora: horario,
         valorConsulta: valorCobradoNum,
-        // Só viaja quando de fato houve desconto — sem desconto o campo fica
-        // null no banco ("cobrado cheio").
-        valorOriginal: houveDesconto ? valorTabelaNum ?? undefined : undefined,
+        // FI06: `valorOriginal` NÃO vai no body — o servidor deriva a tabela do
+        // `valorConsultaBase` do profissional e só grava quando houve desconto.
         statusPagamento,
         motivoDescontoOuGratuidade: exigeMotivo ? motivo.trim() : undefined,
         observacoes: observacoes.trim() || undefined,
@@ -498,9 +492,7 @@ export default function NovoAtendimentoPage() {
                       setHorario(null);
                       const prof = profissionais.find((p) => p.id === novoId);
                       if (prof) {
-                        const base = String(Number(prof.valorConsultaBase));
-                        setValorConsulta(base);
-                        setValorTabela(base);
+                        setValorConsulta(String(Number(prof.valorConsultaBase)));
                       }
                     }}
                     required
@@ -626,21 +618,6 @@ export default function NovoAtendimentoPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="valorTabela">Valor de tabela (R$)</Label>
-                  <Input
-                    id="valorTabela"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={valorTabela}
-                    onChange={(e) => setValorTabela(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Preço cheio do profissional. Deixe em branco se não houver
-                    tabela.
-                  </p>
-                </div>
-                <div className="space-y-1.5">
                   <Label htmlFor="valor">Valor cobrado (R$)</Label>
                   <Input
                     id="valor"
@@ -651,8 +628,26 @@ export default function NovoAtendimentoPage() {
                     onChange={(e) => setValorConsulta(e.target.value)}
                     aria-required="true"
                   />
+                  {valorTabelaNum !== null ? (
+                    <p
+                      className="text-sm text-muted-foreground"
+                      data-testid="valor-tabela"
+                    >
+                      Valor de tabela:{" "}
+                      <span className="font-medium tabular-nums text-foreground">
+                        {formatBRL(valorTabelaNum)}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Escolha um profissional para ver o valor de tabela.
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
-                    O que o paciente paga por esta consulta.
+                    O que o paciente paga por esta consulta. O preço vem do
+                    cadastro
+                    {profSelecionado ? ` de ${profSelecionado.nome}` : ""} —
+                    cobrar abaixo dele exige justificativa.
                   </p>
                 </div>
               </div>

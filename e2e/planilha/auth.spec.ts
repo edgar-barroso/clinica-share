@@ -154,7 +154,9 @@ test("RF-022 — controle de acesso por perfil (5 perfis + 403 em rota restrita)
   const perfis: { perfil: Perfil; role: string; url: RegExp }[] = [
     { perfil: "admin", role: "admin", url: /\/dashboard$/ },
     { perfil: "auxiliar", role: "auxiliar", url: /\/dashboard$/ },
-    { perfil: "profissional", role: "profissional", url: /\/dashboard$/ },
+    // Cada perfil cai na primeira tela do próprio menu. A profissional não
+    // passa pelo painel da clínica: ele depende de dados que ela não pode ver.
+    { perfil: "profissional", role: "profissional", url: /\/minha-agenda$/ },
     { perfil: "atendente", role: "atendente", url: /\/agenda$/ },
     { perfil: "paciente", role: "paciente", url: /\/p$/ },
   ];

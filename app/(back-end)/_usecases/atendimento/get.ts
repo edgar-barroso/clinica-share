@@ -26,7 +26,15 @@ export async function getAtendimento(id: string, viewer: Viewer) {
     include: {
       paciente: { select: { id: true, nome: true, telefone: true, email: true } },
       profissional: {
-        select: { id: true, nome: true, especialidade: true, conselho: true },
+        select: {
+          id: true,
+          nome: true,
+          especialidade: true,
+          conselho: true,
+          // FI06: a tela precisa saber o preço de tabela para calcular e exibir
+          // o desconto sem pedir que ninguém digite o valor de novo.
+          valorConsultaBase: true,
+        },
       },
       consultorio: { select: { id: true, nome: true } },
       procedimentos: {

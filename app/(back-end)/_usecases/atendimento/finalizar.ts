@@ -42,7 +42,12 @@ export async function finalizarAtendimento(
 ) {
   const before = await prisma.atendimento.findUnique({
     where: { id },
-    include: { procedimentos: { select: procedimentoSelect } },
+    include: {
+      procedimentos: { select: procedimentoSelect },
+      // FI06: o preço de tabela é o do cadastro do profissional. Ninguém
+      // precisa digitá-lo — o servidor já sabe quanto a consulta custa.
+      profissional: { select: { valorConsultaBase: true } },
+    },
   });
   if (!before) throw new NaoEncontrado("Atendimento");
 
@@ -67,9 +72,23 @@ export async function finalizarAtendimento(
   // FI06: cobrar abaixo do valor de tabela é desconto e preserva a
   // justificativa. Antes o motivo era jogado fora sempre que o pagamento não
   // fosse "gratuito", então desconto parcial ficava sem rastro nenhum.
-  const houveDesconto =
-    input.valorOriginal !== undefined &&
-    input.valorConsulta < input.valorOriginal;
+  //
+  // A tabela vem do cadastro do profissional (`valorConsultaBase`); o cliente
+  // pode sobrescrever via `valorOriginal` para casos combinados fora da
+  // tabela, mas não é obrigado a informar nada.
+  const valorTabela = Number(
+    input.valorOriginal ?? before.profissional.valorConsultaBase,
+  );
+  const houveDesconto = input.valorConsulta < valorTabela;
+
+  if (houveDesconto) {
+    const motivo = input.motivoDescontoOuGratuidade?.trim() ?? "";
+    if (motivo.length < 3) {
+      throw new RegraNegocio(
+        `Cobrança de ${input.valorConsulta} abaixo do valor de tabela (${valorTabela}) exige justificativa (FI06)`,
+      );
+    }
+  }
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.atendimento.update({
@@ -77,10 +96,9 @@ export async function finalizarAtendimento(
       data: {
         status: "realizado",
         valorConsulta: new Prisma.Decimal(input.valorConsulta),
-        // FI06: preço de tabela, para o desconto ser detectável depois.
-        ...(input.valorOriginal === undefined
-          ? {}
-          : { valorOriginal: new Prisma.Decimal(input.valorOriginal) }),
+        // FI06: registra o preço de tabela SÓ quando houve desconto — é o que
+        // torna a diferença reconstituível depois. Sem desconto fica null.
+        valorOriginal: houveDesconto ? new Prisma.Decimal(valorTabela) : null,
         statusPagamento: input.statusPagamento,
         motivoDescontoOuGratuidade:
           input.statusPagamento === "gratuito" || houveDesconto
@@ -191,7 +209,7 @@ export async function finalizarAtendimento(
           entidade: "Atendimento",
           entidadeId: id,
           campo: "desconto",
-          valorAntes: String(input.valorOriginal),
+          valorAntes: String(valorTabela),
           valorDepois: updated.valorConsulta.toString(),
           motivo:
             input.motivoDescontoOuGratuidade ?? "Desconto concedido (FI06)",

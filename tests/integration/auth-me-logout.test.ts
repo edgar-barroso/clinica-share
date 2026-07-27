@@ -53,7 +53,10 @@ describe("GET /api/auth/me + POST /api/auth/logout", () => {
   });
 
   it("/logout limpa o cookie (maxAge=0)", async () => {
-    const res = await logoutPost();
+    // O logout agora recebe a request para poder invalidar o token no
+    // servidor (RF-024). Sem cookie ele só limpa e responde 200 — logout é
+    // idempotente e não revela se havia sessão.
+    const res = await logoutPost(jsonRequest("/api/auth/logout", {}));
     expect(res.status).toBe(200);
     const cookie = res.cookies.get("auth-token");
     expect(cookie?.value).toBe("");

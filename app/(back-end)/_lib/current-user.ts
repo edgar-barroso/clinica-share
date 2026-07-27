@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import { readAuthCookie } from "./auth-cookie";
 import { verifyAuthToken } from "./jwt";
 import { NaoAutenticado } from "./errors";
-import { isSessionIdle, touchUltimoAcesso } from "./session-activity";
+import {
+  isSessionIdle,
+  isSessionRevoked,
+  touchUltimoAcesso,
+} from "./session-activity";
 
 /**
  * [RF-024] Além do JWT, valida a janela de inatividade contra
@@ -16,12 +20,15 @@ export async function getUserFromRequest(req: NextRequest) {
   const token = readAuthCookie(req);
   if (!token) return null;
   try {
-    const { userId } = verifyAuthToken(token);
+    const { userId, iat } = verifyAuthToken(token);
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { paciente: true, profissional: true, staff: true },
     });
     if (!user) return null;
+    // RF-024: token anterior ao último logout não vale — cobre o caso da
+    // resposta em voo que repunha o cookie depois do "Sair".
+    if (isSessionRevoked(user.sessoesInvalidadasEm, iat)) return null;
     if (isSessionIdle(user.ultimoAcesso)) return null;
 
     const ultimoAcesso = await touchUltimoAcesso(user.id, user.ultimoAcesso);

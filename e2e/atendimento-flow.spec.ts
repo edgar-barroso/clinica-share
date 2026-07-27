@@ -228,6 +228,10 @@ test.describe("Atendimentos — fluxo completo (Fase 4)", () => {
     const res = await page.request.patch(`/api/atendimentos/${a.id}`, {
       data: {
         valorConsulta: 150,
+        // FI06: 150 fica abaixo do valor de tabela do cadastro (200 =
+        // `valorConsultaBase`), então a edição também precisa justificar o
+        // abatimento — a mesma regra do finalizar e do walk-in.
+        motivoDescontoOuGratuidade: "Abatimento acordado na recepção (FI06)",
         motivo: "Cliente alegou cobrança duplicada",
       },
     });

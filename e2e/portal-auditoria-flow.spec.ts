@@ -149,6 +149,9 @@ test.describe("Auditoria — Fase 8", () => {
     const res = await page.request.patch(`/api/atendimentos/${a.id}`, {
       data: {
         valorConsulta: 180,
+        // FI06: 180 fica abaixo do valor de tabela do profissional (200), então
+        // a edição é um desconto e exige a justificativa do abatimento.
+        motivoDescontoOuGratuidade: "Ajuste combinado com o paciente",
         motivo: "Teste auditoria E2E",
       },
     });

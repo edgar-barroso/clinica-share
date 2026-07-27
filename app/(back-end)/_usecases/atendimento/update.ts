@@ -31,7 +31,12 @@ export async function updateAtendimento(
 ) {
   const before = await prisma.atendimento.findUnique({
     where: { id },
-    include: { procedimentos: { select: procedimentoSelect } },
+    include: {
+      procedimentos: { select: procedimentoSelect },
+      // FI06: preço de tabela do cadastro, para a edição aplicar a mesma
+      // regra de desconto que o finalizar e o walk-in.
+      profissional: { select: { valorConsultaBase: true } },
+    },
   });
   if (!before) throw new NaoEncontrado("Atendimento");
 
@@ -61,8 +66,30 @@ export async function updateAtendimento(
     if (input.motivoDescontoOuGratuidade !== undefined) {
       data.motivoDescontoOuGratuidade = input.motivoDescontoOuGratuidade;
     }
-    // FI06: valor de tabela, para o desconto continuar detectável na edição.
-    if (input.valorOriginal !== undefined) {
+    // FI06: a mesma regra do finalizar/walk-in. A tabela sai do cadastro do
+    // profissional; `valorOriginal` no body só sobrescreve casos combinados.
+    // Sem isto, um desconto aplicado na edição ficaria sem registro do
+    // abatimento e sumiria do relatório.
+    if (input.valorConsulta !== undefined) {
+      const valorTabela = Number(
+        input.valorOriginal ?? before.profissional.valorConsultaBase,
+      );
+      const houveDesconto = input.valorConsulta < valorTabela;
+      if (houveDesconto) {
+        const motivo =
+          input.motivoDescontoOuGratuidade?.trim() ??
+          before.motivoDescontoOuGratuidade?.trim() ??
+          "";
+        if (motivo.length < 3) {
+          throw new RegraNegocio(
+            `Cobrança de ${input.valorConsulta} abaixo do valor de tabela (${valorTabela}) exige justificativa (FI06)`,
+          );
+        }
+      }
+      // Sem desconto o campo é LIMPO: senão sobra um preço de tabela órfão de
+      // uma edição anterior que já foi desfeita.
+      data.valorOriginal = houveDesconto ? new Prisma.Decimal(valorTabela) : null;
+    } else if (input.valorOriginal !== undefined) {
       data.valorOriginal = new Prisma.Decimal(input.valorOriginal);
     }
     if (input.prontuarioInterno !== undefined) {

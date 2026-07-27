@@ -93,6 +93,8 @@ interface AtendimentoApi extends AgendamentoApi {
   valorOriginal: string | null;
   motivoDescontoOuGratuidade: string | null;
   procedimentos?: { descricao: string; valor: string }[];
+  /** Só no GET de um atendimento — `valorConsultaBase` vem junto (FI06). */
+  profissional?: { id: string; nome: string; valorConsultaBase?: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +157,33 @@ async function abrirProximoAtendimento(page: Page): Promise<string> {
 }
 
 const soma = (nums: number[]) => nums.reduce((a, b) => a + b, 0);
+
+/**
+ * FI06 — preço de tabela do atendimento: o `valorConsultaBase` do cadastro do
+ * profissional. Nenhuma tela pede esse número digitado e o servidor deriva
+ * dele quando `valorOriginal` não vai no body.
+ */
+async function valorDeTabela(page: Page, atendimentoId: string): Promise<number> {
+  const { atendimento } = await getJson<{ atendimento: AtendimentoApi }>(
+    page,
+    `/api/atendimentos/${atendimentoId}`,
+  );
+  const valor = Number(atendimento.profissional?.valorConsultaBase);
+  expect(
+    Number.isFinite(valor) && valor > 0,
+    "GET /api/atendimentos/[id] precisa trazer profissional.valorConsultaBase",
+  ).toBe(true);
+  return valor;
+}
+
+/** Parte numérica de um valor em BRL, como a tela imprime ("1.234,50"). */
+function moeda(valor: number): RegExp {
+  const texto = valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return new RegExp(texto.replace(/\./g, "\\."));
+}
 
 // ===========================================================================
 // FI01 — Cadastro de contrato por profissional (aluguel fixo OU percentual)
@@ -484,9 +513,12 @@ test("FI05 — status de pagamento pago, pendente e gratuito", async ({ page }) 
   //    e depois pendente → pago (FI11, admin/auxiliar, com motivo auditado).
   const atendimentoId = await abrirProximoAtendimento(page);
 
+  // FI06: cobrar exatamente a tabela do cadastro mantém o foco em FI05 —
+  // abaixo dela o servidor passaria a exigir justificativa de desconto.
+  const valorTabelaFI05 = await valorDeTabela(page, atendimentoId);
   const finalizar = await page.request.post(
     `/api/atendimentos/${atendimentoId}/finalizar`,
-    { data: { valorConsulta: 220, statusPagamento: "pendente" } },
+    { data: { valorConsulta: valorTabelaFI05, statusPagamento: "pendente" } },
   );
   expect(finalizar.status(), "POST /finalizar (AT06)").toBe(200);
   const finalizado = (await finalizar.json()) as { atendimento: AtendimentoApi };
@@ -560,18 +592,27 @@ test("FI06 — gratuidade e desconto parcial só são registrados com justificat
   await mostrar(page);
 
   // ---------------------------------------------------------------------
-  // DESCONTO PARCIAL — cobrar abaixo do preço de tabela (`valorOriginal`)
+  // DESCONTO PARCIAL — cobrar abaixo do preço de tabela do cadastro
   // ---------------------------------------------------------------------
   const descontoId = await abrirProximoAtendimento(page);
 
+  // O valor de tabela NÃO é digitado em lugar nenhum: é o
+  // `Profissional.valorConsultaBase`, e é dele que o servidor parte para saber
+  // se houve desconto. `valorOriginal` no body só serve a preço combinado
+  // fora da tabela.
+  const tabela = await valorDeTabela(page, descontoId);
+  const DESCONTO = 70;
+  const cobradoComDesconto = Math.round((tabela - DESCONTO) * 100) / 100;
+  expect(cobradoComDesconto, "a seed precisa de tabela acima do desconto").toBeGreaterThan(0);
+
   // 4) Valor de tabela MENOR que o cobrado é incoerente (desconto negativo)
-  //    e o servidor recusa antes de gravar (422).
+  //    e o servidor recusa antes de gravar (422 — a coerência ainda é Zod).
   const tabelaMenor = await page.request.post(
     `/api/atendimentos/${descontoId}/finalizar`,
     {
       data: {
-        valorConsulta: 220,
-        valorOriginal: 150,
+        valorConsulta: tabela,
+        valorOriginal: cobradoComDesconto,
         statusPagamento: "pago",
         motivoDescontoOuGratuidade: "Tentativa incoerente (comprovação FI06)",
       },
@@ -582,38 +623,43 @@ test("FI06 — gratuidade e desconto parcial só são registrados com justificat
     /[Vv]alor de tabela não pode ser menor/,
   );
 
-  // 5) Cobrar abaixo da tabela SEM justificativa também é recusado (422) —
-  //    é exatamente a regra que a gratuidade já tinha, agora valendo para o
-  //    desconto parcial.
+  // 5) Cobrar abaixo da tabela SEM justificativa é recusado com 400: a regra
+  //    não vive mais no Zod (o schema não conhece o preço de tabela), e sim no
+  //    usecase, que compara o cobrado com o `valorConsultaBase` do cadastro.
   const descontoSemMotivo = await page.request.post(
     `/api/atendimentos/${descontoId}/finalizar`,
     {
       data: {
-        valorConsulta: 150, // consulta de tabela R$ 220
-        valorOriginal: 220,
+        valorConsulta: cobradoComDesconto,
         statusPagamento: "pago",
       },
     },
   );
   expect(
     descontoSemMotivo.status(),
-    "desconto parcial sem motivo deve ser 422",
-  ).toBe(422);
+    "desconto parcial sem motivo deve ser 400 (RegraNegocio)",
+  ).toBe(400);
   expect(JSON.stringify(await descontoSemMotivo.json())).toMatch(
-    /[Mm]otivo é obrigatório/,
+    /exige justificativa/i,
   );
 
-  // 6) Pela TELA: o formulário de finalização separa "Valor de tabela" de
-  //    "Valor cobrado", calcula o desconto ao vivo e passa a exigir a
-  //    "Justificativa do desconto" (mesmo campo da gratuidade, outro rótulo).
+  // 6) Pela TELA: o valor de tabela é EXIBIDO (vem do cadastro, não é campo
+  //    digitável), o desconto é calculado ao vivo sobre ele e a
+  //    "Justificativa do desconto" passa a ser exigida (mesmo campo da
+  //    gratuidade, outro rótulo).
   await irPara(page, `/atendimentos/${descontoId}`, /^Atendimento #/);
   await page.getByRole("button", { name: /Finalizar e registrar/ }).click();
 
-  const campoTabela = page.getByLabel("Valor de tabela (R$)");
-  await expect(campoTabela).toBeVisible({ timeout: 20_000 });
-  await campoTabela.fill("220");
-  await page.getByLabel("Valor cobrado (R$)").fill("150");
-  await expect(page.getByTestId("desconto-concedido")).toHaveText(/70,00/);
+  const tabelaExibida = page.getByTestId("valor-tabela");
+  await expect(tabelaExibida).toBeVisible({ timeout: 20_000 });
+  await expect(tabelaExibida).toHaveText(moeda(tabela));
+  await expect(page.getByLabel("Valor de tabela (R$)")).toHaveCount(0);
+  await page
+    .getByLabel("Valor cobrado (R$)")
+    .fill(String(cobradoComDesconto));
+  await expect(page.getByTestId("desconto-concedido")).toHaveText(
+    moeda(DESCONTO),
+  );
   // Os botões de status vêm em minúsculas no DOM (capitalize é só CSS).
   // A classe `border-primary` é o único indicador de seleção — esperar por ela
   // garante que o clique registrou antes de submeter.
@@ -648,8 +694,9 @@ test("FI06 — gratuidade e desconto parcial só são registrados com justificat
     atendimento: AtendimentoApi;
   }>(page, `/api/atendimentos/${descontoId}`);
   expect(comDesconto.statusPagamento).toBe("pago");
-  expect(Number(comDesconto.valorConsulta)).toBeCloseTo(150, 2);
-  expect(Number(comDesconto.valorOriginal)).toBeCloseTo(220, 2);
+  expect(Number(comDesconto.valorConsulta)).toBeCloseTo(cobradoComDesconto, 2);
+  // Derivado pelo servidor a partir do cadastro — a tela não mandou o número.
+  expect(Number(comDesconto.valorOriginal)).toBeCloseTo(tabela, 2);
   expect(comDesconto.motivoDescontoOuGratuidade).toBe(justificativaDesconto);
 
   // 8) E a tela do atendimento presta contas do abatimento concedido.

@@ -19,6 +19,7 @@ import {
   entrarComo,
   isoHoje,
   lerJson,
+  moedaBR,
   porExtenso,
   type AtendimentoApi,
 } from "./_support";
@@ -168,7 +169,12 @@ test("07 — Profissional registra o atendimento com procedimentos extras", asyn
       await page
         .getByRole("button", { name: /Finalizar e registrar/i })
         .click();
-      await page.getByLabel("Valor de tabela (R$)").fill(String(valorConsulta));
+      // FI06: o valor de tabela não é digitado — a tela mostra o
+      // `valorConsultaBase` do cadastro da profissional e o servidor deriva
+      // dele. Cobrar exatamente a tabela não gera desconto.
+      await expect(page.getByTestId("valor-tabela")).toHaveText(
+        moedaBR(valorConsulta),
+      );
       await page.getByLabel("Valor cobrado (R$)").fill(String(valorConsulta));
       await jornada.validar(
         page.getByTestId("total-geral"),

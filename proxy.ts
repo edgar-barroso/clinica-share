@@ -31,6 +31,8 @@ const AUTH_COOKIE = "auth-token";
 interface TokenPayload {
   userId: string;
   role: string;
+  /** Emissão em segundos. Repassada aos handlers como `x-token-iat`. */
+  iat?: number;
 }
 
 async function verifyToken(token: string): Promise<TokenPayload> {
@@ -38,7 +40,7 @@ async function verifyToken(token: string): Promise<TokenPayload> {
   if (typeof payload.userId !== "string" || typeof payload.role !== "string") {
     throw new Error("Payload JWT inválido");
   }
-  return { userId: payload.userId, role: payload.role };
+  return { userId: payload.userId, role: payload.role, iat: payload.iat };
 }
 
 /**
@@ -76,6 +78,20 @@ async function slideSession(
   }
 
   const agora = Date.now();
+
+  // Renova só quando o token já gastou metade da janela. Reemitir o cookie em
+  // TODA resposta autenticada abria uma corrida com o logout: qualquer
+  // requisição em voo (RoleProvider, keepalive do guard de inatividade)
+  // devolvia `Set-Cookie` com o token válido e ressuscitava a sessão que o
+  // usuário acabara de encerrar. Renovar na metade preserva o sliding
+  // expiration — quem está ativo nunca chega perto de expirar — e tira o
+  // `Set-Cookie` da esmagadora maioria das respostas.
+  if (payload.iat !== undefined) {
+    const idadeMs = agora - payload.iat * 1000;
+    if (idadeMs < (SESSION_IDLE_SECONDS * 1000) / 2) {
+      return res;
+    }
+  }
   const token = await new SignJWT({ userId: payload.userId, role: payload.role })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -154,6 +170,11 @@ async function handleApi(
         const headers = new Headers(request.headers);
         headers.set("x-user-id", payload.userId);
         headers.set("x-user-role", payload.role);
+        // RF-024: `requireUser` compara com `sessoesInvalidadasEm` para
+        // recusar token anterior ao último logout.
+        if (payload.iat !== undefined) {
+          headers.set("x-token-iat", String(payload.iat));
+        }
         return slideSession(
           NextResponse.next({ request: { headers } }),
           request,
@@ -175,6 +196,9 @@ async function handleApi(
     const headers = new Headers(request.headers);
     headers.set("x-user-id", payload.userId);
     headers.set("x-user-role", payload.role);
+    if (payload.iat !== undefined) {
+      headers.set("x-token-iat", String(payload.iat));
+    }
     return slideSession(
       NextResponse.next({ request: { headers } }),
       request,

@@ -90,7 +90,6 @@ export default function AtendimentoDetailPage({
   const [loading, setLoading] = useState(true);
   const [showFinalize, setShowFinalize] = useState(false);
   const [valor, setValor] = useState("");
-  const [valorTabela, setValorTabela] = useState("");
   const [statusPag, setStatusPag] = useState<StatusPagamento>("pago");
   const [motivoJustificativa, setMotivoJustificativa] = useState("");
   const [procedimentos, setProcedimentos] = useState<ProcedimentoLinha[]>([]);
@@ -105,9 +104,6 @@ export default function AtendimentoDetailPage({
       const { atendimento } = await apiGetAtendimento(id);
       setAtendimento(atendimento);
       setValor(String(atendimento.valorConsulta));
-      setValorTabela(
-        String(atendimento.valorOriginal ?? atendimento.valorConsulta),
-      );
       setStatusPag(atendimento.statusPagamento);
       setMotivoJustificativa(atendimento.motivoDescontoOuGratuidade ?? "");
       setProcedimentos(
@@ -157,13 +153,16 @@ export default function AtendimentoDetailPage({
   // --- FI04/FI06: totais ao vivo do formulário -----------------------------
   const valorCobradoNum = paraNumero(valor);
   const valorCobrado = Number.isFinite(valorCobradoNum) ? valorCobradoNum : 0;
-  const valorTabelaNum = paraNumero(valorTabela);
+  // FI06: o valor de tabela é o do cadastro do profissional (o servidor deriva
+  // dele quando `valorOriginal` não vai no body). A tela só exibe — ninguém
+  // digita o preço de novo.
+  const valorTabelaTexto = atendimento.profissional.valorConsultaBase;
+  const valorTabelaNum =
+    valorTabelaTexto != null ? Number(valorTabelaTexto) : NaN;
+  const temValorTabela = Number.isFinite(valorTabelaNum);
   const totalProcedimentos = somaProcedimentos(procedimentos);
   const totalGeral = valorCobrado + totalProcedimentos;
-  const temDesconto =
-    valorTabela.trim() !== "" &&
-    Number.isFinite(valorTabelaNum) &&
-    valorTabelaNum > valorCobrado;
+  const temDesconto = temValorTabela && valorCobrado < valorTabelaNum;
   const descontoConcedido = temDesconto ? valorTabelaNum - valorCobrado : 0;
   const ehGratuito = statusPag === "gratuito";
   const motivoObrigatorio = temDesconto || ehGratuito;
@@ -197,18 +196,10 @@ export default function AtendimentoDetailPage({
     });
   }
 
-  /** Mesmas regras do servidor — evita o 422 e dá feedback imediato. */
+  /** Mesmas regras do servidor — evita a ida e volta e dá feedback imediato. */
   function validarFormulario(): string | null {
     if (!Number.isFinite(valorCobradoNum) || valorCobradoNum < 0) {
       return "Informe um valor cobrado válido";
-    }
-    if (valorTabela.trim() !== "") {
-      if (!Number.isFinite(valorTabelaNum) || valorTabelaNum < 0) {
-        return "Informe um valor de tabela válido";
-      }
-      if (valorTabelaNum < valorCobradoNum) {
-        return "O valor de tabela não pode ser menor que o valor cobrado";
-      }
     }
     if (motivoObrigatorio && motivoJustificativa.trim().length < 3) {
       return ehGratuito
@@ -258,7 +249,8 @@ export default function AtendimentoDetailPage({
     try {
       await apiFinalizarAtendimento(id, {
         valorConsulta: valorCobradoNum,
-        valorOriginal: temDesconto ? valorTabelaNum : undefined,
+        // FI06: `valorOriginal` NÃO vai no body — o servidor usa o
+        // `valorConsultaBase` do profissional como valor de tabela.
         statusPagamento: statusPag,
         motivoDescontoOuGratuidade: motivoObrigatorio
           ? motivoJustificativa.trim()
@@ -367,24 +359,9 @@ export default function AtendimentoDetailPage({
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleFinalizar} className="space-y-6">
-                  {/* ---- FI06: valor de tabela x valor cobrado ---- */}
+                  {/* ---- FI06: valor de tabela (do cadastro) x valor cobrado ---- */}
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="valorTabela">Valor de tabela (R$)</Label>
-                        <Input
-                          id="valorTabela"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="tabular-nums"
-                          value={valorTabela}
-                          onChange={(e) => setValorTabela(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Preço cheio da consulta, antes de qualquer desconto.
-                        </p>
-                      </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="valor">Valor cobrado (R$)</Label>
                         <Input
@@ -397,6 +374,25 @@ export default function AtendimentoDetailPage({
                           onChange={(e) => setValor(e.target.value)}
                           required
                         />
+                        {temValorTabela ? (
+                          <p
+                            className="text-sm text-muted-foreground"
+                            data-testid="valor-tabela"
+                          >
+                            Valor de tabela:{" "}
+                            <span className="font-medium tabular-nums text-foreground">
+                              {formatBRL(valorTabelaNum)}
+                            </span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Profissional sem valor de consulta cadastrado.
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Preço do cadastro de {atendimento.profissional.nome} —
+                          cobrar abaixo dele exige justificativa.
+                        </p>
                       </div>
                     </div>
 
