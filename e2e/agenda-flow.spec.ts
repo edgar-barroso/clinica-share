@@ -3,6 +3,12 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
+import {
+  escolherDiaNoCalendario,
+  horariosLivres,
+  isoLocal,
+  proximoDiaUtil,
+} from "./helpers/calendario";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -13,15 +19,19 @@ const PACIENTE_EMAIL = `pac-e2e-${Date.now()}@example.com`;
 
 let profissionalId = "";
 let consultorioId = "";
+/** Horário efetivamente escolhido no primeiro teste; os seguintes reusam. */
+let horaCriada = "";
 
+/**
+ * Próximo dia ÚTIL, não simplesmente amanhã: `TurnoFixo` só aceita diaSemana
+ * 1..5 e o calendário desabilita os dias em que o profissional não atende,
+ * então cair num sábado deixaria o teste sem nenhum dia clicável.
+ */
 function dataAmanhaISO() {
   const d = new Date();
-  d.setHours(0, 0, 0, 0);
+  d.setHours(12, 0, 0, 0);
   d.setDate(d.getDate() + 1);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return isoLocal(proximoDiaUtil(d));
 }
 
 test.beforeAll(async () => {
@@ -77,6 +87,19 @@ test.beforeAll(async () => {
     },
   });
   consultorioId = cons.id;
+
+  // Sem TurnoFixo o calendário não libera dia nenhum e `createAgendamento`
+  // recusa com 400 antes de avaliar conflito de horário — era por isso que o
+  // teste de AG05 recebia 400 onde esperava 409.
+  const alvo = new Date(`${dataAmanhaISO()}T12:00:00`);
+  await prisma.turnoFixo.create({
+    data: {
+      profissionalId: prof.id,
+      consultorioId: cons.id,
+      diaSemana: alvo.getDay(),
+      turno: "manha",
+    },
+  });
 });
 
 test.afterAll(async () => {
@@ -106,12 +129,16 @@ test.describe("Agenda — fluxo Atendente (Fase 3)", () => {
 
     // Profissional + consultório já vêm pré-selecionados (os únicos cadastrados)
 
-    // Data: amanhã
+    // Data: próximo dia útil, escolhido no calendário mensal (a tela deixou
+    // de ter um input de data)
     const data = dataAmanhaISO();
-    await page.getByLabel("Data").fill(data);
+    await escolherDiaNoCalendario(page, data);
 
-    // Horário 09:00
-    await page.getByRole("button", { name: "09:00", exact: true }).click();
+    // Primeiro horário realmente livre da grade do profissional
+    const slots = horariosLivres(page);
+    await expect(slots.first()).toBeVisible();
+    horaCriada = (await slots.first().innerText()).trim();
+    await slots.first().click();
 
     await Promise.all([
       page.waitForURL("**/agenda", { timeout: 15_000 }),
@@ -122,7 +149,7 @@ test.describe("Agenda — fluxo Atendente (Fase 3)", () => {
     // (a página abre em hoje; navegamos para amanhã via API direta para validar)
     // Nesta versão simplificada, validamos via DB que o agendamento existe:
     const ag = await prisma.atendimento.findFirst({
-      where: { profissionalId, hora: "09:00" },
+      where: { profissionalId, hora: horaCriada },
     });
     expect(ag).not.toBeNull();
     expect(ag?.status).toBe("agendado");
@@ -148,7 +175,7 @@ test.describe("Agenda — fluxo Atendente (Fase 3)", () => {
         profissionalId,
         consultorioId,
         data,
-        hora: "09:00",
+        hora: horaCriada,
       },
     });
     expect(res.status()).toBe(409);
@@ -158,7 +185,7 @@ test.describe("Agenda — fluxo Atendente (Fase 3)", () => {
     await loginAsAtendente(page);
 
     const ag = await prisma.atendimento.findFirstOrThrow({
-      where: { profissionalId, hora: "09:00" },
+      where: { profissionalId, hora: horaCriada },
     });
 
     const res = await page.request.post(
@@ -177,8 +204,20 @@ test.describe("Agenda — fluxo Atendente (Fase 3)", () => {
   test("cancelar com motivo grava AuditLog", async ({ page }) => {
     await loginAsAtendente(page);
 
-    const ag = await prisma.atendimento.findFirstOrThrow({
-      where: { profissionalId, hora: "09:00" },
+    // Agendamento próprio: o do teste anterior já foi movido para
+    // `em_atendimento`, e o cancelamento só aceita `agendado`.
+    const paciente = await prisma.paciente.findFirstOrThrow();
+    const ag = await prisma.atendimento.create({
+      data: {
+        data: new Date(dataAmanhaISO()),
+        hora: "11:30",
+        pacienteId: paciente.id,
+        profissionalId,
+        consultorioId,
+        valorConsulta: 200,
+        status: "agendado",
+        statusPagamento: "pendente",
+      },
     });
 
     const res = await page.request.post(
