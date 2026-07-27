@@ -168,4 +168,47 @@ describe("DELETE /api/consultorios/[id] — soft delete", () => {
     expect(persisted).not.toBeNull();
     expect(persisted?.ativo).toBe(false);
   });
+
+  it("reativa consultório desativado (PATCH ativo: true)", async () => {
+    // Antes só existia caminho de ida: a UI tinha "Desativar" e nenhuma ação
+    // de volta, então uma sala em reforma ficava inacessível para sempre.
+    const c = await prisma.consultorio.create({
+      data: { ...validInput, ativo: false },
+    });
+    const { token } = await createUserWithRole("admin");
+
+    const res = await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/consultorios/${c.id}`, { ativo: true }),
+        token,
+      ),
+      ctxWithId(c.id),
+    );
+    expect(res.status).toBe(200);
+
+    const persisted = await prisma.consultorio.findUnique({ where: { id: c.id } });
+    expect(persisted?.ativo).toBe(true);
+  });
+
+  it("consultório reativado volta a aparecer no filtro de ativos", async () => {
+    const c = await prisma.consultorio.create({
+      data: { ...validInput, ativo: false },
+    });
+    const { token } = await createUserWithRole("admin");
+
+    await itemPatch(
+      withAuthCookie(
+        jsonRequest(`/api/consultorios/${c.id}`, { ativo: true }),
+        token,
+      ),
+      ctxWithId(c.id),
+    );
+
+    const res = await listGet(
+      withAuthCookie(getRequest("/api/consultorios?ativo=true"), token),
+    );
+    const body = await res.json();
+    const lista = body.consultorios ?? body;
+    expect(lista.some((x: { id: string }) => x.id === c.id)).toBe(true);
+  });
 });

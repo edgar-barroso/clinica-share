@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -65,6 +65,9 @@ export default function EditarConsultorioPage({
   const [novoEq, setNovoEq] = useState("");
   const [especialidades, setEspecialidades] = useState<string[]>([]);
   const [showDelete, setShowDelete] = useState(false);
+  // Um consultório desativado precisa de caminho de volta: antes só existia
+  // o botão de desativar, e a sala ficava inacessível para sempre pela UI.
+  const [ativo, setAtivo] = useState(true);
 
   useEffect(() => {
     apiGetConsultorio(id)
@@ -73,6 +76,7 @@ export default function EditarConsultorioPage({
         setNome(c.nome);
         setTipo(c.tipo);
         setEquipamentos(c.equipamentos);
+        setAtivo(c.ativo);
         setEspecialidades(c.especialidadesCompativeis);
       })
       .catch((err) => {
@@ -119,6 +123,17 @@ export default function EditarConsultorioPage({
     } catch (err) {
       toast.error(apiErrorMessage(err));
       setSubmitting(false);
+    }
+  }
+
+  async function reativar() {
+    try {
+      await apiUpdateConsultorio(id, { ativo: true });
+      setAtivo(true);
+      toast.success("Consultório reativado");
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
     }
   }
 
@@ -292,6 +307,24 @@ export default function EditarConsultorioPage({
             </CardContent>
           </Card>
 
+          {!ativo ? (
+            <Card className="border-warning/40 bg-warning/5">
+              <CardHeader>
+                <CardTitle>Consultório desativado</CardTitle>
+                <CardDescription>
+                  Ele não aparece em novos agendamentos. O histórico de
+                  atendimentos continua intacto e volta a ficar disponível ao
+                  reativar.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button type="button" onClick={reativar}>
+                  <RotateCcw size={16} />
+                  Reativar consultório
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
           <Card className="border-destructive/30">
             <CardHeader>
               <CardTitle className="text-destructive">Zona de perigo</CardTitle>
@@ -333,6 +366,7 @@ export default function EditarConsultorioPage({
               )}
             </CardContent>
           </Card>
+          )}
         </div>
 
         <aside className="lg:col-span-1">

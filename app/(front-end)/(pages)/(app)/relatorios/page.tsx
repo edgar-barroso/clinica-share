@@ -14,7 +14,7 @@ const reports = [
     href: '/relatorios/gratuitas-descontos',
     icon: Gift,
     title: 'Consultas gratuitas e descontos',
-    description: 'Listagem das gratuidades concedidas no período, com justificativa obrigatória',
+    description: 'Cortesias integrais e descontos parciais concedidos no período, com justificativa obrigatória',
   },
   {
     href: '/relatorios/cancelamentos',

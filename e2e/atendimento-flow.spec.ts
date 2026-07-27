@@ -3,6 +3,12 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
+import {
+  escolherDiaNoCalendario,
+  horariosLivres,
+  isoLocal,
+  proximoDiaUtil,
+} from "./helpers/calendario";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -13,6 +19,8 @@ const ADMIN_PASSWORD = "admin-at-12345";
 let pacienteId = "";
 let profissionalId = "";
 let consultorioId = "";
+/** Dia (YYYY-MM-DD) coberto pelo TurnoFixo do profissional do fixture. */
+let dataComTurnoFixo = "";
 
 test.beforeAll(async () => {
   await prisma.repasse.deleteMany();
@@ -66,6 +74,22 @@ test.beforeAll(async () => {
     },
   });
   consultorioId = cons.id;
+
+  // TurnoFixo é pré-condição da tela /atendimentos/novo: é dele que sai a
+  // sala do atendimento, e o botão "Registrar atendimento" fica `disabled`
+  // enquanto o slot escolhido não cair num turno fixo do profissional.
+  // Ancora no dia em que o walk-in vai acontecer (hoje, ou a próxima
+  // segunda se hoje for fim de semana — o calendário bloqueia sáb/dom).
+  const diaAlvo = proximoDiaUtil(new Date());
+  dataComTurnoFixo = isoLocal(diaAlvo);
+  await prisma.turnoFixo.create({
+    data: {
+      profissionalId: prof.id,
+      consultorioId: cons.id,
+      diaSemana: diaAlvo.getDay(), // 1..5
+      turno: "manha",
+    },
+  });
 });
 
 test.afterAll(async () => {
@@ -147,7 +171,22 @@ test.describe("Atendimentos — fluxo completo (Fase 4)", () => {
       .fill("Paciente AT E2E");
     await page.getByRole("option", { name: /Paciente AT E2E/i }).click();
 
-    await page.getByLabel("Valor da consulta (R$)").fill("180");
+    // Data + horário no calendário mensal. Sem um slot dentro do TurnoFixo
+    // do profissional o submit continua `disabled` — é dele que a tela tira
+    // a sala, que não é escolhida à mão.
+    await escolherDiaNoCalendario(page, dataComTurnoFixo);
+    const slots = horariosLivres(page);
+    await expect(slots.first()).toBeVisible();
+    const horaEscolhida = (await slots.first().innerText()).trim();
+    await slots.first().click();
+    await expect(page.getByText("Sala AT E2E", { exact: true })).toBeVisible();
+
+    // 180 fica abaixo do valor de tabela (200 = valorConsultaBase do
+    // profissional), então FI06 passa a exigir justificativa do desconto.
+    await page.getByLabel("Valor cobrado (R$)").fill("180");
+    await page
+      .getByLabel(/Justificativa do desconto/i)
+      .fill("Paciente encaminhado por convênio parceiro");
 
     await Promise.all([
       page.waitForURL("**/atendimentos", { timeout: 15_000 }),
@@ -160,6 +199,12 @@ test.describe("Atendimentos — fluxo completo (Fase 4)", () => {
     });
     expect(recent).not.toBeNull();
     expect(Number(recent?.valorConsulta)).toBe(180);
+    // Veio pelo caminho da UI: hora escolhida na grade e sala herdada do
+    // turno fixo (a tela não expõe seletor de consultório).
+    expect(recent?.hora).toBe(horaEscolhida);
+    expect(recent?.consultorioId).toBe(consultorioId);
+    expect(Number(recent?.valorOriginal)).toBe(200);
+    expect(recent?.motivoDescontoOuGratuidade).toContain("convênio parceiro");
   });
 
   test("FI11: admin edita pós-realizado com motivo → audit log capturado", async ({

@@ -5,6 +5,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.string().url().default("http://localhost:3000"),
   JWT_SECRET: z.string().min(16),
+  // [RF-024] Janela de inatividade da sessão, em minutos. Vale ao mesmo
+  // tempo como TTL do JWT/cookie (renovado a cada request pelo proxy) e
+  // como limite de `User.ultimoAcesso` validado em `requireUser`.
+  // Ver `lib/session-idle.ts` (fonte usada em runtime, Edge-safe).
+  SESSION_IDLE_MINUTES: z.coerce.number().int().positive().default(30),
   EMAIL_SERVICE_USER_EMAIL: z.string().email(),
   EMAIL_SERVICE_USER_PASSWORD: z.string().min(6),
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(10),

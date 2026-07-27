@@ -28,6 +28,9 @@ export interface RelatorioConsultoriosLinha {
   receita: string;
 }
 
+/** RE04/FI06: cortesia integral vs. abatimento parcial no preço de tabela. */
+export type TipoConcessao = "gratuidade" | "desconto";
+
 export interface RelatorioGratuitasLinha {
   id: string;
   data: string;
@@ -36,7 +39,23 @@ export interface RelatorioGratuitasLinha {
   especialidade: string;
   paciente: string;
   motivo: string;
+  tipo: TipoConcessao;
+  /** Preço de tabela — o que seria cobrado sem cortesia/desconto. */
   valorOriginal: string;
+  /** Quanto foi efetivamente cobrado do paciente. */
+  valorCobrado: string;
+  /** Diferença concedida (valorOriginal − valorCobrado). */
+  valorDesconto: string;
+  gratuito: boolean;
+}
+
+export interface RelatorioGratuitasResponse {
+  linhas: RelatorioGratuitasLinha[];
+  totalAtendimentos: number;
+  totalGratuidades: number;
+  totalDescontos: number;
+  /** Soma do que a clínica deixou de faturar no período. */
+  valorTotalConcedido: string;
 }
 
 export interface RelatorioCancelamentosLinha {
@@ -75,7 +94,7 @@ export const apiRelatorioConsultorios = (filter: PeriodoFilter) =>
   );
 
 export const apiRelatorioGratuitas = (filter: PeriodoFilter) =>
-  apiGet<{ linhas: RelatorioGratuitasLinha[]; totalAtendimentos: number }>(
+  apiGet<RelatorioGratuitasResponse>(
     `/api/relatorios/gratuitas?${qs(filter)}`,
   );
 

@@ -18,7 +18,22 @@ export interface RepasseAtendimentoBreakdown {
   hora: string;
   turno: Turno;
   valorConsulta: Prisma.Decimal;
+  /** AT02/FI04: soma dos procedimentos extras deste atendimento */
+  valorProcedimentos: Prisma.Decimal;
+  /** valorConsulta + valorProcedimentos — o que de fato entra na base */
+  valorTotal: Prisma.Decimal;
+  procedimentos: { descricao: string; valor: Prisma.Decimal }[];
   statusPagamento: "pago" | "pendente" | "gratuito";
+}
+
+/** FI04: soma dos procedimentos extras de um atendimento, em Decimal. */
+function somaProcedimentos(
+  procedimentos: { valor: Prisma.Decimal }[],
+): Prisma.Decimal {
+  return procedimentos.reduce(
+    (acc, p) => acc.plus(p.valor),
+    new Prisma.Decimal(0),
+  );
 }
 
 export interface CalculateRepasseOutput {
@@ -72,11 +87,13 @@ export async function calculateRepasse(
         statusPagamento: "pago",
         data: { gte: inicio, lte: fim },
       },
+      include: { procedimentos: true },
       orderBy: [{ data: "asc" }, { hora: "asc" }],
     });
 
+    // FI04: a base é consulta + procedimentos extras, não só a consulta.
     const receitaBruta = elegiveis.reduce(
-      (acc, a) => acc.plus(a.valorConsulta),
+      (acc, a) => acc.plus(a.valorConsulta).plus(somaProcedimentos(a.procedimentos)),
       new Prisma.Decimal(0),
     );
 
@@ -95,12 +112,19 @@ export async function calculateRepasse(
         turnosSet.add(key);
         turnosUtilizados.push({ data: dataIso, turno });
       }
+      const valorProcedimentos = somaProcedimentos(a.procedimentos);
       return {
         atendimentoId: a.id,
         data: dataIso,
         hora: a.hora,
         turno,
         valorConsulta: a.valorConsulta,
+        valorProcedimentos,
+        valorTotal: a.valorConsulta.plus(valorProcedimentos),
+        procedimentos: a.procedimentos.map((p) => ({
+          descricao: p.descricao,
+          valor: p.valor,
+        })),
         statusPagamento: a.statusPagamento,
       };
     });
@@ -131,32 +155,48 @@ export async function calculateRepasse(
       status: "realizado",
       data: { gte: inicio, lte: fim },
     },
+    include: { procedimentos: true },
     orderBy: [{ data: "asc" }, { hora: "asc" }],
   });
 
   const turnosSet = new Set<string>();
   const turnosUtilizados: { data: string; turno: Turno }[] = [];
   const detalhes: RepasseAtendimentoBreakdown[] = realizados.map((a) => {
-    const turno = horaToTurno(a.hora);
+    // `turnosConfig` era omitido aqui, então a contagem de turnos cobrados
+    // usava os defaults hardcoded 13:00/18:00 e ignorava /configuracoes/turnos
+    // — divergência que altera o valor do aluguel.
+    const turno = horaToTurno(a.hora, turnosConfig);
     const dataIso = a.data.toISOString().slice(0, 10);
     const key = `${dataIso}|${turno}`;
     if (!turnosSet.has(key)) {
       turnosSet.add(key);
       turnosUtilizados.push({ data: dataIso, turno });
     }
+    const valorProcedimentos = somaProcedimentos(a.procedimentos);
     return {
       atendimentoId: a.id,
       data: dataIso,
       hora: a.hora,
       turno,
       valorConsulta: a.valorConsulta,
+      valorProcedimentos,
+      valorTotal: a.valorConsulta.plus(valorProcedimentos),
+      procedimentos: a.procedimentos.map((p) => ({
+        descricao: p.descricao,
+        valor: p.valor,
+      })),
       statusPagamento: a.statusPagamento,
     };
   });
 
+  // Informativa no aluguel fixo (o repasse é turnos × valor), mas precisa
+  // refletir consulta + procedimentos para a prestação de contas (FI04).
   const receitaBruta = realizados
     .filter((a) => a.statusPagamento === "pago")
-    .reduce((acc, a) => acc.plus(a.valorConsulta), new Prisma.Decimal(0))
+    .reduce(
+      (acc, a) => acc.plus(a.valorConsulta).plus(somaProcedimentos(a.procedimentos)),
+      new Prisma.Decimal(0),
+    )
     .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
 
   const valorRepasse = profissional.valorAluguelPorTurno

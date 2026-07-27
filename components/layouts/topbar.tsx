@@ -7,12 +7,14 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MobileSidebarTrigger } from './mobile-sidebar';
 import { useRole } from '@/lib/role';
+import { apiLogout, authErrorMessage } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
 
 export function Topbar() {
-  const { info } = useRole();
+  const { info, refresh } = useRole();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,13 +28,27 @@ export function Topbar() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [menuOpen]);
 
-  function handleLogout() {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem('clinicashare:role');
+  /**
+   * Logout de verdade: invalida o cookie `auth-token` no servidor via
+   * POST /api/auth/logout. Limpar só o localStorage deixava o cookie
+   * válido — voltar pro /dashboard re-autenticava sozinho.
+   */
+  async function handleLogout() {
+    setSigningOut(true);
+    try {
+      await apiLogout();
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('clinicashare:role');
+      }
+      await refresh();
+      setMenuOpen(false);
+      toast.success('Sessão encerrada');
+      router.push('/login');
+      router.refresh();
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      setSigningOut(false);
     }
-    setMenuOpen(false);
-    toast.success('Sessão encerrada');
-    router.push('/login');
   }
 
   return (
@@ -57,9 +73,9 @@ export function Topbar() {
               <p className="truncate text-sm font-semibold">{info.name}</p>
               <p className="truncate text-xs text-muted-foreground">{info.label}</p>
             </div>
-            <button type="button" onClick={handleLogout} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10 rounded-b-xl')}>
+            <button type="button" onClick={handleLogout} disabled={signingOut} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10 rounded-b-xl disabled:pointer-events-none disabled:opacity-60')}>
               <LogOut size={14} />
-              Sair
+              {signingOut ? 'Saindo…' : 'Sair'}
             </button>
           </div>
         )}

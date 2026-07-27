@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { CalendarCheck2, LogIn, ShieldCheck, Stethoscope, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+
+  // [RF-024] O proxy (token expirado) e o IdleSessionGuard (timer do
+  // cliente) mandam pra cá com `expirada=1`. Lido de `window.location` em
+  // vez de `useSearchParams` para não exigir boundary de Suspense.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expirada') === '1') {
+      toast.warning('Sua sessão foi encerrada por inatividade. Entre novamente.');
+    }
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

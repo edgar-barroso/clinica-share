@@ -1,6 +1,10 @@
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { NaoAutorizado, NaoEncontrado } from "@/app/(back-end)/_lib/errors";
+import {
+  procedimentoSelect,
+  somaProcedimentos,
+} from "@/app/(back-end)/_lib/procedimentos";
 
 interface Viewer {
   role: Role;
@@ -13,6 +17,8 @@ interface Viewer {
  * - paciente: só vê o próprio (`pacienteId === viewer.pacienteId`)
  * - profissional: só vê os atendimentos atribuídos a ele
  * - admin/aux/atendente: livre
+ *
+ * AT02: retorna também `procedimentos` (id, descricao, valor) do atendimento.
  */
 export async function getAtendimento(id: string, viewer: Viewer) {
   const atendimento = await prisma.atendimento.findUnique({
@@ -23,6 +29,10 @@ export async function getAtendimento(id: string, viewer: Viewer) {
         select: { id: true, nome: true, especialidade: true, conselho: true },
       },
       consultorio: { select: { id: true, nome: true } },
+      procedimentos: {
+        select: procedimentoSelect,
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -40,5 +50,14 @@ export async function getAtendimento(id: string, viewer: Viewer) {
     );
   }
 
-  return atendimento;
+  // FI04: as somas acompanham o atendimento. Sem isto a tela de detalhe
+  // exibia "Procedimentos R$ 0,00" e um total só com a consulta, mesmo
+  // listando os procedimentos logo abaixo — os campos só existiam na rota
+  // de listagem.
+  const valorProcedimentos = somaProcedimentos(atendimento.procedimentos);
+  return {
+    ...atendimento,
+    valorProcedimentos,
+    valorTotal: atendimento.valorConsulta.plus(valorProcedimentos),
+  };
 }

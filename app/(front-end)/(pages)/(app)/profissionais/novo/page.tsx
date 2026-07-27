@@ -283,7 +283,7 @@ export default function NovoProfissionalPage() {
                 >
                   <p className="text-sm font-semibold">Percentual</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Clínica recebe % sobre cada consulta realizada
+                    Profissional recebe % da receita de cada consulta realizada
                   </p>
                 </button>
                 <button
@@ -304,7 +304,9 @@ export default function NovoProfissionalPage() {
 
               {modalidade === "percentual" ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="percentual">Percentual de repasse à clínica (%)</Label>
+                  <Label htmlFor="percentual">
+                    Percentual (%) de repasse ao profissional
+                  </Label>
                   <Input
                     id="percentual"
                     type="number"
@@ -316,8 +318,10 @@ export default function NovoProfissionalPage() {
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Ex: 30 = 30% do bruto vai para a clínica
-                    ({formatPercent(Number(percentual) / 100 || 0)}).
+                    Ex: 70 = profissional recebe 70% da receita bruta; o
+                    restante fica com a clínica. Atual:{" "}
+                    {formatPercent(Number(percentual) / 100 || 0)} ao
+                    profissional.
                   </p>
                 </div>
               ) : (

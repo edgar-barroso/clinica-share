@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use, useCallback, useEffect, useState } from "react";
+import { Fragment, use, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, CheckCircle2, Send } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -114,6 +114,11 @@ export default function RepasseDetailPage({
 
   const { repasse, breakdown } = data;
   const isPercentual = breakdown.modalidade === "percentual";
+  // FI04: o breakdown é quem carrega procedimentos extras e o total por
+  // atendimento; `repasse.atendimentos` só tem o valor da consulta.
+  const detalhePorAtendimento = new Map(
+    breakdown.detalhes.map((d) => [d.atendimentoId, d]),
+  );
 
   return (
     <>
@@ -176,7 +181,7 @@ export default function RepasseDetailPage({
                   </p>
                   <p className="mt-1 text-sm font-medium">
                     {isPercentual
-                      ? `${(Number(repasse.profissional.percentualRepasse) * 100).toFixed(0)}% sobre bruto pago`
+                      ? `${(Number(repasse.profissional.percentualRepasse) * 100).toFixed(0)}% do bruto pago ao profissional`
                       : `Aluguel fixo · ${formatBRL(Number(repasse.profissional.valorAluguelPorTurno))} por turno`}
                   </p>
                 </div>
@@ -221,49 +226,95 @@ export default function RepasseDetailPage({
                     <TableHead>Paciente</TableHead>
                     <TableHead>Consultório</TableHead>
                     <TableHead>Turno</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Consulta</TableHead>
+                    <TableHead className="text-right">Procedimentos</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                     <TableHead>Pagamento</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {repasse.atendimentos.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="text-sm">
-                          {formatDate(a.data, "dd/MM")}
-                        </div>
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          {a.hora}
-                        </div>
-                      </TableCell>
-                      <TableCell>{a.paciente.nome}</TableCell>
-                      <TableCell>{a.consultorio.nome}</TableCell>
-                      <TableCell>
-                        {TURNO_LABEL[
-                          breakdown.detalhes.find(
-                            (d) => d.atendimentoId === a.id,
-                          )?.turno ?? "manha"
-                        ]}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatBRL(Number(a.valorConsulta))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            a.statusPagamento === "pago"
-                              ? "success"
-                              : a.statusPagamento === "gratuito"
-                                ? "info"
-                                : "outline"
-                          }
-                          className="text-xs capitalize"
-                        >
-                          {a.statusPagamento}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {repasse.atendimentos.map((a) => {
+                    const det = detalhePorAtendimento.get(a.id);
+                    const procedimentos = det?.procedimentos ?? [];
+                    const valorProcedimentos = Number(
+                      det?.valorProcedimentos ?? 0,
+                    );
+                    const temProcedimentos =
+                      valorProcedimentos > 0 && procedimentos.length > 0;
+                    const valorTotal = Number(det?.valorTotal ?? a.valorConsulta);
+
+                    return (
+                      <Fragment key={a.id}>
+                        <TableRow className={temProcedimentos ? "border-b-0" : undefined}>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="text-sm">
+                              {formatDate(a.data, "dd/MM")}
+                            </div>
+                            <div className="text-xs text-muted-foreground tabular-nums">
+                              {a.hora}
+                            </div>
+                          </TableCell>
+                          <TableCell>{a.paciente.nome}</TableCell>
+                          <TableCell>{a.consultorio.nome}</TableCell>
+                          <TableCell>
+                            {TURNO_LABEL[det?.turno ?? "manha"]}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatBRL(Number(a.valorConsulta))}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {valorProcedimentos > 0 ? (
+                              formatBRL(valorProcedimentos)
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-medium tabular-nums">
+                            {formatBRL(valorTotal)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                a.statusPagamento === "pago"
+                                  ? "success"
+                                  : a.statusPagamento === "gratuito"
+                                    ? "info"
+                                    : "outline"
+                              }
+                              className="text-xs capitalize"
+                            >
+                              {a.statusPagamento}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+
+                        {temProcedimentos && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell colSpan={8} className="pb-3 pt-0">
+                              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+                                <span className="font-medium uppercase tracking-wide text-muted-foreground">
+                                  Procedimentos extras
+                                </span>
+                                <ul className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                  {procedimentos.map((p, i) => (
+                                    <li
+                                      key={`${a.id}-proc-${i}`}
+                                      className="flex items-baseline gap-1.5 rounded-full bg-muted px-2.5 py-0.5"
+                                    >
+                                      <span>{p.descricao}</span>
+                                      <span className="font-medium tabular-nums">
+                                        {formatBRL(Number(p.valor))}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -312,9 +363,10 @@ export default function RepasseDetailPage({
                 <span>{formatBRL(Number(repasse.valorRepasse))}</span>
               </div>
               <p className="pt-1 text-xs text-muted-foreground">
-                Cálculo realizado no servidor. Atendimentos gratuitos não
-                entram na base, exceto na contagem de turnos no modelo
-                aluguel-fixo.
+                Cálculo realizado no servidor. A receita bruta soma consulta +
+                procedimentos extras de cada atendimento. Atendimentos
+                gratuitos não entram na base, exceto na contagem de turnos no
+                modelo aluguel-fixo.
               </p>
             </CardContent>
           </Card>

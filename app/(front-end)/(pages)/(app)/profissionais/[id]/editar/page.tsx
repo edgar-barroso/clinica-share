@@ -303,7 +303,7 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={() => setModalidade('percentual')} className={`rounded-xl border p-4 text-left transition-colors ${modalidade === 'percentual' ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
                   <p className="text-sm font-semibold">Percentual</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Clínica recebe % sobre atendimentos</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Profissional recebe % da receita dos atendimentos</p>
                 </button>
                 <button
                   type="button"
@@ -317,9 +317,9 @@ export default function EditarProfissionalPage({ params }: { params: Promise<{ i
 
               {modalidade === 'percentual' ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="perc">Percentual (%)</Label>
+                  <Label htmlFor="perc">Percentual (%) de repasse ao profissional</Label>
                   <Input id="perc" type="number" min="0" max="100" step="0.5" value={percentual} onChange={(e) => setPercentual(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Equivale a {formatPercent(novoPercentual || 0)} sobre receita bruta.</p>
+                  <p className="text-xs text-muted-foreground">Ex: 70 = profissional recebe 70% da receita bruta; o restante fica com a clínica. Atual: {formatPercent(novoPercentual || 0)} ao profissional.</p>
                 </div>
               ) : (
                 <div className="space-y-1.5">

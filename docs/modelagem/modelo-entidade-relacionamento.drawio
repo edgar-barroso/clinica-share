@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="ClinicaShare" version="24.0.0">
+  <diagram name="MER - Conceitual (Peter Chen)" id="clinicashare-mer-conceitual">
+    <mxGraphModel dx="2800" dy="2000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="2100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ======================= TITULO ======================= -->
+        <mxCell id="titulo" value="ClinicaShare — Modelo Entidade-Relacionamento (Nível Conceitual)&#xa;Notação: Peter Chen  •  Foco no domínio do negócio  •  Sem tipos de dado (esses ficam para o modelo lógico/físico)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="2720" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  PACIENTE  (topo central)
+             ====================================================================== -->
+        <mxCell id="ent-paciente" value="PACIENTE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="180" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="120" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-nome" value="nome" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="200" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-cpf" value="CPF" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1590" y="120" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-dn" value="data nasc." style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1590" y="200" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-contato" value="contato" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="155" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-contato-1" value="email" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1820" y="115" width="70" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-contato-2" value="telefone" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1820" y="155" width="70" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-pac-contato-3" value="endereço" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1820" y="195" width="80" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-pac-id"      style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-id" target="ent-paciente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-nome"    style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-nome" target="ent-paciente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-cpf"     style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-cpf" target="ent-paciente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-dn"      style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-dn" target="ent-paciente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-contato" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-contato" target="ent-paciente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-c1" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-contato-1" target="atr-pac-contato"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-c2" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-contato-2" target="atr-pac-contato"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-pac-c3" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-pac-contato-3" target="atr-pac-contato"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ======================================================================
+             RELACIONAMENTO  recebe  (Paciente — Atendimento)
+             ====================================================================== -->
+        <mxCell id="rel-recebe" value="recebe" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1325" y="420" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-pac-rec" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="ent-paciente" target="rel-recebe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-pac-rec-l" value="(1,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-pac-rec">
+          <mxGeometry x="-0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  ATENDIMENTO  (centro)
+             ====================================================================== -->
+        <mxCell id="ent-atendimento" value="ATENDIMENTO" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="690" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="640" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-data" value="data" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="690" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-hora" value="hora" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="740" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-valor" value="valor cobrado" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1620" y="640" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-status" value="status atendimento" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1620" y="690" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-statuspag" value="status pagamento" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1620" y="740" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-motivo" value="motivo cancelamento" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="800" width="160" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-at-justif" value="justificativa desconto" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="800" width="160" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-at-id"        style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-id" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-data"      style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-data" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-hora"      style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-hora" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-valor"     style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-valor" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-status"    style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-status" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-statuspag" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-statuspag" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-motivo"    style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-motivo" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-at-justif"    style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-at-justif" target="ent-atendimento"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ligação relacionamento recebe → ATENDIMENTO -->
+        <mxCell id="ln-rec-at" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="rel-recebe" target="ent-atendimento">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-rec-at-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-rec-at">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  PROFISSIONAL  (esquerda)
+             ====================================================================== -->
+        <mxCell id="ent-profissional" value="PROFISSIONAL" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="700" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="620" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-nome" value="nome" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="680" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-esp" value="especialidade" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="740" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-modal" value="modalidade contrato" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="260" y="620" width="150" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-pct" value="% repasse" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="440" y="660" width="90" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-val-base" value="valor consulta" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="440" y="720" width="110" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-prof-aluguel" value="valor aluguel turno" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="440" y="780" width="140" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-id"      style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-id" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-prof-nome"    style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-nome" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-prof-esp"     style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-esp" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-prof-modal"   style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-modal" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-prof-pct"     style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-pct" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-prof-val"     style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-val-base" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-prof-aluguel" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-prof-aluguel" target="ent-profissional"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ======================================================================
+             RELACIONAMENTO  realiza  (Profissional — Atendimento)
+             ====================================================================== -->
+        <mxCell id="rel-realiza" value="realiza" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="780" y="700" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-rel" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="ent-profissional" target="rel-realiza">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-rel-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-prof-rel">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ln-rel-at" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="rel-realiza" target="ent-atendimento">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-rel-at-l" value="(1,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-rel-at">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  CONSULTÓRIO  (direita)
+             ====================================================================== -->
+        <mxCell id="ent-consultorio" value="CONSULTÓRIO" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="2320" y="700" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-cons-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="2540" y="620" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-cons-nome" value="nome" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="2540" y="680" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-cons-tipo" value="tipo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="2540" y="740" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-cons-equip" value="equipamentos" style="shape=doubleEllipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2520" y="800" width="130" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-cons-esp" value="especialidades compatíveis" style="shape=doubleEllipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2510" y="860" width="200" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-cons-id"    style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-cons-id" target="ent-consultorio"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-cons-nome"  style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-cons-nome" target="ent-consultorio"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-cons-tipo"  style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-cons-tipo" target="ent-consultorio"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-cons-equip" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-cons-equip" target="ent-consultorio"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-cons-esp"   style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-cons-esp" target="ent-consultorio"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ======================================================================
+             RELACIONAMENTO  utiliza  (Atendimento — Consultório)
+             ====================================================================== -->
+        <mxCell id="rel-utiliza" value="utiliza" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1860" y="700" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-at-uti" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="ent-atendimento" target="rel-utiliza">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-at-uti-l" value="(1,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-at-uti">
+          <mxGeometry x="-0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ln-uti-cons" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="rel-utiliza" target="ent-consultorio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-uti-cons-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-uti-cons">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             RELACIONAMENTO  compõe  (Atendimento — Repasse)
+             ====================================================================== -->
+        <mxCell id="rel-compoe" value="compõe" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1325" y="940" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-at-comp" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="ent-atendimento" target="rel-compoe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-at-comp-l" value="(0,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-at-comp">
+          <mxGeometry x="-0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  REPASSE  (abaixo de Atendimento)
+             ====================================================================== -->
+        <mxCell id="ent-repasse" value="REPASSE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="1140" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="1100" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-periodo" value="período" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="1160" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-periodo-1" value="início" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="960" y="1140" width="70" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-periodo-2" value="fim" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="960" y="1180" width="70" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-receita" value="receita bruta" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="1100" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-valor" value="valor repasse" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="1160" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="1230" width="80" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-rep-datapag" value="data pagamento" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="1230" width="130" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-rep-id"        style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-id" target="ent-repasse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-periodo"   style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-periodo" target="ent-repasse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-p1"        style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-periodo-1" target="atr-rep-periodo"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-p2"        style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-periodo-2" target="atr-rep-periodo"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-receita"   style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-receita" target="ent-repasse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-valor"     style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-valor" target="ent-repasse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-status"    style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-status" target="ent-repasse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-rep-datapag"   style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" parent="1" source="atr-rep-datapag" target="ent-repasse"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ligação compõe → Repasse -->
+        <mxCell id="ln-comp-rep" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="rel-compoe" target="ent-repasse">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-comp-rep-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-comp-rep">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             RELACIONAMENTO  recebe repasse  (Profissional — Repasse)
+             ====================================================================== -->
+        <mxCell id="rel-recebe-rep" value="recebe repasse" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="780" y="1140" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-recrep" style="endArrow=none;html=1;strokeColor=#666666;edgeStyle=orthogonalEdgeStyle;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ent-profissional" target="rel-recebe-rep">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-recrep-l" value="(1,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-prof-recrep">
+          <mxGeometry x="-0.5" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ln-recrep-rep" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="rel-recebe-rep" target="ent-repasse">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-recrep-rep-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-recrep-rep">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             RELACIONAMENTO  ocupa turno  (Profissional — Consultório, com atributos)
+             — modelado como ENTIDADE ASSOCIATIVA "TURNO FIXO" (M:N com atributos próprios)
+             ====================================================================== -->
+        <mxCell id="ent-turnofixo" value="TURNO FIXO" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;shape=ext;double=1;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="1430" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-turno-dia" value="dia da semana" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="1400" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-turno-turno" value="turno (M/T/N)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="1460" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-turno-dia"   style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-turno-dia" target="ent-turnofixo"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-turno-turno" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="atr-turno-turno" target="ent-turnofixo"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Relacionamentos identificadores da entidade associativa -->
+        <mxCell id="rel-ocupa" value="ocupa" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="780" y="1430" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-ocupa" style="endArrow=none;html=1;strokeColor=#666666;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ent-profissional" target="rel-ocupa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-prof-ocupa-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-prof-ocupa">
+          <mxGeometry x="-0.5" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ln-ocupa-turno" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="rel-ocupa" target="ent-turnofixo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-ocupa-turno-l" value="(1,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-ocupa-turno">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rel-em" value="em" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1860" y="1430" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-turno-em" style="endArrow=none;html=1;strokeColor=#666666;" edge="1" parent="1" source="ent-turnofixo" target="rel-em">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-turno-em-l" value="(1,1)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-turno-em">
+          <mxGeometry x="-0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ln-em-cons" style="endArrow=none;html=1;strokeColor=#666666;edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="rel-em" target="ent-consultorio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-em-cons-l" value="(0,N)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="ln-em-cons">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  FUNCIONÁRIO  (lateral inferior)
+             ====================================================================== -->
+        <mxCell id="ent-funcionario" value="FUNCIONÁRIO" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="1700" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-func-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1670" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-func-nome" value="nome" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1730" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-func-cargo" value="cargo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1670" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-func-contato" value="contato" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1730" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-func-id"      style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-func-id" target="ent-funcionario"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-func-nome"    style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-func-nome" target="ent-funcionario"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-func-cargo"   style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-func-cargo" target="ent-funcionario"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-func-contato" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="atr-func-contato" target="ent-funcionario"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ======================================================================
+             ENTIDADE  REGISTRO DE AUDITORIA  (transversal, sem relacionamento estrutural)
+             ====================================================================== -->
+        <mxCell id="ent-audit" value="REGISTRO DE&#xa;AUDITORIA" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="200" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-id" value="&lt;u&gt;código&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="140" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-data" value="data-hora" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="140" y="120" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-autor" value="autor" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="260" y="140" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-ent" value="entidade alvo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="290" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-campo" value="campo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="150" y="290" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-valores" value="valor antes/depois" style="shape=doubleEllipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="240" y="290" width="140" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="atr-aud-motivo" value="motivo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="240" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-aud-id"      style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-id" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-aud-data"    style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-data" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-aud-autor"   style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-autor" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-aud-ent"     style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-ent" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-aud-campo"   style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-campo" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-aud-valores" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-valores" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ln-aud-motivo"  style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" parent="1" source="atr-aud-motivo" target="ent-audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ======================================================================
+             LEGENDA
+             ====================================================================== -->
+        <mxCell id="legenda" value="LEGENDA — Notação Peter Chen&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;Símbolos:&#xa;  ▭  retângulo  =  entidade&#xa;  ◇  losango    =  relacionamento&#xa;  ◯  elipse     =  atributo simples&#xa;  ◯ com texto sublinhado  =  atributo identificador (chave primária)&#xa;  ◎  elipse dupla  =  atributo multivalorado (ex.: equipamentos, especialidades)&#xa;  ◯ tracejada  =  atributo derivado (calculado — ex.: receita bruta, valor repasse)&#xa;  ◯ &quot;composta&quot; → outras  =  atributo composto (ex.: contato, período)&#xa;  ▭ com borda dupla  =  entidade associativa (TURNO FIXO)&#xa;&#xa;Cardinalidade (notação min,max):&#xa;  (1,1)  exatamente um (obrigatório)&#xa;  (0,1)  zero ou um (opcional)&#xa;  (0,N)  zero ou muitos (opcional)&#xa;  (1,N)  um ou muitos (obrigatório ≥ 1)&#xa;&#xa;Cores por agrupamento conceitual:&#xa;  verde   pessoas (Paciente, Profissional, Funcionário)&#xa;  amarelo recursos físicos / agregadores (Consultório, Turno Fixo, relacionamentos)&#xa;  vermelho núcleo do domínio financeiro (Atendimento, Repasse)&#xa;  roxo    entidade transversal (Registro de Auditoria)&#xa;&#xa;Observações de domínio:&#xa;  • Atendimento é a entidade central — concentra os fluxos de agendamento e financeiro.&#xa;  • Repasse agrupa Atendimentos pagos num período semanal (DEC-R1-02 / FI07).&#xa;  • Turno Fixo é a alocação semanal (Profissional × Consultório × dia × turno).&#xa;  • Registro de Auditoria referencia entidade-alvo polimorficamente (sem FK estrutural).&#xa;  • Funcionário (Atendente/Auxiliar) atua sobre Atendimento operacionalmente — registrado&#xa;    no diagrama de casos de uso, não como relacionamento estrutural neste MER.&#xa;  • Autenticação (login/senha/sessão) é detalhe técnico — fora do conceitual." style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;spacingLeft=14;spacingRight=14;spacingTop=12;spacingBottom=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="660" height="540" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

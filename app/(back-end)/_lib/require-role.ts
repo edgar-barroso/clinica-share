@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { readAuthCookie } from "./auth-cookie";
 import { verifyAuthToken, type AuthTokenPayload } from "./jwt";
 import { NaoAutenticado, NaoAutorizado } from "./errors";
+import { isSessionIdle, touchUltimoAcesso } from "./session-activity";
 
 /**
  * Validação de autorização **rápida** — em runtime, lê os headers
@@ -14,10 +15,10 @@ import { NaoAutenticado, NaoAutorizado } from "./errors";
  * Defense-in-depth: se o proxy falhar/for bypassed, o fallback de
  * cookie ainda protege a rota.
  *
- * Caveat: o `role` no JWT fica congelado até o token expirar (7d).
- * Se um admin alterar o role de outro usuário, o token antigo ainda
- * carrega o role antigo. Para MVP é aceitável; em produção mitigar
- * com TTL menor + refresh.
+ * Caveat: o `role` no JWT fica congelado até o token expirar
+ * (`SESSION_IDLE_MINUTES`, default 30min — ver RF-024). Se um admin
+ * alterar o role de outro usuário, o token antigo ainda carrega o role
+ * antigo até a próxima renovação/expiração. Para MVP é aceitável.
  *
  * @throws {NaoAutenticado} headers ausentes E cookie ausente/JWT inválido
  * @throws {NaoAutorizado} payload válido mas role fora da allowlist
@@ -62,7 +63,13 @@ type UserWithRelations = Prisma.UserGetPayload<{
  * Também valida `ativo: true` — usuários desativados são bloqueados
  * mesmo com JWT ainda válido.
  *
+ * [RF-024] E valida inatividade: se `now - ultimoAcesso` passou de
+ * `SESSION_IDLE_MINUTES`, a sessão está encerrada (`NaoAutenticado` →
+ * 401), independente do cookie que o cliente apresentou. Quando a sessão
+ * está viva, renova o heartbeat `ultimoAcesso` (throttle de 1x/min).
+ *
  * @param allowedRoles `undefined` ou `[]` = qualquer role autenticado
+ * @throws {NaoAutenticado} user inexistente, desativado ou sessão inativa
  */
 export async function requireUser(
   req: NextRequest,
@@ -78,5 +85,11 @@ export async function requireUser(
   if (!user || !user.ativo) {
     throw new NaoAutenticado();
   }
-  return user;
+
+  if (isSessionIdle(user.ultimoAcesso)) {
+    throw new NaoAutenticado();
+  }
+
+  const ultimoAcesso = await touchUltimoAcesso(user.id, user.ultimoAcesso);
+  return { ...user, ultimoAcesso };
 }

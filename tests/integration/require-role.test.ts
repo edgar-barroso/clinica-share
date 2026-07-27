@@ -4,6 +4,10 @@ import { requireRole, requireUser } from "@/app/(back-end)/_lib/require-role";
 import { NaoAutenticado, NaoAutorizado } from "@/app/(back-end)/_lib/errors";
 import { hashPassword } from "@/app/(back-end)/_lib/password";
 import { prisma } from "@/lib/db";
+import {
+  SESSION_IDLE_MS,
+  ULTIMO_ACESSO_THROTTLE_MS,
+} from "@/lib/session-idle";
 import { cleanAuthData } from "../helpers/db";
 import { getRequest, withAuthCookie } from "../helpers/request";
 
@@ -116,5 +120,55 @@ describe("requireUser — JWT + busca no DB", () => {
 
     const user = await requireUser(req);
     expect(user.id).toBe(admin.id);
+  });
+});
+
+describe("[RF-024] requireUser — encerramento por inatividade", () => {
+  async function reqParaAdmin(ultimoAcesso: Date | null) {
+    const admin = await createAdminUser();
+    await prisma.user.update({ where: { id: admin.id }, data: { ultimoAcesso } });
+    const token = signAuthToken({ userId: admin.id, role: admin.role });
+    return { admin, req: withAuthCookie(getRequest("/api/whatever"), token) };
+  }
+
+  it("throw NaoAutenticado quando ultimoAcesso passou da janela de inatividade", async () => {
+    // Token ainda válido (assinado agora) — quem barra é o heartbeat no DB
+    const { req } = await reqParaAdmin(
+      new Date(Date.now() - SESSION_IDLE_MS - 60_000),
+    );
+
+    await expect(requireUser(req, ["admin"])).rejects.toThrow(NaoAutenticado);
+  });
+
+  it("aceita e renova o heartbeat quando dentro da janela", async () => {
+    const dentroDaJanela = new Date(Date.now() - SESSION_IDLE_MS + 60_000);
+    const { admin, req } = await reqParaAdmin(dentroDaJanela);
+
+    const user = await requireUser(req, ["admin"]);
+    expect(user.id).toBe(admin.id);
+
+    const depois = await prisma.user.findUniqueOrThrow({ where: { id: admin.id } });
+    expect(depois.ultimoAcesso!.getTime()).toBeGreaterThan(
+      dentroDaJanela.getTime(),
+    );
+  });
+
+  it("aceita ultimoAcesso null (seed/factory) e grava o primeiro heartbeat", async () => {
+    const { admin, req } = await reqParaAdmin(null);
+
+    await requireUser(req, ["admin"]);
+
+    const depois = await prisma.user.findUniqueOrThrow({ where: { id: admin.id } });
+    expect(depois.ultimoAcesso).not.toBeNull();
+  });
+
+  it("não reescreve ultimoAcesso mais de 1x por minuto (throttle)", async () => {
+    const recente = new Date(Date.now() - ULTIMO_ACESSO_THROTTLE_MS / 2);
+    const { admin, req } = await reqParaAdmin(recente);
+
+    await requireUser(req, ["admin"]);
+
+    const depois = await prisma.user.findUniqueOrThrow({ where: { id: admin.id } });
+    expect(depois.ultimoAcesso!.getTime()).toBe(recente.getTime());
   });
 });
